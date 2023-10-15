@@ -1,0 +1,58 @@
+---
+title: "Data Download from NCBI"
+output:
+  html_document:
+    code_folding: show
+
+params:
+  # general
+  codedir: "~/BusIER/codes"
+  prefix: ""
+  outdir: "~/busco"
+  thread: 5
+  redo: TRUE
+  
+  # list of accession numbers to be downloaded
+  file_refseq: ""
+  file_shortreads: ""
+
+  exe_ncbitoolkit: ""
+  dir_sratoolkit: ""
+---
+
+## Load required libraries and functions
+```{r}
+source(paste0(params$codedir, "/1_data_download/functions.R"))
+
+library(doSNOW)
+```
+
+```{r, include=FALSE}
+# store initial system time
+sys_tic <- Sys.time()
+
+# create outdir
+currentdir <- paste0(params$outdir, "/", params$prefix)
+if (!dir.exists(currentdir)) {
+  dir.create(currentdir, recursive = T)
+}
+
+# create log file
+fn_log <- paste0(params$outdir, "/", params$prefix, "/", params$prefix, ".log")
+log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::default_log_layout())
+fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
+
+knitr::opts_knit$set(root.dir = currentdir)
+```
+
+```{r child = paste0(params$codedir,"/1_data_download/2_run.Rmd")}
+```
+
+```{r, include=FALSE}
+# store final system time
+sys_toc <- Sys.time()
+
+# write the system time in log file
+write.table(c("", paste0("Total elapsed time: ", round(as.numeric(difftime(sys_toc, sys_tic, units = "mins")), 3), " mins")),
+            file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+```
