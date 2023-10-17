@@ -19,6 +19,7 @@ ls_shortreads <- list.dirs(dir_shortreads, recursive=F, full.names=F)
 
 # output files
 file_msh <- paste0(dir_refseq, params$prefix, ".msh")
+file_mashsum <- paste0(params$outdir, "/", params$prefix, ".mashsum")
 ```
 
 ## Create Mash sketch for all reference sequences
@@ -87,4 +88,49 @@ foreach (i = ls_shortreads) %dopar% {
     f_mash_screen(params$exe_mash, file_msh, fwd_read, file_output)
     log4r::info(fn_logger, paste0("File created: .mashtab for ", i, "."))
 }
+
+stopCluster(nwcl)
+```
+
+## Summarize .mashtab for all short reads
+```{r mash-screen-summary}
+df_mashsum <- data.table::data.table(reads_accession=character(), reads_dir=character(), reads_species=character(),
+                                    refseq_accession=character(), refseq_dir=character(), refseq_species=character(),
+                                    score=numeric())
+
+for (i in ls_shortreads) {
+    # input files
+    reads_accession <- i
+    reads_dir <- list.files(paste0(dir_shortreads, i, "/fastq/"), full.names=T)[1]
+    reads_species <- f_extract_species_from_reads(params$exe_esearch, params$efetch, i)
+
+    file_mashtab <- paste0(dir_shortreads, i, "/", i, ".mashtab")
+    if (!file.exists(file_output)) {
+        log4r::warn(fn_logger, paste0("File not found: .mashtab for ", i, ". Skipped."))
+        return(NULL)
+    }
+
+    # extract the best Mash sketch
+    cmd_sort_mashtab <- paste("sort -gr", file_mashtab, "| head -1")
+    best_sketch <- system(cmd_sort_mashtab, intern=T)
+    ls_best_sketch <- unlist(strsplit(best_sketch, split="\t"))
+
+    # extract the accession number
+    refseq_dir <- ls_best_sketch[5]
+    ls_refseq_dir <- unlist(strsplit(refseq_dir, split="/"))
+    ls_refseq_accession <- unlist(strsplit(ls_refseq_dir[length(ls_refseq_dir)], split="_"))
+    refseq_accession <- paste(ls_refseq_accession[1:2], collapse="_")
+
+    # extract the species name and score
+    refseq_species <- f_extract_species_from_assembly(params$exe_esearch, params$efetch, params$xtract, refseq_accession)
+    score <- as.numeric(ls_best_sketch[1])
+    
+    # save the information into data.table
+    df_mashsum <- rbind(df_mashsum, list(reads_accession=reads_accession, reads_dir=reads_dir, reads_species=reads_species,
+                                    refseq_accession=refseq_accession, refseq_dir=refseq_dir, refseq_species=refseq_species,
+                                    score=score))
+}
+
+data.table::fwrite(df_mashsum, file=file_mashsum, quote=F, sep="\t")
+log4r::info(fn_logger, "File created/updated: summary file for Mash Sketches.")
 ```

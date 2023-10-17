@@ -12,8 +12,11 @@ params:
   thread: 5
   redo: TRUE
   
-  # Mash executable
+  # executables
   exe_mash: ""
+  exe_esearch: ""
+  exe_efetch: ""
+  exe_xtract: ""
 ---
 
 ## Load required libraries and functions
@@ -24,6 +27,7 @@ library(doSNOW)
 ```
 
 ```{r, include=FALSE}
+# install.packages("data.table")
 # install.packages("log4r")
 
 # store initial system time
