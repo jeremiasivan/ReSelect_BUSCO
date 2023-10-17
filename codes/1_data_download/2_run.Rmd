@@ -62,3 +62,40 @@ if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
     stopCluster(nwcl)
 }
 ```
+
+```{r download-shortreads}
+write.table(c("",
+              "---------------- Short Reads ---------------"),
+              file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+
+# open the file that contains the list of short reads
+ls_shortreads <- NULL
+if (params$file_shortreads != "" && !is.null(params$file_shortreads)) {
+    ls_shortreads <- readLines(params$file_shortreads)
+}
+
+# check the length of the short reads
+if (length(ls_shortreads) == 0 || is.null(ls_shortreads)) {
+    log4r::warn(fn_logger, "Warn: list of short reads has length zero. Skipped.")
+} else {
+    # create doSNOW cluster
+    nwcl <- makeCluster(params$thread)
+    doSNOW::registerDoSNOW(nwcl)
+
+    # iterate through short reads
+    foreach (i = ls_shortreads) %dopar% {
+        # check if file exists
+        dir_output_fastq <- paste0(dir_shortreads, i, "/fastq/")
+        if (length(list.files(dir_output_fastq, recursive=F)) != 0 && !params$redo) {
+            log4r::info(fn_logger, paste0("File found: FASTQ alignment for ", i, ". Skipped."))
+            return(NULL)
+        }
+
+        # download the short reads
+        f_shortreads_download(params$dir_sratoolkit, i, dir_shortreads)
+        log4r::info(fn_logger, paste0("File downloaded: FASTQ alignment for ", i, "."))
+    }
+
+    stopCluster(nwcl)
+}
+```
