@@ -1,0 +1,56 @@
+---
+title: "Mash Sketch for Short Reads"
+---
+
+```{r sketch-setup, include=FALSE}
+write.table(c("",
+              "####################################",
+              "####         Mash Sketch        ####",
+              "####################################"),
+            file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+
+# refseq and short reads directories
+dir_refseq <- paste0(getwd(), "/refseq/")
+dir_shortreads <- paste0(getwd(), "/short_reads/")
+
+# lists of refseq and short reads
+ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
+ls_shortreads <- list.dirs(dir_shortreads, recursive=F)
+```
+
+## Create Mash Sketch for all reference sequences
+```{r sketch-refseq}
+write.table(c("",
+              "--------- Mash Sketch on References --------"),
+              file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+
+# list of reference FASTA sequences
+ls_refseq_fasta <- NULL
+ls_refseq_fasta <- sapply(ls_refseq, function(x) {
+    dir_fasta <- paste0(dir_refseq, x, "/ncbi_dataset/data/", x, "/")
+    file_fasta <- list.files(dir_fasta, pattern="*.fna", recursive=F)
+
+    if (length(file_fasta) > 0) {
+        c(ls_refseq_fasta, file_fasta)
+    }
+})
+
+# check the length of the reference sequences
+if (length(ls_refseq_fasta) == 0 || is.null(ls_refseq_fasta)) {
+    log4r::error(fn_logger, "Error: list of reference sequence has length zero. Exited.")
+    knitr::knit_exit()
+} else {
+    # convert list to string
+    str_refseq_fasta <- paste(ls_refseq_fasta, collapse=" ")
+
+    # check if output file exists
+    prefix <- paste0(dir_refseq, params$prefix)
+    if (file.exists(paste0(prefix,".msh")) && !params$redo) {
+        log4r::warn(fn_logger, "File found: Mash sketch for reference sequences. Skipped.")
+    } else {
+        # run Mash sketch on all reference sequences
+        f_mash_sketch(params$exe_mash, str_refseq_fasta, params$thread, prefix)
+        log4r::info(fn_logger, "File created: Mash sketch for reference sequences.")
+    }
+}
+```

@@ -1,5 +1,5 @@
 ---
-title: "Data Download from NCBI"
+title: "Mash Sketch for Short Reads"
 output:
   html_document:
     code_folding: show
@@ -12,17 +12,13 @@ params:
   thread: 5
   redo: TRUE
   
-  # list of accession numbers to be downloaded
-  file_refseq: ""
-  file_shortreads: ""
-
-  exe_datasets: ""
-  dir_sratoolkit: ""
+  # Mash executable
+  exe_mash: ""
 ---
 
 ## Load required libraries and functions
 ```{r}
-source(paste0(params$codedir, "/1_data_download/functions.R"))
+source(paste0(params$codedir, "/2_mash_sketch/functions.R"))
 
 library(doSNOW)
 ```
@@ -40,7 +36,7 @@ if (!dir.exists(currentdir)) {
 }
 
 # create log file
-fn_log <- paste0(params$outdir, "/", params$prefix, "/", params$prefix, ".download.log")
+fn_log <- paste0(params$outdir, "/", params$prefix, "/", params$prefix, ".mash.log")
 log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::default_log_layout())
 fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
 if (params$redo) {
@@ -51,7 +47,7 @@ if (params$redo) {
 knitr::opts_knit$set(root.dir = currentdir)
 ```
 
-```{r child = paste0(params$codedir,"/1_data_download/2_run.Rmd")}
+```{r child = paste0(params$codedir,"/2_mash_sketch/2_run.Rmd")}
 ```
 
 ```{r, include=FALSE}
