@@ -2,10 +2,10 @@
 title: "Mash Sketch for Short Reads"
 ---
 
-```{r sketch-setup, include=FALSE}
+```{r mash-setup, include=FALSE}
 write.table(c("",
               "####################################",
-              "####         Mash Sketch        ####",
+              "####            Mash            ####",
               "####################################"),
             file=fn_log, quote=F, row.names=F, col.names=F, append=T)
 
@@ -15,11 +15,14 @@ dir_shortreads <- paste0(getwd(), "/short_reads/")
 
 # lists of refseq and short reads
 ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
-ls_shortreads <- list.dirs(dir_shortreads, recursive=F)
+ls_shortreads <- list.dirs(dir_shortreads, recursive=F, full.names=F)
+
+# output files
+file_msh <- paste0(dir_refseq, params$prefix, ".msh")
 ```
 
-## Create Mash Sketch for all reference sequences
-```{r sketch-refseq}
+## Create Mash sketch for all reference sequences
+```{r mash-sketch}
 write.table(c("",
               "--------- Mash Sketch on References --------"),
               file=fn_log, quote=F, row.names=F, col.names=F, append=T)
@@ -45,12 +48,43 @@ if (length(ls_refseq_fasta) == 0 || is.null(ls_refseq_fasta)) {
 
     # check if output file exists
     prefix <- paste0(dir_refseq, params$prefix)
-    if (file.exists(paste0(prefix,".msh")) && !params$redo) {
+    if (file.exists(file_msh) && !params$redo) {
         log4r::warn(fn_logger, "File found: Mash sketch for reference sequences. Skipped.")
     } else {
         # run Mash sketch on all reference sequences
         f_mash_sketch(params$exe_mash, str_refseq_fasta, params$thread, prefix)
         log4r::info(fn_logger, "File created: Mash sketch for reference sequences.")
     }
+}
+```
+
+## Run Mash screen for all short reads
+```{r mash-screen}
+write.table(c("",
+              "--------- Mash Screen on Short Reads -------"),
+              file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+foreach (i = ls_shortreads) %dopar% {
+    dir_fastq <- paste0(dir_shortreads, i, "/fastq/")
+
+    # extract the forward fastq
+    fwd_read <- list.files(dir_fastq, full.names=T)[1]
+    if (length(fwd_read) == 0) {
+        log4r::warn(fn_logger, paste0("File not found: FASTQ alignment for ", i, ". Skipped."))
+        return(NULL)
+    }
+
+    file_output <- paste0(dir_shortreads, i, "/", i, ".mashtab")
+    if (file.exists(file_output) && !params$redo) {
+        log4r::warn(fn_logger, paste0("File found: .mashtab for ", i, ". Skipped."))
+        return(NULL)
+    }
+
+    f_mash_screen(params$exe_mash, file_msh, fwd_read, file_output)
+    log4r::info(fn_logger, paste0("File created: .mashtab for ", i, "."))
 }
 ```
