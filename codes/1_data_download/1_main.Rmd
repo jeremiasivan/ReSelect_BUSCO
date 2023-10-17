@@ -16,7 +16,7 @@ params:
   file_refseq: ""
   file_shortreads: ""
 
-  exe_ncbitoolkit: ""
+  exe_datasets: ""
   dir_sratoolkit: ""
 ---
 
