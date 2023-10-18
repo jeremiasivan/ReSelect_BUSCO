@@ -32,7 +32,7 @@ write.table(c("",
 ls_refseq_fasta <- NULL
 ls_refseq_fasta <- sapply(ls_refseq, function(x) {
     dir_fasta <- paste0(dir_refseq, x, "/ncbi_dataset/data/", x, "/")
-    file_fasta <- list.files(dir_fasta, pattern="*.fna", recursive=F)
+    file_fasta <- list.files(dir_fasta, pattern="*.fna", recursive=F, full.names=T)
 
     if (length(file_fasta) > 0) {
         c(ls_refseq_fasta, file_fasta)
