@@ -47,15 +47,20 @@ if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
         file_output <- paste0(dir_refseq, "/", i, ".zip")
         if (file.exists(file_output) && !params$redo) {
             log4r::warn(fn_logger, paste0("File found: genome alignment for ", i, ". Skipped."))
-            return(NULL)
+        } else {
+            # delete the zip file
+            unlink(file_output)
+
+            # download the reference sequence
+            f_refseq_download(params$exe_datasets, i, file_output)
+            log4r::info(fn_logger, paste0("File downloaded: genome alignment for ", i, "."))
         }
 
-        # delete the zip file
-        unlink(file_output)
-
-        # download the reference sequence
-        f_refseq_download(params$exe_datasets, i, file_output, dir_refseq)
-        log4r::info(fn_logger, paste0("File downloaded: genome alignment for ", i, "."))
+        # check if folder exists
+        dir_output <- paste0(dir_refseq, "/ncbi_dataset/data/", i, "/")
+        if (!dir.exists(dir_output) || params$redo) {
+            system(paste("unzip", file_output, "-d", dir_refseq))
+        }
     }
 
     stopCluster(nwcl)
