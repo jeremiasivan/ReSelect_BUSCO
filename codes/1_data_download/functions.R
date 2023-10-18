@@ -8,7 +8,7 @@ f_refseq_download <- function(dir_datasets, accession, file_output, dir_refseq) 
                 "--include genome --no-progressbar")
 
     system(cmd)
-    system(paste("unzip", file_output, dir_refseq))
+    system(paste("unzip", file_output, "-d", dir_refseq))
 }
 
 # function: download short reads FASTQ sequence using SRA Toolkit
