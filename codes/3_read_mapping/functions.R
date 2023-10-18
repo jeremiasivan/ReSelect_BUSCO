@@ -1,5 +1,6 @@
 # functions for codes/3_read_mapping
 
+# function: read map fastq to reference sequence using BWA-MEM2
 f_read_map <- function(refseq, fastq, thread, exe_bwamem2, file_sam) {
     # index reference file
     cmd_index <- paste(exe_bwamem2, "index", refseq)
