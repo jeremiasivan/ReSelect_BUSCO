@@ -59,7 +59,7 @@ if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
         # check if folder exists
         dir_output <- paste0(dir_refseq, "/ncbi_dataset/data/", i, "/")
         if (!dir.exists(dir_output) || params$redo) {
-            system(paste("unzip", file_output, "-d", dir_refseq))
+            system(paste("unzip -o", file_output, "-d", dir_refseq))
         }
     }
 
