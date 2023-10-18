@@ -54,7 +54,7 @@ if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
         unlink(file_output)
 
         # download the reference sequence
-        f_refseq_download(params$exe_datasets, i, file_output)
+        f_refseq_download(params$exe_datasets, i, file_output, dir_refseq)
         log4r::info(fn_logger, paste0("File downloaded: genome alignment for ", i, "."))
     }
 
