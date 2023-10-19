@@ -105,7 +105,7 @@ for (i in ls_shortreads) {
     reads_species <- f_extract_species_from_reads(params$exe_esearch, params$exe_efetch, i)
 
     file_mashtab <- paste0(dir_shortreads, i, "/", i, ".mashtab")
-    if (!file.exists(file_output)) {
+    if (!file.exists(file_mashtab)) {
         log4r::warn(fn_logger, paste0("File not found: .mashtab for ", i, ". Skipped."))
         return(NULL)
     }
