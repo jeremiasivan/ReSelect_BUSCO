@@ -37,7 +37,7 @@ if (!dir.exists(currentdir)) {
 }
 
 # create log file
-fn_log <- paste0(params$outdir, "/", params$prefix, "/", params$prefix, ".mapping.log")
+fn_log <- paste0(params$outdir, "/", params$prefix, "/", params$prefix, ".readmap.log")
 log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::default_log_layout())
 fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
 if (params$redo) {
