@@ -102,7 +102,7 @@ for (i in ls_shortreads) {
     # input files
     reads_accession <- i
     reads_dir <- list.files(paste0(dir_shortreads, i, "/fastq/"), full.names=T)[1]
-    reads_species <- f_extract_species_from_reads(params$exe_esearch, params$efetch, i)
+    reads_species <- f_extract_species_from_reads(params$exe_esearch, params$exe_efetch, i)
 
     file_mashtab <- paste0(dir_shortreads, i, "/", i, ".mashtab")
     if (!file.exists(file_output)) {
@@ -122,7 +122,7 @@ for (i in ls_shortreads) {
     refseq_accession <- paste(ls_refseq_accession[1:2], collapse="_")
 
     # extract the species name and score
-    refseq_species <- f_extract_species_from_assembly(params$exe_esearch, params$efetch, params$xtract, refseq_accession)
+    refseq_species <- f_extract_species_from_assembly(params$exe_esearch, params$exe_efetch, params$exe_xtract, refseq_accession)
     score <- as.numeric(ls_best_sketch[1])
     
     # save the information into data.table
