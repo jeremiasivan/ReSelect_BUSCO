@@ -16,7 +16,7 @@ if (!dir.exists(dir_readmap)) {
 }
 
 # input/output files
-file_mashsum <- paste0(params$outdir, "/", params$prefix, ".mashsum")
+file_mashsum <- paste0(getwd(), "/", params$prefix, ".mashsum")
 ```
 
 ```{r readmap}
