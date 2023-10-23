@@ -32,7 +32,7 @@ for (i in 1:nrow(df_mashsum)) {
     }
     
     # check the number of fastq files
-    ls_dir_reads <- strsplit(df_mashsum$reads_dir[i], split="/")
+    ls_dir_reads <- unlist(strsplit(df_mashsum$reads_dir[i], split="/"))
     dir_reads <- paste(ls_dir_reads[-length(ls_dir_reads)], collapse="/")
 
     ls_fastq <- list.files(dir_reads, pattern="*.fastq", recursive=F)
