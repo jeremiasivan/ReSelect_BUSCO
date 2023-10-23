@@ -14,9 +14,7 @@ dir_sratoolkit <- ""
 
 # mash sketch
 exe_mash <- ""
-exe_esearch <- ""
 exe_efetch <- ""
-exe_xtract <- ""
 
 # read mapping
 exe_bwamem2 <- ""
@@ -40,7 +38,7 @@ rmarkdown::render(input=paste0(codedir,"/1_data_download/1_main.Rmd"),
 rmarkdown::render(input=paste0(codedir,"/2_mash_sketch/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, prefix, ".mash.html"),
                   params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
-                              exe_mash=exe_mash, exe_esearch=exe_esearch, exe_efetch=exe_efetch, exe_xtract=exe_xtract),
+                              exe_mash=exe_mash, exe_efetch=exe_efetch),
                   quiet=TRUE)
 
 # read mapping

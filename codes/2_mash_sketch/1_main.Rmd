@@ -14,9 +14,7 @@ params:
   
   # executables
   exe_mash: ""
-  exe_esearch: ""
   exe_efetch: ""
-  exe_xtract: ""
 ---
 
 ## Load required libraries and functions

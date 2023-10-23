@@ -16,8 +16,8 @@ f_mash_screen <- function(exe_mash, file_msh, file_input, file_output) {
 }
 
 # function: run entrez-direct to extract species from SRA accession number
-f_extract_species_from_reads <- function(exe_esearch, exe_efetch, accession) {
-    cmd_entrez <- paste(exe_esearch, "-db sra -query", accession, "|", exe_efetch, "-format runinfo")
+f_extract_species_from_reads <- function(exe_efetch, accession) {
+    cmd_entrez <- paste(exe_efetch, "-db sra -id", accession, "-format runinfo")
     metadata <- system(cmd_entrez, intern=T)
 
     # extract index of the species name
@@ -29,9 +29,13 @@ f_extract_species_from_reads <- function(exe_esearch, exe_efetch, accession) {
 }
 
 # function: run entrez-direct to extract species from assembly accession number
-f_extract_species_from_assembly <- function(exe_esearch, exe_efetch, exe_xtract, accession) {
-    cmd_entrez <- paste(exe_esearch, "-db assembly -query", accession, "|", exe_efetch, "-format docsum |", exe_xtract, "-pattern DocumentSummary -element Organism")
-    species_name <- system(cmd_entrez, intern=T)
+f_extract_species_from_assembly <- function(exe_efetch, accession) {
+    cmd_entrez <- paste(exe_efetch, "-db assembly -id", accession, "-format docsum")
+    metadata <- system(cmd_entrez, intern=T)
+
+    # extract the species name
+    species_name <- metadata[grep("<Organism>", metadata)]
+    species_name <- gsub(".*<Organism>(.+)<\\/Organism>.*", "\\1", species_name)
 
     return(species_name)
 }
