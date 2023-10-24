@@ -35,7 +35,7 @@ for (i in 1:nrow(df_mashsum)) {
     ls_dir_reads <- unlist(strsplit(df_mashsum$reads_dir[i], split="/"))
     dir_reads <- paste(ls_dir_reads[-length(ls_dir_reads)], collapse="/")
 
-    ls_fastq <- list.files(dir_reads, pattern="*.fastq", recursive=F)
+    ls_fastq <- list.files(dir_reads, pattern="*.fastq", recursive=F, full.names=T)
     len_ls_fastq <- length(ls_fastq)
     if (len_ls_fastq != 1 && len_ls_fastq != 2) {
         log4r::warn(fn_logger, paste0("Warn: invalid number of FASTQ file for ", df_mashsum$reads_accession[i], " (", len_ls_fastq, "). Skipped."))
