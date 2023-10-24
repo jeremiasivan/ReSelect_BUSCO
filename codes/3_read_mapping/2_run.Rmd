@@ -15,6 +15,11 @@ if (!dir.exists(dir_readmap)) {
   dir.create(dir_readmap, recursive = T)
 }
 
+dir_sam <- paste0(dir_readmap, "sam/")
+dir_bam <- paste0(dir_readmap, "bam/")
+dir_fasta <- paste0(dir_readmap, "fasta/")
+lapply(list(dir_sam,dir_bam,dir_fasta), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+
 # input/output files
 file_mashsum <- paste0(getwd(), "/", params$prefix, ".mashsum")
 ```
@@ -25,7 +30,7 @@ df_mashsum <- data.table::fread(file_mashsum)
 
 # iterate over all short reads
 for (i in 1:nrow(df_mashsum)) {
-    file_sam <- paste0(dir_readmap, df_mashsum$reads_accession[i], ".sam")
+    file_sam <- paste0(dir_sam, df_mashsum$reads_accession[i], ".sam")
     if (file.exists(file_sam) && !params$redo) {
         log4r::warn(fn_logger, paste0("File found: SAM file for ", df_mashsum$reads_accession[i], ". Skipped."))
         next
@@ -44,5 +49,17 @@ for (i in 1:nrow(df_mashsum)) {
         f_read_map(df_mashsum$refseq_dir, ls_fastq, params$thread, params$exe_bwamem2, file_sam)
         log4r::info(fn_logger, paste0("File created: SAM file for ", df_mashsum$reads_accession[i], "."))
     }
+}
+```
+
+```{r file-conversion, eval=FALSE}
+ls_sam <- list.files(dir_sam, pattern='*.sam', recursive=F, full.names=F)
+
+# iterate over SAM files
+for (i in ls_sam) {
+    prefix <- strsplit(i, split=".sam")[[1]]
+    f_convert_SAM(prefix, dir_sam, dir_bam, dir_fasta, params$thread, params$exe_samtools)
+
+    log4r::info(fn_logger, paste0("File created: BAM and FASTA files for ", prefix, "."))
 }
 ```
