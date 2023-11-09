@@ -18,6 +18,7 @@ exe_efetch <- ""
 
 # read mapping
 exe_bwamem2 <- ""
+exe_samtools <- ""
 #################################
 
 # set up outdir
@@ -45,7 +46,7 @@ rmarkdown::render(input=paste0(codedir,"/2_mash_sketch/1_main.Rmd"),
 rmarkdown::render(input=paste0(codedir,"/3_read_mapping/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, prefix, ".readmap.html"),
                   params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
-                              exe_bwamem2=exe_bwamem2),
+                              exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools),
                   quiet=TRUE)
 
 #################################
