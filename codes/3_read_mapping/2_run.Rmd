@@ -9,7 +9,7 @@ write.table(c("",
               "####################################"),
             file=fn_log, quote=F, row.names=F, col.names=F, append=T)
 
-# create refseq directory
+# create readmap directory
 dir_readmap <- paste0(getwd(), "/readmap/")
 if (!dir.exists(dir_readmap)) {
   dir.create(dir_readmap, recursive = T)
@@ -52,7 +52,7 @@ for (i in 1:nrow(df_mashsum)) {
 }
 ```
 
-```{r file-conversion, eval=FALSE}
+```{r file-conversion}
 ls_sam <- list.files(dir_sam, pattern='*.sam', recursive=F, full.names=F)
 
 # iterate over SAM files

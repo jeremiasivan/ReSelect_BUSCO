@@ -61,3 +61,25 @@ f_convert_SAM <- function(prefix, dir_sam, dir_bam, dir_fasta, thread, exe_samto
                        fn_bam, ">", fn_fasta)                                          
     system(cmd_fasta)
 }
+
+f_index_reference <- function(refseq, exe_samtools) {
+    cmd_index <- paste(exe_samtools, "faidx", refseq)
+    system(cmd_index)
+}
+
+#f_variant_call <- function(prefix, refseq, bam, chromosome, dir_vcf, exe_bcftools){
+#    fn_bcf <- paste0(dir_vcf, "/", prefix, ".genotype_likelihood.bcf")
+#    
+#    cmd_bcftools <- paste(exe_bcftools, "mpileup -f", refseq)
+#
+#    if (chromosome != "" && !is.null(chromosome)) {
+#        cmd_bcftools <- paste(cmd_bcftools, "-r", chromosome)
+#    }
+#    
+#    cmd_bcftools <- paste(cmd_bcftools, fn_bam, "|",
+#                          exe_bcftools, "call",
+#                          "-m -Oz -f GQ",
+#                          "-o", fn_output)
+#
+#    system(cmd_bcftools)
+#}
