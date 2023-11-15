@@ -47,6 +47,12 @@ f_convert_SAM <- function(prefix, dir_sam, dir_bam, dir_fasta, thread, exe_samto
                          fn_bam_sort, fn_bam_markdup) 
     system(cmd_markdup)
 
+    # run samtools index to BAM
+    cmd_index <- paste(exe_samtools, "index",
+                      "--threads", thread,
+                      fn_bam_markdup)
+    system(cmd_index)
+
     # run samtools view to BAM
     cmd_view <- paste(exe_samtools, "view",
                       "--threads", thread,
