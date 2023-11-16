@@ -30,33 +30,29 @@ f_convert_SAM <- function(prefix, dir_sam, dir_bam, dir_fasta, thread, exe_samto
     # run samtools fixmate
     cmd_fixmate <- paste(exe_samtools, "fixmate",
                          "--threads", thread,
-                         "-O bam",
+                         "-O bam,level=1",
                          "-m", fn_sam, fn_bam_fixmate)
     system(cmd_fixmate)
 
     # run samtools sort
     cmd_sort <- paste(exe_samtools, "sort",
                       "--threads", thread,
+                      "-l 1",
                       "-o", fn_bam_sort, fn_bam_fixmate)
     system(cmd_sort)                  
     
     # run samtools markdup
     cmd_markdup <- paste(exe_samtools, "markdup",
                          "--threads", thread,
-                         "-O bam",
+                         "-O bam,level=1",
                          fn_bam_sort, fn_bam_markdup) 
     system(cmd_markdup)
-
-    # run samtools index to BAM
-    cmd_index <- paste(exe_samtools, "index",
-                      "--threads", thread,
-                      fn_bam_markdup)
-    system(cmd_index)
 
     # run samtools view to BAM
     cmd_view <- paste(exe_samtools, "view",
                       "--threads", thread,
-                      fn_bam_markdup, fn_bam)
+                      fn_bam_markdup, 
+                      "-o", fn_bam)
     system(cmd_view)
 
     # run samtools fasta
