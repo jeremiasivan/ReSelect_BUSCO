@@ -1,5 +1,5 @@
 ---
-title: "BUSCO Extraction from Genome Alignment"
+title: "BUSCO Check for Reference Sequences"
 output:
   html_document:
     code_folding: show
@@ -13,14 +13,24 @@ params:
   redo: TRUE
   
   # executables
+  exe_bwamem2: ""
+  exe_samtools: ""
   exe_busco: ""
-  lineage: ""
-  mode: ""
+  exe_iqtree2: ""
+
+  # number of short reads to cross-validate
+  n_short_reads: 1
+
+  # BUSCO
+  busco_lineage: ""
+  busco_mode: ""
 ---
 
 ## Load required libraries and functions
 ```{r}
-source(paste0(params$codedir, "/4_busco/functions.R"))
+source(paste0(params$codedir, "/2_busco_check/functions.R"))
+
+library(doSNOW)
 ```
 
 ```{r, include=FALSE}
@@ -42,7 +52,7 @@ if (!dir.exists(logdir)) {
 }
 
 # create log file
-fn_log <- paste0(logdir, params$prefix, ".busco.log")
+fn_log <- paste0(logdir, params$prefix, ".check.log")
 log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::default_log_layout())
 fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
 if (!file.exists(fn_log) || params$redo) {
@@ -53,7 +63,10 @@ if (!file.exists(fn_log) || params$redo) {
 knitr::opts_knit$set(root.dir = currentdir)
 ```
 
-```{r child = paste0(params$codedir,"/4_busco/2_run.Rmd")}
+```{r child = paste0(params$codedir,"/2_busco_check/2_run_readmap.Rmd")}
+```
+
+```{r child = paste0(params$codedir,"/2_busco_check/3_run_busco.Rmd")}
 ```
 
 ```{r, include=FALSE}

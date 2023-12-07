@@ -1,0 +1,72 @@
+---
+title: "Read Mapping of ThreeShort Reads"
+---
+
+```{r check-readmap-setup, include=FALSE}
+write.table(c("",
+              "####################################",
+              "####        Read Mapping        ####",
+              "####################################"),
+            file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+
+# refseq and short reads directories
+dir_refseq <- paste0(getwd(), "/refseq/")
+dir_shortreads <- paste0(getwd(), "/short_reads/")
+
+# lists of refseq and short reads
+ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
+ls_shortreads <- list.dirs(dir_shortreads, recursive=F, full.names=F)
+
+# create output directory
+dir_readmap <- paste0(getwd(), "/busco_check/readmap/")
+if (!dir.exists(dir_readmap)) {
+  dir.create(dir_readmap, recursive = T)
+}
+
+# select short reads
+randseed <- sample(1:length(ls_shortreads), params$n_short_reads)
+ls_shortreads <- ls_shortreads[randseed]
+```
+
+## Map short reads to reference using BWA-MEM2
+```{r check-readmap}
+# iterate over short reads
+for (read in ls_shortreads) {
+    # iterate over reference sequences
+    for (ref in ls_refseq) {
+        prefix <- paste0(read, "_", ref)
+
+        # output directory
+        dir_output <- paste0(dir_readmap, prefix, "/")
+        if (!dir.exists(dir_output)) {
+            dir.create(dir_output, recursive=T)
+        }
+
+        # check if file exists
+        file_sam <- paste0(dir_output, prefix, ".sam")
+        if (file.exists(file_sam) && !params$redo) {
+            log4r::warn(fn_logger, paste0("File found: SAM file for ", prefix, ". Skipped."))
+            next
+        }
+
+        # extract reference sequence
+        dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
+        file_ref <- list.files(dir_ref, pattern="*.fna", recursive=F, full.names=T)[1]
+
+        # extract FASTQ files
+        dir_reads <- paste0(dir_shortreads, read, "/fastq/")
+        ls_fastq <- list.files(dir_reads, pattern="*.fastq", recursive=F, full.names=T)
+        len_ls_fastq <- length(ls_fastq)
+
+        # run BWA-MEM2
+        if (len_ls_fastq != 1 && len_ls_fastq != 2) {
+            log4r::warn(fn_logger, paste0("Warn: invalid number of FASTQ file for ", prefix, " (", len_ls_fastq, "). Skipped."))
+            next
+        } else {
+            f_read_map(file_ref, ls_fastq, params$thread, params$exe_bwamem2, file_sam)
+            f_convert_sam2bam(prefix, dir_output, params$thread, params$exe_samtools)
+            log4r::info(fn_logger, paste0("File created: SAM and BAM files for ", prefix, "."))
+        }
+    }
+}
+```
