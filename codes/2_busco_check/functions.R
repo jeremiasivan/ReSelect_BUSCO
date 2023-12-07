@@ -63,7 +63,8 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
                        "-m", mode,
                        "-o", prefix,
                        "--out_path", dir_output,
-                       "-c", thread)
+                       "-c", thread,
+                       "--quiet")
     system(cmd_busco)
 }
 
