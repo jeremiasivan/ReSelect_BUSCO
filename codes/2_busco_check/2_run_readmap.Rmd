@@ -54,7 +54,7 @@ for (ref in ls_refseq) {
         file_sam <- paste0(dir_output, prefix, ".sam")
         if (file.exists(file_sam) && !params$redo) {
             log4r::warn(fn_logger, paste0("File found: SAM file for ", prefix, ". Skipped."))
-            next
+            return(NULL)
         }
 
         # extract reference sequence
@@ -69,11 +69,11 @@ for (ref in ls_refseq) {
         # run BWA-MEM2
         if (len_ls_fastq != 1 && len_ls_fastq != 2) {
             log4r::warn(fn_logger, paste0("Warn: invalid number of FASTQ file for ", prefix, " (", len_ls_fastq, "). Skipped."))
-            next
-        } else {
-            f_read_map(file_ref, ls_fastq, thread_bwamem2, params$exe_bwamem2, file_sam)
-            log4r::info(fn_logger, paste0("File created: SAM file for ", prefix, "."))
+            return(NULL)
         }
+        
+        f_read_map(file_ref, ls_fastq, thread_bwamem2, params$exe_bwamem2, file_sam)
+        log4r::info(fn_logger, paste0("File created: SAM file for ", prefix, "."))
     }
 }
 
@@ -91,6 +91,13 @@ for (ref in ls_refseq) {
     # iterate over short reads
     foreach (read = ls_shortreads) %dopar% {
         prefix <- paste0(read, "--", ref)
+
+        # check if file exists
+        file_bam <- paste0(dir_output, prefix, ".bam")
+        if (file.exists(file_bam) && !params$redo) {
+            log4r::warn(fn_logger, paste0("File found: BAM file for ", prefix, ". Skipped."))
+            return(NULL)
+        }
         
         # output directory
         dir_output <- paste0(dir_readmap, prefix, "/")
