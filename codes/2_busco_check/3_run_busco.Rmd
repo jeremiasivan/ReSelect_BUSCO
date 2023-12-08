@@ -1,5 +1,5 @@
 ---
-title: "Run BUSCO Pipeline on Reference Sequences"
+title: "Run BUSCO Pipeline on Reference Sequences and Short Reads"
 ---
 
 ```{r check-busco-setup, include=FALSE}
@@ -20,6 +20,9 @@ dir_busco <- paste0(getwd(), "/busco_check/busco/")
 if (!dir.exists(dir_busco)) {
   dir.create(dir_busco, recursive = T)
 }
+
+# set thread for BUSCO
+thread_busco <- ifelse(params$thread < 50, params$thread, 50)
 ```
 
 ## Run BUSCO on reference sequences
@@ -29,8 +32,12 @@ if (!dir.exists(dir_busco_ref)) {
     dir.create(dir_busco_ref, recursive=T)
 }
 
+# create doSNOW cluster
+nwcl <- makeCluster(floor(params$thread/thread_busco))
+doSNOW::registerDoSNOW(nwcl)
+
 # iterate over reference sequences
-for (ref in ls_refseq) {
+foreach (ref = ls_refseq) %dopar% {
     # output directory
     dir_output <- paste0(dir_busco_ref, ref, "/")
     if (!dir.exists(dir_output)) {
@@ -42,9 +49,11 @@ for (ref in ls_refseq) {
     file_ref <- list.files(dir_ref, pattern="*.fna", recursive=F, full.names=T)[1]
 
     # run BUSCO
-    f_run_busco(file_ref, params$busco_lineage, ref, dir_output, params$busco_mode, params$thread, params$exe_busco)
+    f_run_busco(file_ref, params$busco_lineage, ref, dir_output, params$busco_mode, thread_busco, params$exe_busco)
     log4r::info(fn_logger, paste0("File created: BUSCO run for ", ref, "."))
 }
+
+stopCluster(nwcl)
 ```
 
 ## Extract common BUSCOs between reference sequences
@@ -92,6 +101,10 @@ if (!dir.exists(dir_busco_read)) {
 # extract list of short reads
 ls_prefix <- list.dirs(dir_readmap, recursive=F, full.names=F)
 
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
 # iterate over short reads
 for (prefix in ls_prefix) {
     # create outdir
@@ -104,12 +117,8 @@ for (prefix in ls_prefix) {
     read <- unlist(strsplit(prefix, split="_"))[1]
     ref <- unlist(strsplit(prefix, split="_"))[2]
 
-    # create doSNOW cluster
-    nwcl <- makeCluster(params$thread)
-    doSNOW::registerDoSNOW(nwcl)
-
     # iterate over shared BUSCOs
-    foreach (busco in shread_busco) %dopar% {
+    foreach (busco = shread_busco) %dopar% {
         # busco file
         file_busco_ref <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
         busco_header <- system(paste("grep '^>'", file_busco_ref), intern=T)
@@ -132,9 +141,10 @@ for (prefix in ls_prefix) {
         f_extract_busco_from_BAM(file_input_bam, file_out_bam, coordinates, file_out_1, file_out_2, params$exe_samtools)
     }
 
-    stopCluster(nwcl)
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
 }
+
+stopCluster(nwcl)
 ```
 
 ## Convert individual BUSCO alignments into MSA
@@ -149,7 +159,7 @@ nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over shared BUSCOs
-foreach (busco in shread_busco) %dopar% {
+foreach (busco = shread_busco) %dopar% {
     dir_output <- paste0(dir_busco_tree, busco, "/")
     if (!dir.exists(dir_output)) {
         dir.create(dir_output, recursive=T)
@@ -187,7 +197,7 @@ nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over shared BUSCOs
-foreach (busco in shread_busco) %dopar% {
+foreach (busco = shread_busco) %dopar% {
     dir_output <- paste0(dir_busco_tree, busco, "/")
 
     # output IQ-Tree2 files

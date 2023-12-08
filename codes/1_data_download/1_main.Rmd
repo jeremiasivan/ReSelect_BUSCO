@@ -93,8 +93,14 @@ if (params$file_refseq != "" && !is.null(params$file_refseq)) {
 if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
     log4r::warn(fn_logger, "Warn: list of reference sequence has length zero. Skipped.")
 } else {
+    # update number of thread
+    nthread <- params$thread
+    if (nthread > length(ls_refseq)) {
+      nthread <- length(ls_refseq)
+    }
+
     # create doSNOW cluster
-    nwcl <- makeCluster(params$thread)
+    nwcl <- makeCluster(nthread)
     doSNOW::registerDoSNOW(nwcl)
 
     # iterate through reference sequences
@@ -140,8 +146,14 @@ if (params$file_shortreads != "" && !is.null(params$file_shortreads)) {
 if (length(ls_shortreads) == 0 || is.null(ls_shortreads)) {
     log4r::warn(fn_logger, "Warn: list of short reads has length zero. Skipped.")
 } else {
+  # update number of thread
+    nthread <- params$thread
+    if (nthread > length(ls_shortreads)) {
+      nthread <- length(ls_shortreads)
+    }
+
     # create doSNOW cluster
-    nwcl <- makeCluster(params$thread)
+    nwcl <- makeCluster(nthread)
     doSNOW::registerDoSNOW(nwcl)
 
     # iterate through short reads
