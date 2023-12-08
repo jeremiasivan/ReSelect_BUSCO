@@ -121,8 +121,8 @@ for (prefix in ls_prefix) {
     }
 
     # extract short read and reference sequence IDs
-    read <- unlist(strsplit(prefix, split="_"))[1]
-    ref <- unlist(strsplit(prefix, split="_"))[2]
+    read <- unlist(strsplit(prefix, split="--"))[1]
+    ref <- unlist(strsplit(prefix, split="--"))[2]
 
     # iterate over shared BUSCOs
     foreach (busco = shread_busco) %dopar% {

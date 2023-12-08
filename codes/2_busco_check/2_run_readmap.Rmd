@@ -42,7 +42,7 @@ doSNOW::registerDoSNOW(nwcl)
 for (ref in ls_refseq) {
     # iterate over short reads
     foreach (read = ls_shortreads) %dopar% {
-        prefix <- paste0(read, "_", ref)
+        prefix <- paste0(read, "--", ref)
 
         # output directory
         dir_output <- paste0(dir_readmap, prefix, "/")
@@ -90,7 +90,7 @@ doSNOW::registerDoSNOW(nwcl)
 for (ref in ls_refseq) {
     # iterate over short reads
     foreach (read = ls_shortreads) %dopar% {
-        prefix <- paste0(read, "_", ref)
+        prefix <- paste0(read, "--", ref)
         
         # output directory
         dir_output <- paste0(dir_readmap, prefix, "/")
