@@ -34,7 +34,10 @@ library(doSNOW)
 ```
 
 ```{r, include=FALSE}
+# install.packages("ape")
+# install.packages("data.table")
 # install.packages("log4r")
+# install.packages("stringr")
 
 # store initial system time
 sys_tic <- Sys.time()

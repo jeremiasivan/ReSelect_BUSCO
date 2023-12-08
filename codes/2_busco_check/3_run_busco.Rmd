@@ -48,6 +48,13 @@ foreach (ref = ls_refseq) %dopar% {
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
     file_ref <- list.files(dir_ref, pattern="*.fna", recursive=F, full.names=T)[1]
 
+    # check if BUSCO run exists
+    finish_msg <- system(paste0("grep 'BUSCO analysis done' ", dir_output, "logs/busco.log"), intern=T)
+    if (length(finish_msg) != 0 && !params$redo) {
+        log4r::info(fn_logger, paste0("File found: BUSCO run for ", ref, ". Skipped."))
+        return(NULL)
+    }
+
     # run BUSCO
     f_run_busco(file_ref, params$busco_lineage, ref, dir_output, params$busco_mode, thread_busco, params$exe_busco)
     log4r::info(fn_logger, paste0("File created: BUSCO run for ", ref, "."))

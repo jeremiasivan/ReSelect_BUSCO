@@ -1,0 +1,69 @@
+---
+title: "Summarize BUSCO Trees"
+---
+
+```{r check-tree-setup, include=FALSE}
+write.table(c("",
+              "####################################",
+              "####         BUSCO Trees        ####",
+              "####################################"),
+            file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+
+# list of reference sequences
+dir_refseq <- paste0(getwd(), "/refseq/")
+ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
+
+# list of directories
+dir_check <- paste0(getwd(), "/busco_check/")
+dir_busco_tree <- paste0(dir_busco, "busco/trees/")
+
+# output file
+fn_summary <- paste0(dir_check, params$prefix, ".sumtable")
+```
+
+## Check BUSCO trees
+```{r check-tree}
+ls_busco <- list.dirs(dir_busco_tree, recursive=F, full.names=F)
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+ls_output <- foreach (busco = ls_busco, .combine='c') %dopar% {
+    # initiate variable
+    out <- list(name=busco)
+
+    # check if treefile exists
+    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, ".fa.treefile")
+    if (!file.exists(fn_tree)){
+        log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
+        return(NULL)
+    }
+
+    # read tree
+    tre <- ape::read.tree(fn_tree)
+    ls_tips <- tre$tip.label
+
+    # iterate over reference sequences
+    for (ref in ls_refseq) {
+        # extract list of taxa with specific reference
+        ls_taxa <- ls_tips[stringr::str_detect(ls_tips, ref)]
+
+        # check if clade is monophyletic
+        is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
+
+        out[[ref]] <- is_monophyletic
+    }
+
+    return(list(out))
+}
+
+stopCluster(nwcl)
+
+# convert list into dataframe
+df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
+df_output <- data.table::transpose(df_output, keep.names = "refseq", make.names = "name")
+data.table::fwrite(df_output, file=fn_summary, quote=F, row.names=F)
+
+log4r::info(fn_logger, "File created: summary for BUSCO trees.")
+```
