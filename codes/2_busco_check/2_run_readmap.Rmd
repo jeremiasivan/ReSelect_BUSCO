@@ -34,6 +34,14 @@ thread_samtools <- ifelse(params$thread < 10, params$thread, 10)
 
 ## Map short reads to reference using BWA-MEM2
 ```{r check-readmap}
+# check if the number of mapped individuals is satisfied
+ls_readmap_pair <- list.dirs(dir_readmap, recursive=F, full.names=F)
+if (length(ls_readmap_pair) == params$n_short_reads * length(ls_refseq) && !params$redo) {
+    ls_shortreads <- unique(sapply(ls_readmap_pair, function(x) {
+        unlist(strsplit(x, split="--"))[1]
+        }))
+}
+
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_bwamem2))
 doSNOW::registerDoSNOW(nwcl)
