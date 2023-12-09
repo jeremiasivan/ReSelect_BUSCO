@@ -60,7 +60,7 @@ foreach (ref = ls_refseq) %dopar% {
 
     # check if BUSCO run exists
     file_busco_log <- paste0("grep 'BUSCO analysis done' ", dir_busco_ref, ref, "/logs/busco.log")
-    if (file.exist(file_busco_log)) {
+    if (file.exists(file_busco_log)) {
         finish_msg <- system(file_busco_log, intern=T)
         if (length(finish_msg) != 0 && !params$redo) {
             log4r::info(fn_logger, paste0("File found: BUSCO run for ", ref, ". Skipped."))
