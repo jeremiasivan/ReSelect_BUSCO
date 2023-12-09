@@ -99,6 +99,9 @@ for (ref in ls_refseq) {
     # iterate over short reads
     foreach (read = ls_shortreads) %dopar% {
         prefix <- paste0(read, "--", ref)
+        
+        # output directory
+        dir_output <- paste0(dir_readmap, prefix, "/")
 
         # check if file exists
         file_bam <- paste0(dir_output, prefix, ".bam")
@@ -106,9 +109,6 @@ for (ref in ls_refseq) {
             log4r::warn(fn_logger, paste0("File found: BAM file for ", prefix, ". Skipped."))
             return(NULL)
         }
-        
-        # output directory
-        dir_output <- paste0(dir_readmap, prefix, "/")
 
         # convert SAM to BAM
         f_convert_sam2bam(prefix, dir_output, thread_samtools, params$exe_samtools)
