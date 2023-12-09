@@ -25,6 +25,22 @@ if (!dir.exists(dir_busco)) {
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
 ```
 
+## Download BUSCO lineage dataset
+```{r busco-lineage-download}
+# create directory for BUSCO lineage
+dir_busco_lineage <- paste0(getwd(), "/busco_lineage/")
+if (!dir.exists(dir_busco_lineage)) {
+    dir.create(dir_busco_lineage, recursive=T)
+}
+
+# specific BUSCO lineage
+dir_lineage <- paste0(dir_busco_lineage, "lineages/", params$busco_lineage)
+if (!dir.exists(dir_lineage)) {
+    busco_cmd <- paste(params$exe_busco, "--download_path", dir_busco_lineage, "--download", params$busco_lineage)
+    system(cmd)
+}
+```
+
 ## Run BUSCO on reference sequences
 ```{r check-busco-ref}
 dir_busco_ref <- paste0(dir_busco, "refseq/")
@@ -38,25 +54,22 @@ doSNOW::registerDoSNOW(nwcl)
 
 # iterate over reference sequences
 foreach (ref = ls_refseq) %dopar% {
-    # output directory
-    dir_output <- paste0(dir_busco_ref, ref, "/")
-    if (!dir.exists(dir_output)) {
-        dir.create(dir_output, recursive=T)
-    }
-
     # extract reference sequence
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
     file_ref <- list.files(dir_ref, pattern="*.fna", recursive=F, full.names=T)[1]
 
     # check if BUSCO run exists
-    finish_msg <- system(paste0("grep 'BUSCO analysis done' ", dir_output, "logs/busco.log"), intern=T)
-    if (length(finish_msg) != 0 && !params$redo) {
-        log4r::info(fn_logger, paste0("File found: BUSCO run for ", ref, ". Skipped."))
-        return(NULL)
+    file_busco_log <- paste0("grep 'BUSCO analysis done' ", dir_busco_ref, ref, "/logs/busco.log")
+    if (file.exist(file_busco_log)) {
+        finish_msg <- system(file_busco_log, intern=T)
+        if (length(finish_msg) != 0 && !params$redo) {
+            log4r::info(fn_logger, paste0("File found: BUSCO run for ", ref, ". Skipped."))
+            return(NULL)
+        }
     }
 
     # run BUSCO
-    f_run_busco(file_ref, params$busco_lineage, ref, dir_output, params$busco_mode, thread_busco, params$exe_busco)
+    f_run_busco(file_ref, dir_lineage, ref, dir_busco_ref, params$busco_mode, thread_busco, params$exe_busco)
     log4r::info(fn_logger, paste0("File created: BUSCO run for ", ref, "."))
 }
 
