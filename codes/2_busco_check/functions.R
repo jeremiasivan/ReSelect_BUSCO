@@ -71,10 +71,6 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
 
 # functions: extract BUSCO region
 f_extract_busco_from_BAM <- function(fn_bam, fn_out_bam, coordinates, fn_out_1, fn_out_2, exe_samtools) {
-    # run samtools index
-    cmd_index <- paste(exe_samtools, "index", fn_bam)
-    system(cmd_index)
-
     # run samtools view
     cmd_view <- paste(exe_samtools, "view",
                       "-b", fn_bam,

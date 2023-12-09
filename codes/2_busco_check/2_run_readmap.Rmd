@@ -118,3 +118,35 @@ for (ref in ls_refseq) {
 
 stopCluster(nwcl)
 ```
+
+## Index BAM file for subsequent BUSCO analysis
+```{r check-readmap-conversion}
+# create doSNOW cluster
+nwcl <- makeCluster(floor(params$thread/thread_samtools))
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over reference sequences
+for (ref in ls_refseq) {
+    # iterate over short reads
+    foreach (read = ls_shortreads) %dopar% {
+        prefix <- paste0(read, "--", ref)
+        
+        # output directory
+        dir_output <- paste0(dir_readmap, prefix, "/")
+
+        # check if file exists
+        file_bam <- paste0(dir_output, prefix, ".bam")
+        file_bam_index <- paste0(file_bam, ".bai")
+        if (file.exists(file_bam_index) && !params$redo) {
+            log4r::warn(fn_logger, paste0("File found: BAM index file for ", prefix, ". Skipped."))
+            return(NULL)
+        }
+
+        # index BAM file
+        system(paste(params$exe_samtools, "index", file_bam, "--threads", thread_samtools))
+        log4r::info(fn_logger, paste0("File created: BAM index file for ", prefix, "."))
+    }
+}
+
+stopCluster(nwcl)
+```
