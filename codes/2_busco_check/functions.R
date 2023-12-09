@@ -58,13 +58,14 @@ f_convert_sam2bam <- function(prefix, dir_output, thread, exe_samtools) {
 # function: run BUSCO pipeline
 f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe_busco) {
     cmd_busco <- paste(exe_busco,
+                       "--offline",
                        "-i", fn_fasta,
                        "-l", lineage,
                        "-m", mode,
                        "-o", prefix,
                        "--out_path", dir_output,
                        "-c", thread,
-                       "--quiet --force --offline")
+                       "--quiet --force")
     system(cmd_busco)
 }
 

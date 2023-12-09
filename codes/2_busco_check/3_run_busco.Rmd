@@ -138,7 +138,7 @@ for (prefix in ls_prefix) {
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
     # iterate over shared BUSCOs
-    foreach (busco = shread_busco) %dopar% {
+    foreach (busco = shared_busco) %dopar% {
         # busco file
         file_busco_ref <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
         busco_header <- system(paste("grep '^>'", file_busco_ref), intern=T)
@@ -179,7 +179,7 @@ nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over shared BUSCOs
-foreach (busco = shread_busco) %dopar% {
+foreach (busco = shared_busco) %dopar% {
     dir_output <- paste0(dir_busco_tree, busco, "/")
     if (!dir.exists(dir_output)) {
         dir.create(dir_output, recursive=T)
@@ -217,7 +217,7 @@ nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over shared BUSCOs
-foreach (busco = shread_busco) %dopar% {
+foreach (busco = shared_busco) %dopar% {
     dir_output <- paste0(dir_busco_tree, busco, "/")
 
     # output IQ-Tree2 files
