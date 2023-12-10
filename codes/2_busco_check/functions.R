@@ -85,7 +85,7 @@ f_extract_busco_from_BAM <- function(fn_bam, fn_out_bam, coordinates, fn_out_1, 
 }
 
 # functions: combine individual FASTA as MSA
-f_fasta2msa <- function(fn_input, header, fn_out, fn_out_aligned, exe_mafft) {
+f_fasta2msa <- function(fn_input, header, fn_out) {
     # open the FASTA file
     con <- file(fn_input, "r")
 
@@ -100,10 +100,6 @@ f_fasta2msa <- function(fn_input, header, fn_out, fn_out_aligned, exe_mafft) {
     
     # close the file connection
     close(con)
-
-    # align using MAFFT
-    mafft_cmd <- paste(exe_mafft, "--localpair --maxiterate 1000", fn_out, ">", fn_out_aligned)
-    system(mafft_cmd)
 }
 
 # functions: run IQ-Tree 2

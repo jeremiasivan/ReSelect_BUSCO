@@ -206,8 +206,12 @@ foreach (busco = shared_busco) %dopar% {
     ls_busco_reads <- list.dirs(dir_busco_read, recursive=F, full.names=F)
     for (read in ls_busco_reads) {
         file_busco_read <- paste0(dir_busco_read, read, "/", busco, ".1.fna")
-        f_fasta2msa(file_busco_read, read, fn_out, fn_out_aligned, params$exe_mafft)
+        f_fasta2msa(file_busco_read, read, fn_out)
     }
+
+    # align using MAFFT
+    mafft_cmd <- paste(params$exe_mafft, "--localpair --maxiterate 1000", fn_out, ">", fn_out_aligned)
+    system(mafft_cmd)
 }
 
 stopCluster(nwcl)
