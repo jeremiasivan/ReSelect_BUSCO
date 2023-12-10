@@ -120,7 +120,7 @@ stopCluster(nwcl)
 ```
 
 ## Index BAM file for subsequent BUSCO analysis
-```{r check-readmap-conversion}
+```{r check-index-bam}
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_samtools))
 doSNOW::registerDoSNOW(nwcl)

@@ -17,6 +17,7 @@ params:
   exe_samtools: ""
   exe_busco: ""
   exe_iqtree2: ""
+  exe_mafft: ""
 
   # number of short reads to cross-validate
   n_short_reads: 1
@@ -70,6 +71,9 @@ knitr::opts_knit$set(root.dir = currentdir)
 ```
 
 ```{r child = paste0(params$codedir,"/2_busco_check/3_run_busco.Rmd")}
+```
+
+```{r child = paste0(params$codedir,"/2_busco_check/4_summary.Rmd")}
 ```
 
 ```{r, include=FALSE}

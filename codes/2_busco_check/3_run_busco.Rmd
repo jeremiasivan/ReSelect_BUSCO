@@ -189,7 +189,8 @@ foreach (busco = shared_busco) %dopar% {
 
     # output MSA file
     fn_out <- paste0(dir_output, busco, ".fa")
-    if (file.exists(fn_out) && !params$redo) {
+    fn_out_aligned <- paste0(dir_output, busco, "_aligned.fa")
+    if (all(file.exists(fn_out, fn_out_aligned)) && !params$redo) {
         return(NULL)
     }
 
@@ -205,7 +206,7 @@ foreach (busco = shared_busco) %dopar% {
     ls_busco_reads <- list.dirs(dir_busco_read, recursive=F, full.names=F)
     for (read in ls_busco_reads) {
         file_busco_read <- paste0(dir_busco_read, read, "/", busco, ".1.fna")
-        f_fasta2msa(file_busco_read, read, fn_out)
+        f_fasta2msa(file_busco_read, read, fn_out, fn_out_aligned, params$exe_mafft)
     }
 }
 
@@ -223,8 +224,8 @@ foreach (busco = shared_busco) %dopar% {
     dir_output <- paste0(dir_busco_tree, busco, "/")
 
     # output IQ-Tree2 files
-    fn_fasta <- paste0(dir_output, busco, ".fa")
-    fn_treefile <- paste0(dir_output, busco, ".fa.treefile")
+    fn_fasta <- paste0(dir_output, busco, "_aligned.fa")
+    fn_treefile <- paste0(dir_output, busco, "_aligned.fa.treefile")
     if (file.exists(fn_treefile) && !params$redo) {
         return(NULL)
     }
