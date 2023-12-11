@@ -23,6 +23,7 @@ if (!dir.exists(dir_busco)) {
 
 # set thread for BUSCO
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
+thread_mafft <- ifelse(params$thread < 10, params$thread, 10)
 ```
 
 ## Download BUSCO lineage dataset
@@ -184,8 +185,12 @@ if (!dir.exists(dir_busco_tree)) {
     dir.create(dir_busco_tree, recursive=T)
 }
 
+# create doSNOW cluster
+nwcl <- makeCluster(floor(params$thread/thread_mafft))
+doSNOW::registerDoSNOW(nwcl)
+
 # iterate over shared BUSCOs
-for (busco in shared_busco) {
+foreach (busco = shared_busco) %dopar% {
     dir_output <- paste0(dir_busco_tree, busco, "/")
     if (!dir.exists(dir_output)) {
         dir.create(dir_output, recursive=T)
@@ -195,7 +200,7 @@ for (busco in shared_busco) {
     fn_out <- paste0(dir_output, busco, ".fa")
     fn_out_aligned <- paste0(dir_output, busco, "_aligned.fa")
     if (all(file.exists(fn_out, fn_out_aligned)) && !params$redo) {
-        next
+        return(NULL)
     }
 
     # extract BUSCO alignment from reference sequences
@@ -213,9 +218,11 @@ for (busco in shared_busco) {
     }
 
     # align using MAFFT
-    mafft_cmd <- paste(params$exe_mafft, fn_out, ">", fn_out_aligned)
+    mafft_cmd <- paste(params$exe_mafft, "--thread", thread_mafft, fn_out, ">", fn_out_aligned)
     system(mafft_cmd)
 }
+
+stopCluster(nwcl)
 ```
 
 ## Generate BUSCO trees
