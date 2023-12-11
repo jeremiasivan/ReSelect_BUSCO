@@ -133,9 +133,6 @@ for (prefix in ls_prefix) {
     read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
-    # input BAM file
-    file_input_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
-
     # create doSNOW cluster
     nwcl <- makeCluster(params$thread)
     doSNOW::registerDoSNOW(nwcl)
@@ -149,7 +146,8 @@ for (prefix in ls_prefix) {
         # extract start and stop positions
         coordinates <- unlist(strsplit(busco_header, split=">"))[2]
 
-        # output files
+        # input and output files
+        file_input_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
         file_out_bam <- paste0(dir_busco_out, busco, ".bam")
         file_out_1 <- paste0(dir_busco_out, busco, ".1.fna")
         file_out_2 <- paste0(dir_busco_out, busco, ".2.fna")
