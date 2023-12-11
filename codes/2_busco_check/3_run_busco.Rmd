@@ -123,8 +123,18 @@ if (!dir.exists(dir_busco_read)) {
 # extract list of short reads
 ls_prefix <- list.dirs(dir_readmap, recursive=F, full.names=F)
 
+# update number of thread
+nthread <- params$thread
+if (nthread > length(ls_prefix)) {
+    nthread <- length(ls_prefix)
+}
+
+# create doSNOW cluster
+nwcl <- makeCluster(nthread)
+doSNOW::registerDoSNOW(nwcl)
+
 # iterate over short reads
-for (prefix in ls_prefix) {
+foreach (prefix = ls_prefix) {
     # create outdir
     dir_busco_out <- paste0(dir_busco_read, prefix, "/")
     if (!dir.exists(dir_busco_out)) {
@@ -135,12 +145,11 @@ for (prefix in ls_prefix) {
     read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
-    # create doSNOW cluster
-    nwcl <- makeCluster(params$thread)
-    doSNOW::registerDoSNOW(nwcl)
+    # input BAM file
+    file_input_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
 
     # iterate over shared BUSCOs
-    foreach (busco = shared_busco) %dopar% {
+    for (busco in shared_busco) {
         # busco file
         file_busco_ref <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
         busco_header <- system(paste("grep '^>'", file_busco_ref), intern=T)
@@ -148,26 +157,22 @@ for (prefix in ls_prefix) {
         # extract start and stop positions
         coordinates <- unlist(strsplit(busco_header, split=">"))[2]
 
-        # input and output files
-        file_input_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
+        # output files
         file_out_bam <- paste0(dir_busco_out, busco, ".bam")
         file_out_1 <- paste0(dir_busco_out, busco, ".1.fna")
         file_out_2 <- paste0(dir_busco_out, busco, ".2.fna")
 
         # check if files exist
-        if (all(file.exists(file_out_bam, file_out_1, file_out_2)) && !params$redo) {
-            return(NULL)
+        if (!all(file.exists(file_out_bam, file_out_1, file_out_2)) || params$redo) {
+            # extract BUSCO
+            f_extract_busco_from_BAM(file_input_bam, file_out_bam, coordinates, file_out_1, file_out_2, params$exe_samtools)
         }
-
-        # extract BUSCO
-        f_extract_busco_from_BAM(file_input_bam, file_out_bam, coordinates, file_out_1, file_out_2, params$exe_samtools)
-
-        return(NULL)
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
-    stopCluster(nwcl)
 }
+
+stopCluster(nwcl)
 ```
 
 ## Convert individual BUSCO alignments into MSA
