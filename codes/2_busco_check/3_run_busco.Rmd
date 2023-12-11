@@ -71,6 +71,8 @@ foreach (ref = ls_refseq) %dopar% {
     # run BUSCO
     f_run_busco(file_ref, dir_lineage, ref, dir_busco_ref, params$busco_mode, thread_busco, params$exe_busco)
     log4r::info(fn_logger, paste0("File created: BUSCO run for ", ref, "."))
+
+    return(NULL)
 }
 
 stopCluster(nwcl)
@@ -159,6 +161,8 @@ for (prefix in ls_prefix) {
 
         # extract BUSCO
         f_extract_busco_from_BAM(file_input_bam, file_out_bam, coordinates, file_out_1, file_out_2, params$exe_samtools)
+
+        return(NULL)
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
