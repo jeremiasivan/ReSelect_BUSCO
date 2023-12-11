@@ -210,7 +210,7 @@ foreach (busco = shared_busco) %dopar% {
     }
 
     # align using MAFFT
-    mafft_cmd <- paste(params$exe_mafft, "--localpair --maxiterate 1000", fn_out, ">", fn_out_aligned)
+    mafft_cmd <- paste(params$exe_mafft, fn_out, ">", fn_out_aligned)
     system(mafft_cmd)
 }
 
