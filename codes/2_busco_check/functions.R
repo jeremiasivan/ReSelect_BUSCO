@@ -73,8 +73,9 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
 f_extract_busco_from_BAM <- function(fn_bam, fn_out_bam, coordinates, fn_out_1, fn_out_2, exe_samtools) {
     # run samtools view
     cmd_view <- paste(exe_samtools, "view",
+                      "-o", fn_out_bam,
                       "-b", fn_bam,
-                      coordinates, ">", fn_out_bam)
+                      coordinates)
     
     # check if there is an error message
     out_msg <- system(cmd_view, intern=TRUE)
