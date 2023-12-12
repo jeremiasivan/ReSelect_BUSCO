@@ -75,7 +75,13 @@ f_extract_busco_from_BAM <- function(fn_bam, fn_out_bam, coordinates, fn_out_1, 
     cmd_view <- paste(exe_samtools, "view",
                       "-b", fn_bam,
                       coordinates, ">", fn_out_bam)
-    system(cmd_view)
+    
+    # check if there is an error message
+    out_msg <- system(cmd_view, intern=TRUE)
+    if (grepl(".+specifies an invalid region or unknown reference*", out_msg)) {
+        unlink(fn_out_bam)
+        return(NULL)
+    }
 
     # run samtools fasta
     cmd_fasta <- paste(exe_samtools, "fasta",
@@ -86,13 +92,19 @@ f_extract_busco_from_BAM <- function(fn_bam, fn_out_bam, coordinates, fn_out_1, 
 
 # functions: combine individual FASTA as MSA
 f_fasta2msa <- function(fn_input, header, fn_out) {
+    # initiate variable
+    first_sequence <- TRUE
+
     # open the FASTA file
     con <- file(fn_input, "r")
 
     # iterate over lines
     while (length(line <- readLines(con, n = 1)) > 0) {
         if (grepl("^>+", line)) {
-            write.table(paste0(">", header), file=fn_out, quote=F, row.names=F, col.names=F, append=T)
+            if (first_sequence) {
+                write.table(paste0(">", header), file=fn_out, quote=F, row.names=F, col.names=F, append=T)
+                first_sequence <- FALSE
+            }
         } else {
             write.table(line, file=fn_out, quote=F, row.names=F, col.names=F, append=T)
         }

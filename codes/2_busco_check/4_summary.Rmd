@@ -52,6 +52,11 @@ ls_output <- foreach (busco = ls_busco, .combine='c') %dopar% {
         # check if clade is monophyletic
         is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
 
+        # check if tips are complete
+        if (n_short_reads+1 != length(ls_taxa)) {
+            is_monophyletic <- FALSE
+        }
+        
         out[[ref]] <- is_monophyletic
     }
 

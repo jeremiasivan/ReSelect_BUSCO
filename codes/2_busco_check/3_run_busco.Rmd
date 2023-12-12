@@ -208,6 +208,10 @@ foreach (busco = shared_busco) %dopar% {
     ls_busco_reads <- list.dirs(dir_busco_read, recursive=F, full.names=F)
     for (read in ls_busco_reads) {
         file_busco_read <- paste0(dir_busco_read, read, "/", busco, ".1.fna")
+        if (!file.exists(file_busco_read)) {
+            next
+        }
+
         f_fasta2msa(file_busco_read, read, fn_out)
     }
 
