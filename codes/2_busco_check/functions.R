@@ -78,7 +78,7 @@ f_extract_busco_from_BAM <- function(fn_bam, fn_out_bam, coordinates, fn_out_1, 
     
     # check if there is an error message
     out_msg <- system(cmd_view, intern=TRUE)
-    if (!is.null(out_msg) && grepl(".+specifies an invalid region or unknown reference*", out_msg)) {
+    if (length(grep(".+specifies an invalid region or unknown reference*", out_msg)) != 0) {
         unlink(fn_out_bam)
         return(NULL)
     }
