@@ -45,14 +45,14 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
 # function: run BUSCO pipeline
 f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe_busco) {
     cmd_busco <- paste(exe_busco,
-                       "--offline",
                        "-i", fn_fasta,
                        "-l", lineage,
                        "-m", mode,
                        "-o", prefix,
+                       "--download_path", dir_output,
                        "--out_path", dir_output,
                        "-c", thread,
-                       "--quiet --force")
+                       "--quiet --force --offline")
     system(cmd_busco)
 }
 
