@@ -17,7 +17,7 @@ params:
   file_shortreads: ""
 
   exe_datasets: ""
-  dir_sratoolkit: ""
+  bin_sratoolkit: ""
 ---
 
 ## Load required libraries and functions
@@ -51,18 +51,17 @@ log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::defa
 fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
 if (!file.exists(fn_log) || params$redo) {
   unlink(fn_log)
-  write.table("BusIER", file=fn_log, quote=F, row.names=F, col.names=F)
+  f_write_log(fn_log=fn_log, msg="BusIER")
 }
 
 knitr::opts_knit$set(root.dir = currentdir)
 ```
 
-```{r download-setup, include=FALSE}
-write.table(c("",
-              "####################################",
-              "####        Data Download       ####",
-              "####################################"),
-            file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+```{r, include=FALSE}
+f_write_log(fn_log=fn_log,
+            msg=c("", "####################################",
+                      "####        Data Download       ####",
+                      "####################################"))
 
 # create refseq directory
 dir_refseq <- paste0(currentdir, "/refseq/")
@@ -78,100 +77,113 @@ if (!dir.exists(dir_shortreads)) {
 ```
 
 ## Download reference genome FASTA alignments from NCBI
-```{r download-refseq}
-write.table(c("",
-              "------------ Reference Sequences -----------"),
-              file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+```{r, include=FALSE}
+f_write_log(fn_log=fn_log,
+            msg=c("", "------------ Reference Sequences -----------"))
+
+# initiate variable to store list of reference sequences
+ls_refseq <- NULL
+is_refseq_available <- FALSE
 
 # open the file that contains the list of reference sequences
-ls_refseq <- NULL
 if (params$file_refseq != "" && !is.null(params$file_refseq)) {
-    ls_refseq <- readLines(params$file_refseq)
+  ls_refseq <- readLines(params$file_refseq)
 }
 
 # check the length of the reference sequences
 if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
-    log4r::warn(fn_logger, "Warn: list of reference sequence has length zero. Skipped.")
+  f_write_log(fn_log=fn_log, msg="Warn: list of reference sequence has length zero")
 } else {
-    # update number of thread
-    nthread <- params$thread
-    if (nthread > length(ls_refseq)) {
-      nthread <- length(ls_refseq)
-    }
-
-    # create doSNOW cluster
-    nwcl <- makeCluster(nthread)
-    doSNOW::registerDoSNOW(nwcl)
-
-    # iterate through reference sequences
-    foreach (i = ls_refseq) %dopar% {
-        # check if file exists
-        file_output <- paste0(dir_refseq, "/", i, ".zip")
-        if (file.exists(file_output) && !params$redo) {
-            log4r::warn(fn_logger, paste0("File found: genome alignment for ", i, ". Skipped."))
-        } else {
-            # delete the zip file
-            unlink(file_output)
-
-            # download the reference sequence
-            f_refseq_download(params$exe_datasets, i, file_output)
-            log4r::info(fn_logger, paste0("File downloaded: genome alignment for ", i, "."))
-        }
-
-        # check if folder exists
-        dir_output <- paste0(dir_refseq, i, "/")
-        if (!dir.exists(dir_output) || params$redo) {
-            dir.create(dir_output, recursive=T)
-            system(paste("unzip -o", file_output, "-d", dir_output))
-        }
-    }
-
-    stopCluster(nwcl)
+  f_write_log(fn_log=fn_log, msg=paste("Number of reference sequences:", length(ls_refseq)))
+  is_refseq_available <- TRUE
 }
 ```
 
+```{r download-refseq, include=is_refseq_available, eval=is_refseq_available}
+# update number of thread
+nthread <- params$thread
+if (nthread > length(ls_refseq)) {
+  nthread <- length(ls_refseq)
+}
+
+# create doSNOW cluster
+nwcl <- makeCluster(nthread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate through reference sequences
+foreach (i = ls_refseq) %dopar% {
+    # check if file exists
+    file_output <- paste0(dir_refseq, "/", i, ".zip")
+    if (file.exists(file_output) && !params$redo) {
+        log4r::warn(fn_logger, paste0("File found: genome alignment for ", i, ". Skipped."))
+    } else {
+        # delete the zip file
+        unlink(file_output)
+
+        # download the reference sequence
+        f_refseq_download(params$exe_datasets, i, file_output)
+        log4r::info(fn_logger, paste0("File downloaded: genome alignment for ", i, "."))
+    }
+
+    # check if folder exists
+    dir_output <- paste0(dir_refseq, i, "/")
+    if (!dir.exists(dir_output) || params$redo) {
+        dir.create(dir_output, recursive=T)
+        unzip(file_output, exdir=dir_output)
+    }
+}
+
+stopCluster(nwcl)
+```
 ## Download short reads FASTQ alignments from NCBI
-```{r download-shortreads}
-write.table(c("",
-              "---------------- Short Reads ---------------"),
-              file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+```{r, include=FALSE}
+f_write_log(fn_log=fn_log,
+            msg=c("", "---------------- Short Reads ---------------"))
+
+# initiate variable to store list of reference sequences
+ls_shortreads <- NULL
+is_shortreads_available <- FALSE
 
 # open the file that contains the list of short reads
-ls_shortreads <- NULL
 if (params$file_shortreads != "" && !is.null(params$file_shortreads)) {
-    ls_shortreads <- readLines(params$file_shortreads)
+  ls_shortreads <- readLines(params$file_shortreads)
 }
 
 # check the length of the short reads
 if (length(ls_shortreads) == 0 || is.null(ls_shortreads)) {
-    log4r::warn(fn_logger, "Warn: list of short reads has length zero. Skipped.")
+  f_write_log(fn_log=fn_log, msg="Warn: list of short reads has length zero")
 } else {
-  # update number of thread
-    nthread <- params$thread
-    if (nthread > length(ls_shortreads)) {
-      nthread <- length(ls_shortreads)
-    }
-
-    # create doSNOW cluster
-    nwcl <- makeCluster(nthread)
-    doSNOW::registerDoSNOW(nwcl)
-
-    # iterate through short reads
-    foreach (i = ls_shortreads) %dopar% {
-        # check if file exists
-        dir_output_fastq <- paste0(dir_shortreads, i, "/fastq/")
-        if (length(list.files(dir_output_fastq, recursive=F)) != 0 && !params$redo) {
-            log4r::warn(fn_logger, paste0("File found: FASTQ alignment for ", i, ". Skipped."))
-            return(NULL)
-        }
-
-        # download the short reads
-        f_shortreads_download(params$dir_sratoolkit, i, dir_shortreads)
-        log4r::info(fn_logger, paste0("File downloaded: FASTQ alignment for ", i, "."))
-    }
-
-    stopCluster(nwcl)
+  f_write_log(fn_log=fn_log, msg=paste("Number of short reads:", length(ls_shortreads)))
+  is_shortreads_available <- TRUE
 }
+```
+
+```{r download-shortreads, include=is_shortreads_available, eval=is_shortreads_available}
+# update number of thread
+nthread <- params$thread
+if (nthread > length(ls_shortreads)) {
+  nthread <- length(ls_shortreads)
+}
+
+# create doSNOW cluster
+nwcl <- makeCluster(nthread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate through short reads
+foreach (i = ls_shortreads) %dopar% {
+    # check if file exists
+    dir_output_fastq <- paste0(dir_shortreads, i, "/fastq/")
+    if (length(list.files(dir_output_fastq, recursive=F)) != 0 && !params$redo) {
+        log4r::warn(fn_logger, paste0("File found: FASTQ alignment for ", i, ". Skipped."))
+        return(NULL)
+    }
+
+    # download the short reads
+    f_shortreads_download(params$bin_sratoolkit, i, dir_shortreads)
+    log4r::info(fn_logger, paste0("File downloaded: FASTQ alignment for ", i, "."))
+}
+
+stopCluster(nwcl)
 ```
 
 ```{r, include=FALSE}
@@ -179,6 +191,5 @@ if (length(ls_shortreads) == 0 || is.null(ls_shortreads)) {
 sys_toc <- Sys.time()
 
 # write the system time in log file
-write.table(c("", paste0("Total elapsed time: ", round(as.numeric(difftime(sys_toc, sys_tic, units = "mins")), 3), " mins")),
-            file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+f_write_log(fn_log=fn_log, msg=c("", paste0("Total elapsed time: ", round(as.numeric(difftime(sys_toc, sys_tic, units = "mins")), 3), " mins")))
 ```

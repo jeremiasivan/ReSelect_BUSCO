@@ -10,7 +10,7 @@ file_refseq <- ""
 file_shortreads <- ""
 
 exe_datasets <- "datasets"
-dir_sratoolkit <- "sratoolkit/bin/"
+bin_sratoolkit <- "sratoolkit/bin/"
 
 # BUSCO check
 exe_bwamem2 <- "bwa-mem2"
@@ -38,7 +38,7 @@ rmarkdown::render(input=paste0(codedir,"/1_data_download/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, prefix, ".download.html"),
                   params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               file_refseq=file_refseq, file_shortreads=file_shortreads,
-                              exe_datasets=exe_datasets, dir_sratoolkit=dir_sratoolkit),
+                              exe_datasets=exe_datasets, bin_sratoolkit=bin_sratoolkit),
                   quiet=TRUE)
 
 # BUSCO check
