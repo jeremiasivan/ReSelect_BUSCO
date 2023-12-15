@@ -3,29 +3,23 @@ title: "Read Mapping of Short Reads on Reference Sequences"
 ---
 
 ```{r check-readmap-setup, include=FALSE}
-write.table(c("",
-              "####################################",
-              "####        Read Mapping        ####",
-              "####################################"),
-            file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+f_write_log(fn_log=fn_log,
+            msg=c("", "####################################",
+                      "####        Read Mapping        ####",
+                      "####################################"))
 
 # refseq and short reads directories
 dir_refseq <- paste0(getwd(), "/refseq/")
 dir_shortreads <- paste0(getwd(), "/short_reads/")
 
-# lists of refseq and short reads
+# list of refseq
 ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
-ls_shortreads <- list.dirs(dir_shortreads, recursive=F, full.names=F)
 
 # create output directory
 dir_readmap <- paste0(getwd(), "/busco_check/readmap/")
 if (!dir.exists(dir_readmap)) {
   dir.create(dir_readmap, recursive = T)
 }
-
-# select short reads
-randseed <- sample(1:length(ls_shortreads), params$n_short_reads)
-ls_shortreads <- ls_shortreads[randseed]
 
 # set thread for bwamem2 and samtools
 thread_bwamem2 <- ifelse(params$thread < 50, params$thread, 50)
@@ -34,13 +28,9 @@ thread_samtools <- ifelse(params$thread < 10, params$thread, 10)
 
 ## Map short reads to reference using BWA-MEM2
 ```{r check-readmap}
-# check if the number of mapped individuals is satisfied
-ls_readmap_pair <- list.dirs(dir_readmap, recursive=F, full.names=F)
-if (length(ls_readmap_pair) == params$n_short_reads * length(ls_refseq) && !params$redo) {
-    ls_shortreads <- unique(sapply(ls_readmap_pair, function(x) {
-        unlist(strsplit(x, split="--"))[1]
-        }))
-}
+# select short reads
+df_shortreads <- data.table::fread(params$file_shortreads)
+ls_shortreads <- df_shortreads$id[df_shortreads$is_check]
 
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_bwamem2))
@@ -95,9 +85,8 @@ stopCluster(nwcl)
 
 ## Convert SAM to BAM
 ```{r check-readmap-conversion}
-write.table(c("",
-              "--------- Data Preprocessing -------"),
-              file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+f_write_log(fn_log=fn_log,
+            msg=c("", "--------- Data Preprocessing -------"))
 
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_samtools))

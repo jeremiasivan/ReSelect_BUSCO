@@ -146,7 +146,8 @@ is_shortreads_available <- FALSE
 
 # open the file that contains the list of short reads
 if (params$file_shortreads != "" && !is.null(params$file_shortreads)) {
-  ls_shortreads <- readLines(params$file_shortreads)
+  df_shortreads <- read.table(params$file_shortreads, header=T)
+  ls_shortreads <- df_shortreads$id
 }
 
 # check the length of the short reads
