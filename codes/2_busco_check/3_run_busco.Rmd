@@ -205,7 +205,10 @@ foreach (busco = shared_busco) %dopar% {
     fn_out <- paste0(dir_output, busco, ".fa")
     fn_out_aligned <- paste0(dir_output, busco, "_aligned.fa")
     if (all(file.exists(fn_out, fn_out_aligned)) && !params$redo) {
-        return(NULL)
+        # check if file is not empty
+        if (file.size(fn_out_aligned) != 0L) {
+            return(NULL)
+        }
     }
 
     # extract BUSCO alignment from reference sequences
