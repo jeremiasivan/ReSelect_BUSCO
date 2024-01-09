@@ -27,7 +27,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
 
     nthread <- paste("--threads", thread)
 
-    # run samtools fixmate
+    # run samtools
     cmd_samtools <- paste(exe_samtools, "view", nthread, "-b -u", fn_sam, "|",
                           exe_samtools, "collate", nthread, "-O -u - |",
                           exe_samtools, "fixmate", nthread, "-m -u - - |",
@@ -35,11 +35,18 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
                           exe_samtools, "markdup", nthread, "-", fn_bam)
     system(cmd_samtools)                  
     
+    # index BAM file
+    cmd_bam_index <- paste(exe_samtools, "index", nthread, fn_bam)
+    system(cmd_bam_index)
+
     # run bcftools mpileup
     cmd_bcftools <- paste(exe_bcftools, "mpileup", nthread, "-Ou -f", refseq, fn_bam, "|",
                           exe_bcftools, "call", nthread, "-Ou -mv |",
                           exe_bcftools, "norm", nthread, "-f", refseq, "-Oz -o", fn_vcf) 
     system(cmd_bcftools)
+
+    # index VCF file
+    cmd_vcf_index <- paste(exe_bcftools, "index -t", nthread, fn_vcf)
 }
 
 # function: run BUSCO pipeline
