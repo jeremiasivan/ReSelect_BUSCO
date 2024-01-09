@@ -25,7 +25,6 @@ fn_summary <- paste0(getwd(), "/busco_check/", params$prefix, ".sumtable")
 
 # set thread for BUSCO
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
-thread_mafft <- ifelse(params$thread < 10, params$thread, 10)
 ```
 
 ## Download BUSCO lineage dataset
@@ -192,7 +191,7 @@ if (!dir.exists(dir_busco_tree)) {
 }
 
 # create doSNOW cluster
-nwcl <- makeCluster(floor(params$thread/thread_mafft))
+nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over shared BUSCOs
@@ -227,9 +226,8 @@ foreach (busco = shared_busco) %dopar% {
         f_fasta2msa(file_busco_read, read, fn_out)
     }
 
-    # align using MAFFT
-    mafft_cmd <- paste(params$exe_mafft, "--thread", thread_mafft, fn_out, ">", fn_out_aligned)
-    system(mafft_cmd)
+    # align using MAFFT FFT-NS-2
+    f_mafft(fn_out, fn_out_aligned, "--retree 2", params$exe_mafft)
 }
 
 stopCluster(nwcl)

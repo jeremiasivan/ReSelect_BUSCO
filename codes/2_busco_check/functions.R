@@ -88,6 +88,13 @@ f_fasta2msa <- function(fn_input, header, fn_out) {
     close(con)
 }
 
+# functions: run MAFFT
+f_mafft <- function(fn_input, fn_output, params_mafft, exe_mafft) {
+    cmd_mafft <- paste(exe_mafft, params_mafft,
+                       fn_input, ">", fn_output)
+    system(cmd_mafft)
+}
+
 # functions: run IQ-Tree 2
 f_iqtree2 <- function(fn_input, exe_iqtree2) {
     cmd_iqtree2 <- paste(exe_iqtree2,
