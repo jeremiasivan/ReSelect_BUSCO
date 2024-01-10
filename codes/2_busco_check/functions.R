@@ -42,6 +42,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
     # run bcftools mpileup
     cmd_bcftools <- paste(exe_bcftools, "mpileup", nthread, "-Ou -f", refseq, fn_bam, "|",
                           exe_bcftools, "call", nthread, "-Ou -mv |",
+                          exe_bcftools, "view", nthread, "-i 'QUAL>20' |"
                           exe_bcftools, "norm", nthread, "-f", refseq, "-Oz -o", fn_vcf) 
     system(cmd_bcftools)
 
