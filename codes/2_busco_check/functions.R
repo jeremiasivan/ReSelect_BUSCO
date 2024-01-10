@@ -1,5 +1,28 @@
 # functions for codes/2_busco_check
 
+# function: quality control for short reads
+f_qc_short_reads <- function(fastq, fn_adapters, prefix, min_quality, exe_adapterremoval) {
+    cmd_qc <- paste(exe_adapterremoval, "--file1", fastq[1])
+    
+    # check the number of fastq files
+    if (length(fastq) == 2) {
+        cmd_qc <- paste(cmd_qc, "-file2", fastq[2])
+    }
+
+    # update the adapters
+    if (fn_adapters != "" && file.exists(fn_adapters)) {
+        cmd_qc <- paste(cmd_qc, "--adapter-list", fn_adapters)
+    }
+
+    # set the minimum quality score and merge overlapping reads
+    cmd_qc <- paste(cmd_qc, "--basename", prefix,
+                    "--trimqualities --minquality", min_quality,
+                    "--collapse")
+    
+    # run AdapterRemoval to get prefix.collapsed.truncated
+    system(cmd_qc)
+}
+
 # function: read map fastq to reference sequence using BWA-MEM2
 f_read_mapping <- function(refseq, fastq, thread, exe_bwamem2, file_sam) {
     # index reference file
