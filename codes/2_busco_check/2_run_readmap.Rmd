@@ -113,7 +113,7 @@ for (ref in ls_refseq) {
         # check if file exists
         file_bam <- paste0(dir_output, prefix, ".bam")
         file_vcf <- paste0(dir_output, prefix, ".vcf.gz")
-        file_vcf_idx <- paste0(file_vcf, ".csi")
+        file_vcf_idx <- paste0(file_vcf, ".tbi")
         if (all(file.exists(file_bam, file_vcf, file_vcf_idx)) && !params$redo) {
             log4r::warn(fn_logger, paste0("File found: BAM and VCF files for ", prefix, ". Skipped."))
             return(NULL)
