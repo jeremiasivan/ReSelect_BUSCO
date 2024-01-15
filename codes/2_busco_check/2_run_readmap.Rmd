@@ -16,22 +16,59 @@ dir_shortreads <- paste0(getwd(), "/short_reads/")
 ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
 
 # create output directory
+dir_shortreads <- paste0(getwd(), "/busco_check/short_reads/")
 dir_readmap <- paste0(getwd(), "/busco_check/readmap/")
-if (!dir.exists(dir_readmap)) {
-  dir.create(dir_readmap, recursive = T)
-}
+
+# create directory if not exist
+lapply(list(dir_shortreads,dir_readmap), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
 # set thread for bwamem2 and samtools
 thread_bwamem2 <- ifelse(params$thread < 50, params$thread, 50)
+thread_adapterremoval <- ifelse(params$thread < 10, params$thread, 10)
 thread_samtools <- ifelse(params$thread < 10, params$thread, 10)
 ```
 
-## Map short reads to reference using BWA-MEM2
-```{r check-readmap}
+## QC of short reads
+```{check-qc-reads}
 # select short reads
 df_shortreads <- data.table::fread(params$file_shortreads)
 ls_shortreads <- df_shortreads$id[df_shortreads$is_check]
 
+# create doSNOW cluster
+nwcl <- makeCluster(floor(params$thread/thread_adapterremoval))
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over short reads
+foreach (read = ls_shortreads) %dopar% {
+    prefix <- paste0(dir_shortreads, read)
+
+    # check if file exists
+    file_fastq <- paste0(prefix, ".collapsed.truncated")
+    if (file.exists(file_fastq) && !params$redo) {
+        log4r::warn(fn_logger, paste0("File found: filtered FASTQ file for ", prefix, ". Skipped."))
+        return(NULL)
+    }
+
+    # extract FASTQ files
+    dir_reads <- paste0(dir_shortreads, read, "/fastq/")
+    ls_fastq <- list.files(dir_reads, pattern="*.fastq", recursive=F, full.names=T)
+    len_ls_fastq <- length(ls_fastq)
+
+    # run BWA-MEM2
+    if (len_ls_fastq != 1 && len_ls_fastq != 2) {
+        log4r::warn(fn_logger, paste0("Warn: invalid number of FASTQ file for ", prefix, " (", len_ls_fastq, "). Skipped."))
+        return(NULL)
+    }
+    
+    f_qc_short_reads(ls_fastq, params$file_adapters, prefix, 25, thread_adapterremoval, params$exe_adapterremoval)
+    log4r::info(fn_logger, paste0("File created: filtered FASTQ file for ", prefix, "."))
+}
+
+stopCluster(nwcl)
+```
+
+## Map short reads to reference using BWA-MEM2
+```{r check-readmap}
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_bwamem2))
 doSNOW::registerDoSNOW(nwcl)
@@ -64,18 +101,15 @@ for (ref in ls_refseq) {
             return(NULL)
         }
 
-        # extract FASTQ files
-        dir_reads <- paste0(dir_shortreads, read, "/fastq/")
-        ls_fastq <- list.files(dir_reads, pattern="*.fastq", recursive=F, full.names=T)
-        len_ls_fastq <- length(ls_fastq)
-
-        # run BWA-MEM2
-        if (len_ls_fastq != 1 && len_ls_fastq != 2) {
-            log4r::warn(fn_logger, paste0("Warn: invalid number of FASTQ file for ", prefix, " (", len_ls_fastq, "). Skipped."))
+        # extract FASTQ file
+        file_fastq <- paste0(dir_shortreads, read, ".collapsed.truncated")
+        if (!file.exists(file_fastq)) {
+            log4r::warn(fn_logger, paste0("File not found: filtered FASTQ file for ", read, ". Skipped."))
             return(NULL)
         }
         
-        f_read_mapping(file_ref, ls_fastq, thread_bwamem2, params$exe_bwamem2, file_sam)
+        # run BWA-MEM2
+        f_read_mapping(file_ref, file_fastq, thread_bwamem2, params$exe_bwamem2, file_sam)
         log4r::info(fn_logger, paste0("File created: SAM file for ", prefix, "."))
     }
 }

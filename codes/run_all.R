@@ -8,11 +8,13 @@ redo <- TRUE
 # data download
 file_refseq <- paste0(codedir, "/../data/eucs_refseq.txt")
 file_shortreads <- paste0(codedir, "/../data/eucs_shortreads.txt")
+file_adapters <- paste0(codedir, "/../data/eucs_adapter.txt")
 
 exe_datasets <- "datasets"
 bin_sratoolkit <- "sratoolkit/bin/"
 
 # BUSCO check
+exe_adapterremoval <- "AdapterRemoval"
 exe_bwamem2 <- "bwa-mem2"
 exe_samtools <- "samtools"
 exe_bcftools <- "bcftools"
@@ -43,8 +45,9 @@ rmarkdown::render(input=paste0(codedir,"/1_data_download/1_main.Rmd"),
 rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, prefix, ".check.html"),
                   params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
-                              exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools, exe_busco=exe_busco, exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft,
-                              file_shortreads=file_shortreads, busco_lineage=busco_lineage, busco_mode=busco_mode),
+                              exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools,
+                              exe_busco=exe_busco, exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft,
+                              file_shortreads=file_shortreads, file_adapters=file_adapters, busco_lineage=busco_lineage, busco_mode=busco_mode),
                   quiet=TRUE)
 
 #################################

@@ -14,8 +14,10 @@ params:
 
   # input file
   file_shortreads: ""
+  file_adapters: ""
   
   # executables
+  exe_adapterremoval: ""
   exe_bwamem2: ""
   exe_samtools: ""
   exe_bcftools: ""

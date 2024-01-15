@@ -1,7 +1,7 @@
 # functions for codes/2_busco_check
 
 # function: quality control for short reads
-f_qc_short_reads <- function(fastq, fn_adapters, prefix, min_quality, exe_adapterremoval) {
+f_qc_short_reads <- function(fastq, fn_adapters, prefix, min_quality, thread, exe_adapterremoval) {
     cmd_qc <- paste(exe_adapterremoval, "--file1", fastq[1])
     
     # check the number of fastq files
