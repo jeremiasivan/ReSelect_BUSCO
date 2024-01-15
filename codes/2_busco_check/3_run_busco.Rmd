@@ -277,7 +277,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     out <- list(name=busco)
 
     # check if treefile exists
-    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, ".fa.treefile")
+    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
     if (!file.exists(fn_tree)){
         log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
         return(NULL)

@@ -40,7 +40,7 @@ doSNOW::registerDoSNOW(nwcl)
 for (ref in ls_refseq) {
     # extract reference sequence
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna", recursive=F, full.names=T)
+    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
     
     if (length(file_ref) != 1) {
         file_ref <- file_ref[1]
@@ -96,7 +96,7 @@ doSNOW::registerDoSNOW(nwcl)
 for (ref in ls_refseq) {
     # extract reference sequence
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna", recursive=F, full.names=T)
+    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
     
     if (length(file_ref) != 1) {
         file_ref <- file_ref[1]
