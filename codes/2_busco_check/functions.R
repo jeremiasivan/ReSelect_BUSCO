@@ -48,6 +48,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
 
     # index VCF file
     cmd_vcf_index <- paste(exe_bcftools, "index -t", nthread, fn_vcf)
+    system(cmd_vcf_index)
 }
 
 # function: run BUSCO pipeline
