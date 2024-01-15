@@ -3,11 +3,10 @@ title: "Run BUSCO Pipeline on Reference Sequences and Short Reads"
 ---
 
 ```{r check-busco-setup, include=FALSE}
-write.table(c("",
-              "####################################",
-              "####            BUSCO           ####",
-              "####################################"),
-            file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+f_write_log(fn_log=fn_log,
+            msg=c("", "####################################",
+                      "####            BUSCO           ####",
+                      "####################################"))
 
 # list of reference sequences
 dir_refseq <- paste0(getwd(), "/refseq/")
@@ -21,9 +20,11 @@ if (!dir.exists(dir_busco)) {
   dir.create(dir_busco, recursive = T)
 }
 
+# output file
+fn_summary <- paste0(getwd(), "/busco_check/", params$prefix, ".sumtable")
+
 # set thread for BUSCO
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
-thread_mafft <- ifelse(params$thread < 10, params$thread, 10)
 ```
 
 ## Download BUSCO lineage dataset
@@ -44,6 +45,8 @@ if (!dir.exists(dir_lineage)) {
 
 ## Run BUSCO on reference sequences
 ```{r check-busco-ref}
+f_write_log(fn_log=fn_log, msg=c("", "--------- Reference Sequence -------"))
+
 dir_busco_ref <- paste0(dir_busco, "refseq/")
 if (!dir.exists(dir_busco_ref)) {
     dir.create(dir_busco_ref, recursive=T)
@@ -109,13 +112,14 @@ if (length(shared_busco) == 0) {
     log4r::error(fn_logger, paste0("Error: no BUSCO shared between reference sequences. Exited."))
     knitr::knit_exit()
 } else {
-    write.table(c("", paste0("Number of complete single-copy BUSCOs: ", length(shared_busco), ".")),
-                file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+    f_write_log(fn_log=fn_log, msg=c("", paste0("Number of complete single-copy BUSCOs: ", length(shared_busco), ".")))
 }
 ```
 
 ## Extract BUSCOs for short reads
 ```{r check-busco-read}
+f_write_log(fn_log=fn_log, msg=c("", "------------ Short Reads -----------"))
+
 dir_busco_read <- paste0(dir_busco, "short_reads/")
 if (!dir.exists(dir_busco_read)) {
     dir.create(dir_busco_read, recursive=T)
@@ -140,8 +144,17 @@ for (prefix in ls_prefix) {
     read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
-    # input BAM file
-    file_input_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
+    # extract reference sequence
+    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
+    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
+    
+    if (length(file_ref) != 1) {
+        file_ref <- file_ref[1]
+        log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
+    }
+
+    # input VCF file
+    file_input_vcf <- paste0(dir_readmap, prefix, "/", prefix, ".vcf.gz")
 
     # iterate over shared BUSCOs
     foreach (busco = shared_busco) %dopar% {
@@ -152,18 +165,16 @@ for (prefix in ls_prefix) {
         # extract start and stop positions
         coordinates <- unlist(strsplit(busco_header, split=">"))[2]
 
-        # output files
-        file_out_bam <- paste0(dir_busco_out, busco, ".bam")
-        file_out_1 <- paste0(dir_busco_out, busco, ".1.fna")
-        file_out_2 <- paste0(dir_busco_out, busco, ".2.fna")
+        # output file
+        file_out <- paste0(dir_busco_out, busco, ".fna")
 
-        # check if files exist
-        if (all(file.exists(file_out_bam, file_out_1, file_out_2)) && !params$redo) {
+        # check if file exists
+        if (file.exists(file_out) && !params$redo) {
             return(NULL)
         }
 
         # extract BUSCO
-        f_extract_busco_from_BAM(file_input_bam, file_out_bam, coordinates, file_out_1, file_out_2, params$exe_samtools)
+        f_extract_busco(file_input_vcf, file_ref, coordinates, file_out, params$exe_samtools, params$exe_bcftools)
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
@@ -180,7 +191,7 @@ if (!dir.exists(dir_busco_tree)) {
 }
 
 # create doSNOW cluster
-nwcl <- makeCluster(floor(params$thread/thread_mafft))
+nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over shared BUSCOs
@@ -194,7 +205,10 @@ foreach (busco = shared_busco) %dopar% {
     fn_out <- paste0(dir_output, busco, ".fa")
     fn_out_aligned <- paste0(dir_output, busco, "_aligned.fa")
     if (all(file.exists(fn_out, fn_out_aligned)) && !params$redo) {
-        return(NULL)
+        # check if file is not empty
+        if (file.size(fn_out_aligned) != 0L) {
+            return(NULL)
+        }
     }
 
     # extract BUSCO alignment from reference sequences
@@ -207,7 +221,7 @@ foreach (busco = shared_busco) %dopar% {
     # extract BUSCO alignment from short reads
     ls_busco_reads <- list.dirs(dir_busco_read, recursive=F, full.names=F)
     for (read in ls_busco_reads) {
-        file_busco_read <- paste0(dir_busco_read, read, "/", busco, ".1.fna")
+        file_busco_read <- paste0(dir_busco_read, read, "/", busco, ".fna")
         if (!file.exists(file_busco_read)) {
             next
         }
@@ -215,9 +229,8 @@ foreach (busco = shared_busco) %dopar% {
         f_fasta2msa(file_busco_read, read, fn_out)
     }
 
-    # align using MAFFT
-    mafft_cmd <- paste(params$exe_mafft, "--thread", thread_mafft, fn_out, ">", fn_out_aligned)
-    system(mafft_cmd)
+    # align using MAFFT FFT-NS-2
+    f_mafft(fn_out, fn_out_aligned, "--retree 2", params$exe_mafft)
 }
 
 stopCluster(nwcl)
@@ -225,6 +238,8 @@ stopCluster(nwcl)
 
 ## Generate BUSCO trees
 ```{r busco-tree}
+f_write_log(fn_log=fn_log, msg=c("", "------------ BUSCO Trees -----------"))
+              
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -245,4 +260,58 @@ foreach (busco = shared_busco) %dopar% {
 }
 
 stopCluster(nwcl)
+```
+
+## Check BUSCO trees
+```{r check-tree}
+# select short reads
+df_shortreads <- data.table::fread(params$file_shortreads, select="is_check")
+n_shortreads <- df_shortreads$is_check[df_shortreads$is_check==TRUE]
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    # initiate variable
+    out <- list(name=busco)
+
+    # check if treefile exists
+    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
+    if (!file.exists(fn_tree)){
+        log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
+        return(NULL)
+    }
+
+    # read tree
+    tre <- ape::read.tree(fn_tree)
+    ls_tips <- tre$tip.label
+
+    # iterate over reference sequences
+    for (ref in ls_refseq) {
+        # extract list of taxa with specific reference
+        ls_taxa <- ls_tips[stringr::str_detect(ls_tips, ref)]
+
+        # check if clade is monophyletic
+        is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
+
+        # check if tips are complete
+        if (length(n_shortreads)+1 != length(ls_taxa)) {
+            is_monophyletic <- FALSE
+        }
+        
+        out[[ref]] <- is_monophyletic
+    }
+
+    return(list(out))
+}
+
+stopCluster(nwcl)
+
+# convert list into dataframe
+df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
+df_output <- data.table::transpose(df_output, keep.names = "refseq", make.names = "name")
+data.table::fwrite(df_output, file=fn_summary, quote=F, row.names=F)
+
+log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ```

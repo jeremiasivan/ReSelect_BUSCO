@@ -11,24 +11,27 @@ params:
   outdir: "~/busco"
   thread: 5
   redo: TRUE
+
+  # input file
+  file_shortreads: ""
   
   # executables
   exe_bwamem2: ""
   exe_samtools: ""
+  exe_bcftools: ""
+
   exe_busco: ""
   exe_iqtree2: ""
   exe_mafft: ""
 
-  # number of short reads to cross-validate
-  n_short_reads: 1
-
   # BUSCO
   busco_lineage: ""
-  busco_mode: ""
+  busco_mode: "genome"
 ---
 
 ## Load required libraries and functions
 ```{r}
+source(paste0(params$codedir, "/1_data_download/functions.R"))
 source(paste0(params$codedir, "/2_busco_check/functions.R"))
 
 library(doSNOW)
@@ -61,7 +64,7 @@ log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::defa
 fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
 if (!file.exists(fn_log) || params$redo) {
   unlink(fn_log)
-  write.table("BusIER", file=fn_log, quote=F, row.names=F, col.names=F)
+  f_write_log(fn_log=fn_log, msg="BusIER")
 }
 
 knitr::opts_knit$set(root.dir = currentdir)
@@ -71,9 +74,6 @@ knitr::opts_knit$set(root.dir = currentdir)
 ```
 
 ```{r child = paste0(params$codedir,"/2_busco_check/3_run_busco.Rmd")}
-```
-
-```{r child = paste0(params$codedir,"/2_busco_check/4_summary.Rmd")}
 ```
 
 ```{r, include=FALSE}
