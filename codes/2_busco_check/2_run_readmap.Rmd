@@ -29,7 +29,7 @@ thread_samtools <- ifelse(params$thread < 10, params$thread, 10)
 ```
 
 ## QC of short reads
-```{check-qc-reads}
+```{r check-qc-reads}
 # select short reads
 df_shortreads <- data.table::fread(params$file_shortreads)
 ls_shortreads <- df_shortreads$id[df_shortreads$is_check]
