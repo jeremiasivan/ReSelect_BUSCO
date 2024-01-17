@@ -16,11 +16,11 @@ dir_shortreads <- paste0(getwd(), "/short_reads/")
 ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
 
 # create output directory
-dir_shortreads <- paste0(getwd(), "/busco_check/short_reads/")
+dir_check_shortreads <- paste0(getwd(), "/busco_check/short_reads/")
 dir_readmap <- paste0(getwd(), "/busco_check/readmap/")
 
 # create directory if not exist
-lapply(list(dir_shortreads,dir_readmap), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+lapply(list(dir_check_shortreads,dir_readmap), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
 # set thread for bwamem2 and samtools
 thread_bwamem2 <- ifelse(params$thread < 50, params$thread, 50)
@@ -40,7 +40,7 @@ doSNOW::registerDoSNOW(nwcl)
 
 # iterate over short reads
 foreach (read = ls_shortreads) %dopar% {
-    prefix <- paste0(dir_shortreads, read)
+    prefix <- paste0(dir_check_shortreads, read)
 
     # check if file exists
     file_fastq <- paste0(prefix, ".collapsed.truncated")
@@ -102,7 +102,7 @@ for (ref in ls_refseq) {
         }
 
         # extract FASTQ file
-        file_fastq <- paste0(dir_shortreads, read, ".collapsed.truncated")
+        file_fastq <- paste0(dir_check_shortreads, read, ".collapsed.truncated")
         if (!file.exists(file_fastq)) {
             log4r::warn(fn_logger, paste0("File not found: filtered FASTQ file for ", read, ". Skipped."))
             return(NULL)
