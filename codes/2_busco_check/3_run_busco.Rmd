@@ -148,13 +148,17 @@ for (prefix in ls_prefix) {
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
     file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
     
-    if (length(file_ref) != 1) {
+    if (length(file_ref) > 1) {
         file_ref <- file_ref[1]
         log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
     }
 
     # input VCF file
     file_input_vcf <- paste0(dir_readmap, prefix, "/", prefix, ".vcf.gz")
+    if (!all(file.exists(file_ref, file_input_vcf))) {
+        log4r::warn(fn_logger, paste0("File not found: FASTA or VCF file for ", prefix, ". Skipped."))
+        next
+    }
 
     # iterate over shared BUSCOs
     foreach (busco = shared_busco) %dopar% {
@@ -274,7 +278,7 @@ doSNOW::registerDoSNOW(nwcl)
 
 ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     # initiate variable
-    out <- list(name=busco)
+    out <- list(busco=busco)
 
     # check if treefile exists
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
@@ -296,8 +300,8 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
 
         # check if tips are complete
-        if (length(n_shortreads)+1 != length(ls_taxa)) {
-            is_monophyletic <- FALSE
+        if (is_monophyletic && length(n_shortreads)+1 != length(ls_taxa)) {
+            is_monophyletic <- "INCOMPLETE"
         }
         
         out[[ref]] <- is_monophyletic
@@ -310,8 +314,8 @@ stopCluster(nwcl)
 
 # convert list into dataframe
 df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
-df_output <- data.table::transpose(df_output, keep.names = "refseq", make.names = "name")
-data.table::fwrite(df_output, file=fn_summary, quote=F, row.names=F)
+# df_output <- data.table::transpose(df_output, keep.names = "refseq", make.names = "busco")
+data.table::fwrite(df_output, file=fn_summary, sep="/t", quote=F, row.names=F)
 
 log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ```

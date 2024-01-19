@@ -6,7 +6,7 @@ f_qc_short_reads <- function(fastq, fn_adapters, prefix, min_quality, thread, ex
     
     # check the number of fastq files
     if (length(fastq) == 2) {
-        cmd_qc <- paste(cmd_qc, "-file2", fastq[2])
+        cmd_qc <- paste(cmd_qc, "--file2", fastq[2])
     }
 
     # update the adapters

@@ -79,7 +79,7 @@ for (ref in ls_refseq) {
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
     file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
     
-    if (length(file_ref) != 1) {
+    if (length(file_ref) > 1) {
         file_ref <- file_ref[1]
         log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
     }
@@ -132,7 +132,7 @@ for (ref in ls_refseq) {
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
     file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
     
-    if (length(file_ref) != 1) {
+    if (length(file_ref) > 1) {
         file_ref <- file_ref[1]
         log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
     }
@@ -143,6 +143,13 @@ for (ref in ls_refseq) {
         
         # output directory
         dir_output <- paste0(dir_readmap, prefix, "/")
+
+        # check if input file exists
+        file_sam <- paste0(dir_output, prefix, ".sam")
+        if (!file.exists(file_sam)) {
+            log4r::warn(fn_logger, paste0("File not found: SAM file for ", prefix, ". Skipped."))
+            return(NULL)
+        }
 
         # check if file exists
         file_bam <- paste0(dir_output, prefix, ".bam")
