@@ -166,9 +166,6 @@ for (prefix in ls_prefix) {
         file_busco_ref <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
         busco_header <- system(paste("grep '^>'", file_busco_ref), intern=T)
 
-        # extract start and stop positions
-        coordinates <- unlist(strsplit(busco_header, split=">"))[2]
-
         # output file
         file_out <- paste0(dir_busco_out, busco, ".fna")
 
@@ -178,7 +175,7 @@ for (prefix in ls_prefix) {
         }
 
         # extract BUSCO
-        f_extract_busco(file_input_vcf, file_ref, coordinates, file_out, params$exe_samtools, params$exe_bcftools)
+        f_extract_busco(file_input_vcf, file_ref, busco_header, file_out, params$exe_samtools, params$exe_bcftools)
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
@@ -300,7 +297,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
 
         # check if tips are complete
-        if (is_monophyletic && length(n_shortreads)+1 != length(ls_taxa)) {
+        if (!is_monophyletic && length(n_shortreads)+1 != length(ls_taxa)) {
             is_monophyletic <- "INCOMPLETE"
         }
         
@@ -315,7 +312,7 @@ stopCluster(nwcl)
 # convert list into dataframe
 df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
 # df_output <- data.table::transpose(df_output, keep.names = "refseq", make.names = "busco")
-data.table::fwrite(df_output, file=fn_summary, sep="/t", quote=F, row.names=F)
+data.table::fwrite(df_output, file=fn_summary, sep="\t", quote=F, row.names=F)
 
 log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ```

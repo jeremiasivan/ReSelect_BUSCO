@@ -89,11 +89,40 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
 }
 
 # functions: extract BUSCO region
-f_extract_busco <- function(fn_vcf, refseq, coordinates, fn_out, exe_samtools, exe_bcftools) {
+f_extract_busco <- function(fn_vcf, refseq, busco_header, fn_out, exe_samtools, exe_bcftools) {
+    # set up variable
+    is_reverse <- FALSE
+
+    # remove > sign
+    no_header <- unlist(strsplit(busco_header, split=">"))[2]
+
+    # extract start and stop coordinates
+    ls_coordinates <- unlist(strsplit(no_header, split=":"))
+    start_coordinate <- unlist(strsplit(ls_coordinates[2], split="-"))[1] + 1
+    stop_coordinate <- unlist(strsplit(ls_coordinates[2], split="-"))[2] + 1
+
+    # update the coordinates
+    coordinates <- paste0(ls_coordinates[1], ":", start_coordinate, "-", stop_coordinate)
+    if (start_coordinate > stop_coordinate) {
+        coordinates <- paste0(ls_coordinates[1], ":", stop_coordinate, "-", start_coordinate)
+        is_reverse <- TRUE
+    }
+
     # extract consensus BUSCO sequence
     cmd_consensus <- paste(exe_samtools, "faidx", refseq, coordinates, "|",
-                           exe_bcftools, "consensus", fn_vcf, "-o", fn_out)                                    
+                           exe_bcftools, "consensus", fn_vcf, "-o", fn_out)
+    if (is_reverse) {
+        cmd_consensus <- paste0(cmd_consensus, "_temp")
+    }                                   
     system(cmd_consensus)
+
+    # reverse complement the sequence
+    if (is_reverse) {
+        fasta_sequence <- Biostrings::readDNAStringSet(paste0(fn_out, "_temp"))
+        rc_fasta_sequence <- Biostrings::reverseComplement(fasta_sequence)
+        Biostrings::writeXStringSet(rc_fasta_sequence, filepath=fn_out)
+        unlink(paste0(fn_out, "_temp"))
+    }
 }
 
 # functions: combine individual FASTA as MSA
