@@ -98,8 +98,8 @@ f_extract_busco <- function(fn_vcf, refseq, busco_header, fn_out, exe_samtools, 
 
     # extract start and stop coordinates
     ls_coordinates <- unlist(strsplit(no_header, split=":"))
-    start_coordinate <- unlist(strsplit(ls_coordinates[2], split="-"))[1] + 1
-    stop_coordinate <- unlist(strsplit(ls_coordinates[2], split="-"))[2] + 1
+    start_coordinate <- as.numeric(unlist(strsplit(ls_coordinates[2], split="-"))[1]) + 1
+    stop_coordinate <- as.numeric(unlist(strsplit(ls_coordinates[2], split="-"))[2]) + 1
 
     # update the coordinates
     coordinates <- paste0(ls_coordinates[1], ":", start_coordinate, "-", stop_coordinate)
