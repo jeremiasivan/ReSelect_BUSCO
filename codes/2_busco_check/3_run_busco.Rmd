@@ -98,7 +98,7 @@ foreach (ref = ls_refseq) %dopar% {
     if (is_gff3_run) {
         cmd_metaeuk2gff <- paste("python", params$exe_metaeuk2gff, "-f", file_metaeuk, "-g", file_gff)
         system(cmd_metaeuk2gff)
-        
+
         log4r::info(fn_logger, paste0("File created: BUSCO GFF3 file for ", ref, "."))
     }
 
@@ -184,6 +184,7 @@ for (prefix in ls_prefix) {
         log4r::warn(fn_logger, paste0("File found: BUSCO sequences for ", prefix, ". Skipped."))
     } else {
         cmd_gffread <- paste(params$gffread, "-g", file_fas, "-x", file_output_fas, file_gff)
+        system(cmd_gffread)
     }
 
     # open BUSCO sequences
