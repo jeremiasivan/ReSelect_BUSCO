@@ -95,11 +95,11 @@ f_extract_busco <- function(busco_header, fn_gff, all_seqs, fn_out) {
     no_header <- unlist(strsplit(busco_header, split=">"))[2]
 
     # extract start and stop coordinates
-    ls_coordinates <- unlist(strsplit(no_header, split=":"))
+    seq_name <- unlist(strsplit(no_header, split=":"))[1]
 
     # read GFF table
-    df_gff <- data.table::fread(fn_gff)
-    metadata <- df_gff$V9[df_gff$V3=="gene" & df_gff$V1==ls_coordinates[1]]
+    df_gff <- data.table::fread(fn_gff, header=FALSE)
+    metadata <- df_gff$V9[df_gff$V3=="gene" & df_gff$V1==seq_name][1]
     targetid <- unlist(strsplit(metadata, split=";"))[1]
     targetid <- unlist(strsplit(targetid, split="="))[2]
 

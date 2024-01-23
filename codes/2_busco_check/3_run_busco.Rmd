@@ -183,7 +183,7 @@ for (prefix in ls_prefix) {
     if (file.exists(file_output_fas) && !params$redo) {
         log4r::warn(fn_logger, paste0("File found: BUSCO sequences for ", prefix, ". Skipped."))
     } else {
-        cmd_gffread <- paste(params$gffread, "-g", file_fas, "-x", file_output_fas, file_gff)
+        cmd_gffread <- paste(params$exe_gffread, "-g", file_fas, "-x", file_output_fas, file_gff)
         system(cmd_gffread)
     }
 
