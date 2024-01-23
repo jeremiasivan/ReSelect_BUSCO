@@ -92,9 +92,9 @@ foreach (ref = ls_refseq) %dopar% {
     }
 
     # convert Metaeuk to GFF3
-    ls_filenames <- unlist(strsplit(file_ref, split="/"))
+    file_refname <- list.files(dir_ref, pattern="*.fna", recursive=F, full.names=F)[1]
 
-    file_metaeuk <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/initial_results/", ls_filenames[length(ls_filenames)], ".fas")
+    file_metaeuk <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/initial_results/", file_refname, ".fas")
     if (is_gff3_run) {
         cmd_metaeuk2gff <- paste("python", params$exe_metaeuk2gff, "-f", file_metaeuk, "-g", file_gff)
         log4r::info(fn_logger, paste0("File created: BUSCO GFF3 file for ", ref, "."))
