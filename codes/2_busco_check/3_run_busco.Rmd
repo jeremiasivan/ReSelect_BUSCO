@@ -64,7 +64,7 @@ foreach (ref = ls_refseq) %dopar% {
 
     # extract reference sequence
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna", recursive=F, full.names=T)[1]
+    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)[1]
 
     # check if BUSCO run exists
     file_busco_log <- paste0(dir_busco_ref, ref, "/logs/busco.log")
@@ -92,11 +92,13 @@ foreach (ref = ls_refseq) %dopar% {
     }
 
     # convert Metaeuk to GFF3
-    file_refname <- list.files(dir_ref, pattern="*.fna", recursive=F, full.names=F)[1]
+    file_refname <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=F)[1]
 
     file_metaeuk <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/initial_results/", file_refname, ".fas")
     if (is_gff3_run) {
         cmd_metaeuk2gff <- paste("python", params$exe_metaeuk2gff, "-f", file_metaeuk, "-g", file_gff)
+        system(cmd_metaeuk2gff)
+        
         log4r::info(fn_logger, paste0("File created: BUSCO GFF3 file for ", ref, "."))
     }
 
