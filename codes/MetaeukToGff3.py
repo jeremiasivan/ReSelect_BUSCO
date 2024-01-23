@@ -1,4 +1,4 @@
-# Source: https://raw.githubusercontent.com/Andy-B-123/MetaeukToGff3/main/MetaeukToGff3.py
+# Source: https://raw.githubusercontent.com/Andy-B-123/LittleScripts/main/MetaeukToGff3.py
 
 #Update1: I'm aware more people are using this script and have commented out the troubleshooting library icecream which is not standard for Python/3.7.2 where I was developing this script :-)
 #
@@ -31,7 +31,7 @@ output_filename=args.gff3_output_filename
 # Make output file
 if output_filename == '':
 	output_filename = filename_infile.replace("." + filename_infile.split(".")[-1], ".gff3")
-ic(output_filename)
+#ic(output_filename)
 
 
 initial_list = []
@@ -167,4 +167,3 @@ with open(output_filename, 'w') as f:
 
 		else:
 			print('No strand on this header? Major error')
-	
