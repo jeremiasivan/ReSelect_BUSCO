@@ -160,6 +160,7 @@ f_mafft <- function(fn_input, fn_output, params_mafft, exe_mafft) {
 f_iqtree2 <- function(fn_input, exe_iqtree2) {
     cmd_iqtree2 <- paste(exe_iqtree2,
                          "-s", fn_input,
+                         "-bb 1000",
                          "-T 1 --quiet -redo")
     system(cmd_iqtree2)
 }
