@@ -100,12 +100,20 @@ f_extract_busco <- function(busco, busco_header, fn_gff, all_seqs, fn_out) {
     # read GFF table
     df_gff <- data.table::fread(fn_gff, header=FALSE)
     metadata <- df_gff$V9[df_gff$V3=="gene" & df_gff$V1==seq_name & grepl(busco, df_gff$V9)]
+    if (length(metadata) != 1) {
+        print(busco)
+        return(NULL)
+    }
 
     targetid <- unlist(strsplit(metadata, split=";"))[1]
     targetid <- unlist(strsplit(targetid, split="="))[2]
 
     # extract the FASTA sequence
     busco_seq <- all_seqs[grepl(targetid, names(all_seqs))]
+    if (length(busco_seq) != 1) {
+        return(NULL)
+    }
+
     Biostrings::writeXStringSet(busco_seq, filepath=fn_out)
 }
 
