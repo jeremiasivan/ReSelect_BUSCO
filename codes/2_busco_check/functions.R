@@ -90,7 +90,7 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
 }
 
 # functions: extract BUSCO region
-f_extract_busco <- function(busco_header, fn_gff, all_seqs, fn_out) {
+f_extract_busco <- function(busco, busco_header, fn_gff, all_seqs, fn_out) {
     # remove > sign
     no_header <- unlist(strsplit(busco_header, split=">"))[2]
 
@@ -99,7 +99,8 @@ f_extract_busco <- function(busco_header, fn_gff, all_seqs, fn_out) {
 
     # read GFF table
     df_gff <- data.table::fread(fn_gff, header=FALSE)
-    metadata <- df_gff$V9[df_gff$V3=="gene" & df_gff$V1==seq_name][1]
+    metadata <- df_gff$V9[df_gff$V3=="gene" & df_gff$V1==seq_name & grepl(busco, df_gff$V9)]
+
     targetid <- unlist(strsplit(metadata, split=";"))[1]
     targetid <- unlist(strsplit(targetid, split="="))[2]
 

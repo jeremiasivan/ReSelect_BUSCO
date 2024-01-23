@@ -205,7 +205,7 @@ for (prefix in ls_prefix) {
         }
 
         # extract BUSCO
-        f_extract_busco(busco_header, file_gff, all_seqs, file_out)
+        f_extract_busco(busco, busco_header, file_gff, all_seqs, file_out)
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
