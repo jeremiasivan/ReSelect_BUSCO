@@ -47,6 +47,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
     fn_sam <- paste0(dir_output, "/", prefix, ".sam")
     fn_bam <- paste0(dir_output, "/", prefix, ".bam")
     fn_vcf <- paste0(dir_output, "/", prefix, ".vcf.gz")
+    fn_fas <- paste0(dir_output, "/", prefix, ".fa")
 
     nthread <- paste("--threads", thread)
 
@@ -56,11 +57,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
                           exe_samtools, "fixmate", nthread, "-m -u - - |",
                           exe_samtools, "sort", nthread, "-u - |",
                           exe_samtools, "markdup", nthread, "-", fn_bam)
-    system(cmd_samtools)                  
-    
-    # index BAM file
-    cmd_bam_index <- paste(exe_samtools, "index", nthread, fn_bam)
-    system(cmd_bam_index)
+    system(cmd_samtools)
 
     # run bcftools mpileup
     cmd_bcftools <- paste(exe_bcftools, "mpileup", nthread, "-Ou -f", refseq, fn_bam, "|",
@@ -72,6 +69,10 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
     # index VCF file
     cmd_vcf_index <- paste(exe_bcftools, "index -t", nthread, fn_vcf)
     system(cmd_vcf_index)
+
+    # generate consensus sequence
+    cmd_consensus <- paste("cat", refseq, "|", exe_bcftools, "consensus", fn_vcf, ">", fn_fas)
+    system(cmd_consensus)
 }
 
 # function: run BUSCO pipeline
