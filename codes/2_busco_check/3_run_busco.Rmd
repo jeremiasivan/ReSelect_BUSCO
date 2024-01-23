@@ -188,6 +188,7 @@ for (prefix in ls_prefix) {
     }
 
     # open BUSCO sequences
+    df_gff <- data.table::fread(fn_gff, header=FALSE)
     all_seqs <- Biostrings::readDNAStringSet(file_output_fas)
 
     # iterate over shared BUSCOs
@@ -205,7 +206,7 @@ for (prefix in ls_prefix) {
         }
 
         # extract BUSCO
-        f_extract_busco(busco, busco_header, file_gff, all_seqs, file_out)
+        f_extract_busco(busco, busco_header, df_gff, all_seqs, file_out)
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
