@@ -188,11 +188,14 @@ for (prefix in ls_prefix) {
     }
 
     # open BUSCO sequences
-    df_gff <- data.table::fread(fn_gff, header=FALSE)
+    df_gff <- data.table::fread(file_gff, header=FALSE)
     all_seqs <- Biostrings::readDNAStringSet(file_output_fas)
 
     # iterate over shared BUSCOs
     foreach (busco = shared_busco) %dopar% {
+        require(data.table)
+        require(Biostrings)
+
         # busco file
         file_busco_ref <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
         busco_header <- system(paste("grep '^>'", file_busco_ref), intern=T)

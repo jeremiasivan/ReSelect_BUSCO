@@ -97,10 +97,6 @@ f_extract_busco <- function(busco, busco_header, df_gff, all_seqs, fn_out) {
 
     # read GFF table
     metadata <- df_gff$V9[df_gff$V3=="gene" & df_gff$V1==seq_name & grepl(busco, df_gff$V9)]
-    if (length(metadata) != 1) {
-        print(busco)
-        return(NULL)
-    }
 
     targetid <- unlist(strsplit(metadata, split=";"))[1]
     targetid <- unlist(strsplit(targetid, split="="))[2]
