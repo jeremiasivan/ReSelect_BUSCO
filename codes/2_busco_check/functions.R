@@ -97,6 +97,9 @@ f_extract_busco <- function(busco, busco_header, df_gff, all_seqs, fn_out, prefi
 
     # read GFF table
     metadata <- df_gff$attribute[df_gff$feature=="gene" & df_gff$seqname==seq_name & grepl(busco, df_gff$attribute)]
+    if (length(metadata) == 0) {
+        return(paste0("Error: ", busco, " metadata for ", prefix, ". Skipped."))
+    }
 
     targetid <- unlist(strsplit(metadata, split=";"))[1]
     targetid <- unlist(strsplit(targetid, split="="))[2]
