@@ -21,7 +21,7 @@ if (!dir.exists(dir_busco)) {
 }
 
 # output file
-fn_summary <- paste0(getwd(), "/busco_check/", params$prefix, ".sumtable")
+fn_summary <- paste0(dir_busco, params$prefix, ".sumtable")
 
 # set thread for BUSCO
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
@@ -58,23 +58,49 @@ doSNOW::registerDoSNOW(nwcl)
 
 # iterate over reference sequences
 foreach (ref = ls_refseq) %dopar% {
+    # initiate variables
+    is_busco_run <- TRUE
+    is_gff3_run <- TRUE
+
     # extract reference sequence
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna", recursive=F, full.names=T)[1]
+    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)[1]
 
     # check if BUSCO run exists
     file_busco_log <- paste0(dir_busco_ref, ref, "/logs/busco.log")
-    if (file.exists(file_busco_log)) {
+    if (file.exists(file_busco_log) && !params$redo) {
         finish_msg <- system(paste("grep 'BUSCO analysis done'", file_busco_log), intern=T)
-        if (length(finish_msg) != 0 && !params$redo) {
+        if (length(finish_msg) != 0) {
             log4r::info(fn_logger, paste0("File found: BUSCO run for ", ref, ". Skipped."))
-            return(NULL)
+            is_busco_run <- FALSE
         }
     }
 
     # run BUSCO
-    f_run_busco(file_ref, dir_lineage, ref, dir_busco_ref, params$busco_mode, thread_busco, params$exe_busco)
-    log4r::info(fn_logger, paste0("File created: BUSCO run for ", ref, "."))
+    if (is_busco_run) {
+        f_run_busco(file_ref, dir_lineage, ref, dir_busco_ref, params$busco_mode, thread_busco, params$exe_busco)
+        log4r::info(fn_logger, paste0("File created: BUSCO run for ", ref, "."))
+    }
+
+    # check if Metaeuk GFF3 exists
+    file_gff <- paste0(dir_busco_ref, ref, "/", ref, ".gff3")
+    if (file.exists(file_gff) && !params$redo) {
+        if (file.size(file_gff) != 0L) {
+            log4r::info(fn_logger, paste0("File found: BUSCO GFF3 file for ", ref, ". Skipped."))
+            is_gff3_run <- FALSE
+        }
+    }
+
+    # convert Metaeuk to GFF3
+    file_refname <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=F)[1]
+
+    file_metaeuk <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/initial_results/", file_refname, ".fas")
+    if (is_gff3_run) {
+        cmd_metaeuk2gff <- paste("python", params$exe_metaeuk2gff, "-f", file_metaeuk, "-g", file_gff)
+        system(cmd_metaeuk2gff)
+
+        log4r::info(fn_logger, paste0("File created: BUSCO GFF3 file for ", ref, "."))
+    }
 
     return(NULL)
 }
@@ -144,24 +170,35 @@ for (prefix in ls_prefix) {
     read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
-    # extract reference sequence
-    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
-    
-    if (length(file_ref) > 1) {
-        file_ref <- file_ref[1]
-        log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
-    }
-
-    # input VCF file
-    file_input_vcf <- paste0(dir_readmap, prefix, "/", prefix, ".vcf.gz")
-    if (!all(file.exists(file_ref, file_input_vcf))) {
-        log4r::warn(fn_logger, paste0("File not found: FASTA or VCF file for ", prefix, ". Skipped."))
+    # check input files
+    file_fas <- paste0(dir_readmap, prefix, "/", prefix, ".fa")
+    file_gff <- paste0(dir_busco_ref, ref, "/", ref, ".gff3")
+    if (!all(file.exists(file_fas, file_gff))) {
+        log4r::warn(fn_logger, paste0("File not found: FASTA or GFF3 file for ", prefix, ". Skipped."))
         next
     }
 
+    # extract FASTA based on GFF3
+    file_output_fas <- paste0(dir_busco_out, prefix, ".fa")
+    if (file.exists(file_output_fas) && !params$redo) {
+        log4r::warn(fn_logger, paste0("File found: BUSCO sequences for ", prefix, ". Skipped."))
+    } else {
+        cmd_gffread <- paste(params$exe_gffread, "-g", file_fas, "-x", file_output_fas, file_gff)
+        system(cmd_gffread)
+    }
+
+    # open BUSCO GFF file
+    df_gff <- data.table::fread(file_gff, header=FALSE, select=1:9)
+    data.table::setnames(df_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+
+    # read BUSCO FASTA sequences
+    all_seqs <- Biostrings::readDNAStringSet(file_output_fas)
+
     # iterate over shared BUSCOs
     foreach (busco = shared_busco) %dopar% {
+        require(data.table)
+        require(Biostrings)
+
         # busco file
         file_busco_ref <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
         busco_header <- system(paste("grep '^>'", file_busco_ref), intern=T)
@@ -175,7 +212,10 @@ for (prefix in ls_prefix) {
         }
 
         # extract BUSCO
-        f_extract_busco(file_input_vcf, file_ref, busco_header, file_out, params$exe_samtools, params$exe_bcftools)
+        errmsg <- f_extract_busco(busco, busco_header, df_gff, all_seqs, file_out, prefix)
+        if (!is.null(errmsg)) {
+            f_write_log(fn_log=fn_log, msg=errmsg)
+        }
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
@@ -297,8 +337,12 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
 
         # check if tips are complete
-        if (!is_monophyletic && length(n_shortreads)+1 != length(ls_taxa)) {
-            is_monophyletic <- "INCOMPLETE"
+        if (!is_monophyletic) {
+            if (length(n_shortreads)+1 > length(ls_taxa)) {
+                is_monophyletic <- "INCOMPLETE"
+            } else if (length(n_shortreads)+1 < length(ls_taxa)) {
+                is_monophyletic <- "DUPLICATE"
+            }
         }
         
         out[[ref]] <- is_monophyletic

@@ -47,6 +47,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
     fn_sam <- paste0(dir_output, "/", prefix, ".sam")
     fn_bam <- paste0(dir_output, "/", prefix, ".bam")
     fn_vcf <- paste0(dir_output, "/", prefix, ".vcf.gz")
+    fn_fas <- paste0(dir_output, "/", prefix, ".fa")
 
     nthread <- paste("--threads", thread)
 
@@ -56,11 +57,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
                           exe_samtools, "fixmate", nthread, "-m -u - - |",
                           exe_samtools, "sort", nthread, "-u - |",
                           exe_samtools, "markdup", nthread, "-", fn_bam)
-    system(cmd_samtools)                  
-    
-    # index BAM file
-    cmd_bam_index <- paste(exe_samtools, "index", nthread, fn_bam)
-    system(cmd_bam_index)
+    system(cmd_samtools)
 
     # run bcftools mpileup
     cmd_bcftools <- paste(exe_bcftools, "mpileup", nthread, "-Ou -f", refseq, fn_bam, "|",
@@ -72,6 +69,10 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
     # index VCF file
     cmd_vcf_index <- paste(exe_bcftools, "index -t", nthread, fn_vcf)
     system(cmd_vcf_index)
+
+    # generate consensus sequence
+    cmd_consensus <- paste("cat", refseq, "|", exe_bcftools, "consensus", fn_vcf, ">", fn_fas)
+    system(cmd_consensus)
 }
 
 # function: run BUSCO pipeline
@@ -89,40 +90,28 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
 }
 
 # functions: extract BUSCO region
-f_extract_busco <- function(fn_vcf, refseq, busco_header, fn_out, exe_samtools, exe_bcftools) {
-    # set up variable
-    is_reverse <- FALSE
-
+f_extract_busco <- function(busco, busco_header, df_gff, all_seqs, fn_out, prefix) {
     # remove > sign
     no_header <- unlist(strsplit(busco_header, split=">"))[2]
+    seq_name <- unlist(strsplit(no_header, split=":"))[1]
 
-    # extract start and stop coordinates
-    ls_coordinates <- unlist(strsplit(no_header, split=":"))
-    start_coordinate <- as.numeric(unlist(strsplit(ls_coordinates[2], split="-"))[1]) + 1
-    stop_coordinate <- as.numeric(unlist(strsplit(ls_coordinates[2], split="-"))[2]) + 1
-
-    # update the coordinates
-    coordinates <- paste0(ls_coordinates[1], ":", start_coordinate, "-", stop_coordinate)
-    if (start_coordinate > stop_coordinate) {
-        coordinates <- paste0(ls_coordinates[1], ":", stop_coordinate, "-", start_coordinate)
-        is_reverse <- TRUE
+    # read GFF table
+    metadata <- df_gff$attribute[df_gff$feature=="gene" & df_gff$seqname==seq_name & grepl(busco, df_gff$attribute)]
+    if (length(metadata) == 0) {
+        return(paste0("Error: ", busco, " metadata for ", prefix, ". Skipped."))
     }
 
-    # extract consensus BUSCO sequence
-    cmd_consensus <- paste(exe_samtools, "faidx", refseq, coordinates, "|",
-                           exe_bcftools, "consensus", fn_vcf, "-o", fn_out)
-    if (is_reverse) {
-        cmd_consensus <- paste0(cmd_consensus, "_temp")
-    }                                   
-    system(cmd_consensus)
+    targetid <- unlist(strsplit(metadata, split=";"))[1]
+    targetid <- unlist(strsplit(targetid, split="="))[2]
 
-    # reverse complement the sequence
-    if (is_reverse) {
-        fasta_sequence <- Biostrings::readDNAStringSet(paste0(fn_out, "_temp"))
-        rc_fasta_sequence <- Biostrings::reverseComplement(fasta_sequence)
-        Biostrings::writeXStringSet(rc_fasta_sequence, filepath=fn_out)
-        unlink(paste0(fn_out, "_temp"))
+    # extract the FASTA sequence
+    busco_seq <- all_seqs[grepl(targetid, names(all_seqs))]
+    if (length(busco_seq) == 0) {
+        return(paste0("Error: ", busco, " sequence for ", prefix, ". Skipped."))
     }
+
+    Biostrings::writeXStringSet(busco_seq, filepath=fn_out)
+    return(NULL)
 }
 
 # functions: combine individual FASTA as MSA

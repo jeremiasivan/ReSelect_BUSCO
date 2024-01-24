@@ -19,6 +19,9 @@ exe_bwamem2 <- "bwa-mem2"
 exe_samtools <- "samtools"
 exe_bcftools <- "bcftools"
 
+exe_metaeuk2gff <- paste0(codedir, "/MetaeukToGff3.py")
+exe_gffread <- "gffread"
+
 exe_busco <- "busco"
 exe_iqtree2 <- "iqtree2"
 exe_mafft <- "mafft"
@@ -46,7 +49,7 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, prefix, ".check.html"),
                   params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools,
-                              exe_busco=exe_busco, exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft,
+                              exe_metaeuk2gff=exe_metaeuk2gff, exe_gffread=exe_gffread, exe_busco=exe_busco, exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft,
                               file_shortreads=file_shortreads, file_adapters=file_adapters, busco_lineage=busco_lineage, busco_mode=busco_mode),
                   quiet=TRUE)
 
