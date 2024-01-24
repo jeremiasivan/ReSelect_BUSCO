@@ -90,7 +90,7 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
 }
 
 # functions: extract BUSCO region
-f_extract_busco <- function(busco, busco_header, df_gff, all_seqs, fn_out) {
+f_extract_busco <- function(busco, busco_header, df_gff, all_seqs, fn_out, prefix) {
     # remove > sign
     no_header <- unlist(strsplit(busco_header, split=">"))[2]
     seq_name <- unlist(strsplit(no_header, split=":"))[1]
@@ -103,7 +103,12 @@ f_extract_busco <- function(busco, busco_header, df_gff, all_seqs, fn_out) {
 
     # extract the FASTA sequence
     busco_seq <- all_seqs[grepl(targetid, names(all_seqs))]
+    if (length(busco_seq) == 0) {
+        return(paste0("Error: ", busco, " sequence for ", prefix, ". Skipped."))
+    }
+
     Biostrings::writeXStringSet(busco_seq, filepath=fn_out)
+    return(NULL)
 }
 
 # functions: combine individual FASTA as MSA

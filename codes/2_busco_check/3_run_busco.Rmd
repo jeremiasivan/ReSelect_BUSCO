@@ -212,7 +212,10 @@ for (prefix in ls_prefix) {
         }
 
         # extract BUSCO
-        f_extract_busco(busco, busco_header, df_gff, all_seqs, file_out)
+        errmsg <- f_extract_busco(busco, busco_header, df_gff, all_seqs, file_out, prefix)
+        if (!is.null(errmsg)) {
+            f_write_log(fn_log=fn_log, msg=errmsg)
+        }
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
