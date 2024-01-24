@@ -89,6 +89,12 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
     system(cmd_busco)
 }
 
+# function: extract all BUSCO alignments from GFF
+f_extract_fasta_from_gff <- function(fn_input, fn_out, fn_gff, exe_gffread){
+    cmd_gffread <- paste(exe_gffread, "-g", fn_input, "-x", fn_out, fn_gff)
+    system(cmd_gffread)
+}
+
 # functions: extract BUSCO region
 f_extract_busco <- function(busco, busco_header, df_gff, all_seqs, fn_out, prefix) {
     # remove > sign
