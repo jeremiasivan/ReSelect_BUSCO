@@ -187,8 +187,11 @@ for (prefix in ls_prefix) {
         system(cmd_gffread)
     }
 
-    # open BUSCO sequences
-    df_gff <- data.table::fread(file_gff, header=FALSE)
+    # open BUSCO GFF file
+    df_gff <- data.table::fread(file_gff, header=FALSE, select=1:9)
+    data.table::setnames(df_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+
+    # read BUSCO FASTA sequences
     all_seqs <- Biostrings::readDNAStringSet(file_output_fas)
 
     # iterate over shared BUSCOs
@@ -331,8 +334,12 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
 
         # check if tips are complete
-        if (!is_monophyletic && length(n_shortreads)+1 != length(ls_taxa)) {
-            is_monophyletic <- "INCOMPLETE"
+        if (!is_monophyletic) {
+            if (length(n_shortreads)+1 > length(ls_taxa)) {
+                is_monophyletic <- "INCOMPLETE"
+            } else if (length(n_shortreads)+1 < length(ls_taxa)) {
+                is_monophyletic <- "DUPLICATE"
+            }
         }
         
         out[[ref]] <- is_monophyletic
