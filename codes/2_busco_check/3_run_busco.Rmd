@@ -145,10 +145,10 @@ for (ref in ls_refseq) {
         require(Biostrings)
 
         # busco files
-        dir_busco_ref <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco)
-        # file_busco_fas <- paste0(dir_busco_ref, ".fna")
-        file_busco_gff <- paste0(dir_busco_ref, ".gff")
-        # busco_header <- system(paste("grep '^>'", file_busco_ref), intern=T)
+        dir_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco)
+        # file_busco_fas <- paste0(dir_busco_gff, ".fna")
+        file_busco_gff <- paste0(dir_busco_gff, ".gff")
+        # busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
 
         # output file
         file_out <- paste0(dir_busco_out, busco, ".fna")
