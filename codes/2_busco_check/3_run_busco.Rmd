@@ -323,6 +323,10 @@ foreach (busco = shared_busco) %dopar% {
     ls_busco_ref <- list.dirs(dir_busco_ref, recursive=F, full.names=F)
     for (ref in ls_busco_ref) {
         file_busco_ref <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".fna")
+        if (!file.exists(file_busco_ref)) {
+            next
+        }
+
         f_fasta2msa(file_busco_ref, ref, fn_out)
     }
 

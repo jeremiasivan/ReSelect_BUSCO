@@ -99,10 +99,33 @@ f_extract_fasta_from_gff <- function(fn_input, fn_out, fn_gff, exe_gffread){
 f_extract_busco <- function(busco, busco_header, df_gff, all_seqs, fn_out, prefix) {
     # remove > sign
     no_header <- unlist(strsplit(busco_header, split=">"))[2]
-    seq_name <- unlist(strsplit(no_header, split=":"))[1]
+    ls_header <- unlist(strsplit(no_header, split=":"))
+    ls_coordinates <- unlist(strsplit(ls_header[2], split="-"))
+
+    seq_name <- ls_header[1]
+    first_coordinate <- as.numeric(ls_coordinates[1]) + 1
+    second_coordinate <- as.numeric(ls_coordinates[2]) + 1
+
+    # set the start and stop coordinates
+    start_coordinate <- NULL
+    stop_coordinate <- NULL
+
+    if (first_coordinate < second_coordinate) {
+        start_coordinate <- first_coordinate
+        stop_coordinate <- second_coordinate
+    } else if (first_coordinate > second_coordinate) {
+        start_coordinate <- second_coordinate
+        stop_coordinate <- first_coordinate
+    } else {
+        return(paste0("Error: ", busco, " coordinates for ", prefix, ". Skipped."))
+    }
 
     # read GFF table
-    metadata <- df_gff$attribute[df_gff$feature=="gene" & df_gff$seqname==seq_name & grepl(busco, df_gff$attribute)]
+    metadata <- df_gff$attribute[df_gff$feature=="gene" &
+                                 df_gff$seqname==seq_name &
+                                 df_gff$start==start_coordinate &
+                                 df_gff$end==stop_coordinate &
+                                 grepl(busco, df_gff$attribute)]
     if (length(metadata) == 0) {
         return(paste0("Error: ", busco, " metadata for ", prefix, ". Skipped."))
     }
@@ -112,8 +135,8 @@ f_extract_busco <- function(busco, busco_header, df_gff, all_seqs, fn_out, prefi
 
     # extract the FASTA sequence
     busco_seq <- all_seqs[grepl(targetid, names(all_seqs))]
-    if (length(busco_seq) == 0) {
-        return(paste0("Error: ", busco, " sequence for ", prefix, ". Skipped."))
+    if (length(busco_seq) != 1) {
+        return(paste0("Error: ", busco, " sequence for ", prefix, " (", length(busco_seq), "). Skipped."))
     }
 
     Biostrings::writeXStringSet(busco_seq, filepath=fn_out)
