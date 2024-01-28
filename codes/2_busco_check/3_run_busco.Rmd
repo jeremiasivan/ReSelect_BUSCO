@@ -143,6 +143,7 @@ for (ref in ls_refseq) {
     foreach (busco = shared_busco) %dopar% {
         require(data.table)
         require(Biostrings)
+        require(stringr)
 
         # BUSCO files
         dir_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco)

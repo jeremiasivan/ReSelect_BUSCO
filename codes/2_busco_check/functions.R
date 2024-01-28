@@ -135,16 +135,17 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     }
 
     # extract the respective gene index
-    ls_gene_idx <- which(df_gff$feature == "gene")
-    gene_idx <- which(df_gff$feature == "gene" & df_gff$start == coordinates$start & df_gff$stop == coordinates$stop)
+    gene_idx <- which(df_gff$feature == "gene" & df_gff$start == coordinates$start & df_gff$end == coordinates$stop)
     if (length(gene_idx) != 1) {
         return(paste0("Error: ", busco, " gene extraction for ", prefix, ". Skipped."))
     }
 
-    # subset the GFF table
+    # extract all gene indices
+    ls_gene_idx <- which(df_gff$feature == "gene")
     entry_idx <- match(gene_idx, ls_gene_idx)
+    
+    # subset the GFF table
     df_gff_subset <- NULL
-
     if (entry_idx == length(ls_gene_idx)) {
         df_gff_subset <- df_gff[gene_idx:nrow(df_gff)]
     } else {
@@ -163,7 +164,7 @@ f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out
 
     # open the CDS sequences
     all_cds <- Biostrings::readDNAStringSet(fn_cds_out)
-    all_headers <- sort(names(all_cds))
+    all_headers <- stringr::str_sort(names(all_cds), numeric=T)
 
     # concat all CDS sequences
     header <- ""
@@ -184,54 +185,6 @@ f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out
     concat_cds <- Biostrings::DNAStringSet(seq)
     names(concat_cds) <- header
     Biostrings::writeXStringSet(concat_cds, filepath=fn_concat_out)
-}
-
-# functions: extract BUSCO region
-f_extract_busco <- function(busco, busco_header, df_gff, all_seqs, fn_out, prefix) {
-    # remove > sign
-    no_header <- unlist(strsplit(busco_header, split=">"))[2]
-    ls_header <- unlist(strsplit(no_header, split=":"))
-    ls_coordinates <- unlist(strsplit(ls_header[2], split="-"))
-
-    seq_name <- ls_header[1]
-    first_coordinate <- as.numeric(ls_coordinates[1]) + 1
-    second_coordinate <- as.numeric(ls_coordinates[2]) + 1
-
-    # set the start and stop coordinates
-    start_coordinate <- NULL
-    stop_coordinate <- NULL
-
-    if (first_coordinate < second_coordinate) {
-        start_coordinate <- first_coordinate
-        stop_coordinate <- second_coordinate
-    } else if (first_coordinate > second_coordinate) {
-        start_coordinate <- second_coordinate
-        stop_coordinate <- first_coordinate
-    } else {
-        return(paste0("Error: ", busco, " coordinates for ", prefix, ". Skipped."))
-    }
-
-    # read GFF table
-    metadata <- df_gff$attribute[df_gff$feature=="gene" &
-                                 df_gff$seqname==seq_name &
-                                 df_gff$start==start_coordinate &
-                                 df_gff$end==stop_coordinate &
-                                 grepl(busco, df_gff$attribute)]
-    if (length(metadata) == 0) {
-        return(paste0("Error: ", busco, " metadata for ", prefix, ". Skipped."))
-    }
-
-    targetid <- unlist(strsplit(metadata, split=";"))[1]
-    targetid <- unlist(strsplit(targetid, split="="))[2]
-
-    # extract the FASTA sequence
-    busco_seq <- all_seqs[grepl(targetid, names(all_seqs))]
-    if (length(busco_seq) != 1) {
-        return(paste0("Error: ", busco, " sequence for ", prefix, " (", length(busco_seq), "). Skipped."))
-    }
-
-    Biostrings::writeXStringSet(busco_seq, filepath=fn_out)
-    return(NULL)
 }
 
 # functions: combine individual FASTA as MSA
