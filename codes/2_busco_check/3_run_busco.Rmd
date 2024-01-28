@@ -148,6 +148,12 @@ for (ref in ls_refseq) {
         dir_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco)
         file_busco_fas <- paste0(dir_busco_gff, ".fna")
         file_busco_gff <- paste0(dir_busco_gff, ".gff")
+        if (!all(file.exists(file_busco_fas, file_busco_gff))) {
+            log4r::warn(fn_logger, paste0("File not found: FASTA or GFF file for ", ref, ". Skipped."))
+            return(NULL)
+        }
+        
+        # extract header
         busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
 
         # output files
@@ -170,7 +176,7 @@ for (ref in ls_refseq) {
         }
 
         # manipulate GFF file
-        errmsg <- f_manipulate_gff(file_busco_gff, coordinates$seqname, coordinates$strand, busco, ref, file_busco_gff_out)
+        errmsg <- f_manipulate_gff(file_busco_gff, coordinates, busco, ref, file_busco_gff_out)
         if (!is.null(errmsg)) {
             f_write_log(fn_log=fn_log, msg=errmsg)
             return(NULL)

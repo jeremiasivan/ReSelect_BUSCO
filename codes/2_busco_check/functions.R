@@ -120,7 +120,7 @@ f_extract_coordinates <- function(fasta_header, busco, prefix) {
 }
 
 # function: manipulate and save GFF file
-f_manipulate_gff <- function(fn_input, seqname, strand, busco, prefix, fn_out) {
+f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     # read GFF file
     df_gff <- data.table::fread(fn_input, header=FALSE, select=1:9)
     data.table::setnames(df_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
@@ -129,13 +129,30 @@ f_manipulate_gff <- function(fn_input, seqname, strand, busco, prefix, fn_out) {
     df_gff$attribute <- gsub("TCS_ID", "ID", df_gff$attribute)
 
     # extract relevant GFF entry
-    df_gff <- df_gff[df_gff$seqname==seqname & df_gff$strand==strand]
+    df_gff <- df_gff[df_gff$seqname==coordinates$seqname & df_gff$strand==coordinates$strand]
     if (nrow(df_gff) == 0) {
         return(paste0("Error: ", busco, " GFF extraction for ", prefix, ". Skipped."))
     }
 
+    # extract the respective gene index
+    ls_gene_idx <- which(df_gff$feature == "gene")
+    gene_idx <- which(df_gff$feature == "gene" & df_gff$start == coordinates$start & df_gff$stop == coordinates$stop)
+    if (length(gene_idx) != 1) {
+        return(paste0("Error: ", busco, " gene extraction for ", prefix, ". Skipped."))
+    }
+
+    # subset the GFF table
+    entry_idx <- match(gene_idx, ls_gene_idx)
+    df_gff_subset <- NULL
+
+    if (entry_idx == length(ls_gene_idx)) {
+        df_gff_subset <- df_gff[gene_idx:nrow(df_gff)]
+    } else {
+        df_gff_subset <- df_gff[gene_idx:ls_gene_idx[entry_idx+1]-1]
+    }
+    
     # save the new GFF file
-    data.table::fwrite(df_gff, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
+    data.table::fwrite(df_gff_subset, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
 }
 
 # function: extract all BUSCO alignments from GFF
