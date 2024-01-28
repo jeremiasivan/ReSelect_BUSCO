@@ -135,7 +135,7 @@ f_manipulate_gff <- function(fn_input, seqname, strand, busco, prefix, fn_out) {
     }
 
     # save the new GFF file
-    data.table::fwrite(df_gff, file=fn_out, sep="\t", quote=F, row.names=F)
+    data.table::fwrite(df_gff, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
 }
 
 # function: extract all BUSCO alignments from GFF
@@ -152,7 +152,7 @@ f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out
     header <- ""
     seq <- ""
     for (i in all_headers) {
-        ls_header <- unlist(strsplit(i, sep="\\|"))
+        ls_header <- unlist(strsplit(i, split="\\|"))
 
         if (header == "") {
             header <- paste0(header, ls_header[length(ls_header)])
