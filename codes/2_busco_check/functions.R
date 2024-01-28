@@ -89,10 +89,84 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
     system(cmd_busco)
 }
 
+# function: extract coordinates from FASTA header
+f_extract_coordinates <- function(fasta_header, busco, prefix) {
+    # remove > sign
+    no_header <- unlist(strsplit(fasta_header, split=">"))[2]
+    ls_header <- unlist(strsplit(no_header, split=":"))
+    ls_coordinates <- unlist(strsplit(ls_header[2], split="-"))
+
+    seq_name <- ls_header[1]
+    first_coordinate <- as.numeric(ls_coordinates[1]) + 1
+    second_coordinate <- as.numeric(ls_coordinates[2]) + 1
+
+    # set the start and stop coordinates
+    strand <- "+"
+    start_coordinate <- NULL
+    stop_coordinate <- NULL
+
+    if (first_coordinate < second_coordinate) {
+        start_coordinate <- first_coordinate
+        stop_coordinate <- second_coordinate
+    } else if (first_coordinate > second_coordinate) {
+        start_coordinate <- second_coordinate
+        stop_coordinate <- first_coordinate
+        strand <- "-"
+    } else {
+        return(list(errmsg=paste0("Error: ", busco, " coordinates for ", prefix, ". Skipped.")))
+    }
+
+    return(list(seqname=seq_name, start=start_coordinate, stop=stop_coordinate, strand=strand))
+}
+
+# function: manipulate and save GFF file
+f_manipulate_gff <- function(fn_input, seqname, strand, busco, prefix, fn_out) {
+    # read GFF file
+    df_gff <- data.table::fread(fn_input, header=FALSE, select=1:9)
+    data.table::setnames(df_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+
+    # convert attribute to match with gffread namingconvention
+    df_gff$attribute <- gsub("TCS_ID", "ID", df_gff$attribute)
+
+    # extract relevant GFF entry
+    df_gff <- df_gff[df_gff$seqname==seqname & df_gff$strand==strand]
+    if (nrow(df_gff) == 0) {
+        return(paste0("Error: ", busco, " GFF extraction for ", prefix, ". Skipped."))
+    }
+
+    # save the new GFF file
+    data.table::fwrite(df_gff, file=fn_out, sep="\t", quote=F, row.names=F)
+}
+
 # function: extract all BUSCO alignments from GFF
-f_extract_fasta_from_gff <- function(fn_input, fn_out, fn_gff, exe_gffread){
-    cmd_gffread <- paste(exe_gffread, "-g", fn_input, "-x", fn_out, fn_gff)
+f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out, exe_gffread){
+    # run gffread
+    cmd_gffread <- paste(exe_gffread, "-g", fn_input, "-x", fn_cds_out, fn_gff)
     system(cmd_gffread)
+
+    # open the CDS sequences
+    all_cds <- Biostrings::readDNAStringSet(fn_cds_out)
+    all_headers <- sort(names(all_cds))
+
+    # concat all CDS sequences
+    header <- ""
+    seq <- ""
+    for (i in all_headers) {
+        ls_header <- unlist(strsplit(i, sep="\\|"))
+
+        if (header == "") {
+            header <- paste0(header, ls_header[length(ls_header)])
+        } else {
+            header <- paste0(header, "|", ls_header[length(ls_header)])
+        }
+        
+        seq <- paste0(seq, all_cds[[i]])
+    }
+
+    # save the concatenated FASTA in a file
+    concat_cds <- Biostrings::DNAStringSet(seq)
+    names(concat_cds) <- header
+    Biostrings::writeXStringSet(concat_cds, filepath=fn_concat_out)
 }
 
 # functions: extract BUSCO region

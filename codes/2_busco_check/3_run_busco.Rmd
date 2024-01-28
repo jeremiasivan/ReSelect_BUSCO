@@ -144,26 +144,40 @@ for (ref in ls_refseq) {
         require(data.table)
         require(Biostrings)
 
-        # busco files
+        # BUSCO files
         dir_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco)
-        # file_busco_fas <- paste0(dir_busco_gff, ".fna")
+        file_busco_fas <- paste0(dir_busco_gff, ".fna")
         file_busco_gff <- paste0(dir_busco_gff, ".gff")
-        # busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
+        busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
 
-        # output file
-        file_out <- paste0(dir_busco_out, busco, ".fna")
+        # output files
+        file_busco_cds <- paste0(dir_busco_out, busco, ".cds.fna")
+        file_busco_gff_out <- paste0(dir_busco_out, busco, ".gff")
+        file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
 
         # check if file exists
-        if (file.exists(file_out) && !params$redo) {
+        if (file.exists(file_busco_concat) && !params$redo) {
+            if (file.size(file_busco_concat) != 0L) {
+                return(NULL)
+            }
+        }
+
+        # extract BUSCO coordinates
+        coordinates <- f_extract_coordinates(busco_header, busco, ref)
+        if (!is.null(coordinates$errmsg)) {
+            f_write_log(fn_log=fn_log, msg=coordinates$errmsg)
             return(NULL)
         }
 
-        # open BUSCO GFF file
-        # df_gff <- data.table::fread(file_busco_gff, header=FALSE, select=1:9)
-        # data.table::setnames(df_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+        # manipulate GFF file
+        errmsg <- f_manipulate_gff(file_busco_gff, coordinates$seqname, coordinates$strand, busco, ref, file_busco_gff_out)
+        if (!is.null(errmsg)) {
+            f_write_log(fn_log=fn_log, msg=errmsg)
+            return(NULL)
+        }
 
         # extract BUSCO
-        f_extract_fasta_from_gff(file_fas, file_out, file_busco_gff, params$exe_gffread)
+        f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", ref, "."))
@@ -197,7 +211,6 @@ for (prefix in ls_prefix) {
     }
 
     # extract short read and reference sequence IDs
-    # read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
     # check input files
@@ -212,19 +225,26 @@ for (prefix in ls_prefix) {
         require(data.table)
         require(Biostrings)
 
-        # busco file
-        file_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".gff")
-
-        # output file
-        file_out <- paste0(dir_busco_out, busco, ".fna")
-
-        # check if file exists
-        if (file.exists(file_out) && !params$redo) {
+        # BUSCO file
+        file_busco_gff_out <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".gff")
+        if (!file.exists(file_busco_gff_out)) {
+            f_write_log(fn_log=fn_log, msg=paste0("Error: ", busco, " GFF for ", ref, " not found. Skipped."))
             return(NULL)
         }
 
+        # output files
+        file_busco_cds <- paste0(dir_busco_out, busco, ".cds.fna")
+        file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
+
+        # check if file exists
+        if (file.exists(file_busco_concat) && !params$redo) {
+            if (file.size(file_busco_concat) != 0L) {
+                return(NULL)
+            }
+        }
+
         # extract BUSCO
-        f_extract_fasta_from_gff(file_fas, file_out, file_busco_gff, params$exe_gffread)
+        f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
