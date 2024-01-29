@@ -119,6 +119,27 @@ f_extract_coordinates <- function(fasta_header, busco, prefix) {
     return(list(seqname=seq_name, start=start_coordinate, stop=stop_coordinate, strand=strand))
 }
 
+# function: generate GFF file
+f_create_gff <- function(coordinates, busco, fn_out) {
+    df_gff <- data.table::data.table(
+        seqname=rep(coordinates$seqname, 4),
+        source=rep("Metaeuk", 4),
+        feature=c("gene", "mRNA", "exon", "CDS"),
+        start=rep(coordinates$start, 4),
+        end=rep(coordinates$stop, 4),
+        score=rep(".", 4),
+        strand=rep(coordinates$strand, 4),
+        frame=rep(".", 4),
+        attribute=c(paste0("ID=",busco),
+                    paste0("ID=",busco,"_mRNA;Parent=",busco),
+                    paste0("ID=",busco,"_exon_0;Parent=",busco,"_mRNA"),
+                    paste0("ID=",busco,"_CDS_0;Parent=",busco,"_exon_0"))
+    )
+
+    # save the new GFF file
+    data.table::fwrite(df_gff, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
+}
+
 # function: manipulate and save GFF file
 f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     # read GFF file
