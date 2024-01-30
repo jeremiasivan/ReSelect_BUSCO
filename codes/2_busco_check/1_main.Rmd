@@ -22,7 +22,6 @@ params:
   exe_samtools: ""
   exe_bcftools: ""
 
-  exe_metaeuk2gff: ""
   exe_gffread: ""
 
   exe_busco: ""
