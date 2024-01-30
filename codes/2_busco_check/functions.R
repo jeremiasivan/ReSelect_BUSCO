@@ -152,13 +152,21 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     # extract relevant GFF entry
     df_gff <- df_gff[df_gff$seqname==coordinates$seqname & df_gff$strand==coordinates$strand]
     if (nrow(df_gff) == 0) {
-        return(paste0("Error: ", busco, " GFF extraction for ", prefix, ". Skipped."))
+        return(list(errmsg=paste0("Error: ", busco, " GFF extraction for ", prefix, ". Skipped.")))
     }
 
     # extract the respective gene index
     gene_idx <- which(df_gff$feature == "gene" & df_gff$start == coordinates$start & df_gff$end == coordinates$stop)
     if (length(gene_idx) != 1) {
-        return(paste0("Error: ", busco, " gene extraction for ", prefix, ". Skipped."))
+        # extract all CDS based on the coordinates
+        df_gff_cds <- df_gff[df_gff$feature=="CDS" & df_gff$start>=coordinates$start & df_gff$end<=coordinates$stop]
+        if (nrow(df_gff_cds) == 0) {
+            return(list(errmsg=paste0("Error: ", busco, " gene extraction for ", prefix, ". Skipped.")))
+        }
+
+        # save the new GFF file
+        data.table::fwrite(df_gff_cds, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
+        return(list(warnmsg=paste0("Warn: ", busco, " GFF file for ", prefix, " is CDS-only.")))
     }
 
     # extract all gene indices
