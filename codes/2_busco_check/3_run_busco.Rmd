@@ -12,6 +12,7 @@ f_write_log(fn_log=fn_log,
 dir_refseq <- paste0(getwd(), "/refseq/")
 ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
 
+# output directories
 dir_readmap <- paste0(getwd(), "/busco_check/readmap/")
 
 # create output directory
@@ -63,7 +64,12 @@ foreach (ref = ls_refseq) %dopar% {
 
     # extract reference sequence
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)[1]
+    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
+    
+    if (length(file_ref) > 1) {
+        file_ref <- file_ref[1]
+        log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
+    }
 
     # check if BUSCO run exists
     file_busco_log <- paste0(dir_busco_ref, ref, "/logs/busco.log")
@@ -88,7 +94,7 @@ stopCluster(nwcl)
 ```
 
 ## Extract common BUSCOs between reference sequences
-```{r busco-ref}
+```{r check-busco-common}
 # list BUSCO directories for reference sequences
 ls_refseq <- list.dirs(dir_busco_ref, full.names=F, recursive=F)
 
@@ -122,7 +128,7 @@ if (length(shared_busco) == 0) {
 ```
 
 ## Extract BUSCOs for reference sequences
-```{r extract-busco-refseq}
+```{r check-busco-extract-ref}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -201,7 +207,7 @@ stopCluster(nwcl)
 ```
 
 ## Extract BUSCOs for short reads
-```{r check-busco-read}
+```{r check-busco-extract-reads}
 f_write_log(fn_log=fn_log, msg=c("", "------------ Short Reads -----------"))
 
 dir_busco_read <- paste0(dir_busco, "short_reads/")
@@ -268,7 +274,7 @@ stopCluster(nwcl)
 ```
 
 ## Convert individual BUSCO alignments into MSA
-```{r busco-msa}
+```{r check-busco-msa}
 dir_busco_tree <- paste0(dir_busco, "trees/")
 if (!dir.exists(dir_busco_tree)) {
     dir.create(dir_busco_tree, recursive=T)
@@ -325,7 +331,7 @@ stopCluster(nwcl)
 ```
 
 ## Generate BUSCO trees
-```{r busco-tree}
+```{r check-busco-tree}
 f_write_log(fn_log=fn_log, msg=c("", "------------ BUSCO Trees -----------"))
               
 # create doSNOW cluster
@@ -351,7 +357,7 @@ stopCluster(nwcl)
 ```
 
 ## Check BUSCO trees
-```{r check-tree}
+```{r check-busco-tree-summary}
 # select short reads
 df_shortreads <- data.table::fread(params$file_shortreads, select="is_check")
 n_shortreads <- df_shortreads$is_check[df_shortreads$is_check==TRUE]
@@ -382,20 +388,18 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         if (length(ls_taxa) <= 1) {
             out[[ref]] <- "INVALID"
             next
+        } else if (length(n_shortreads)+1 > length(ls_taxa)) {
+            out[[ref]] <- "INCOMPLETE"
+            next
         }
 
-        # check if clade is monophyletic
+        # check if reference-based clade is monophyletic
         is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
-
-        # check if tips are complete
-        if (!is_monophyletic) {
-            if (length(n_shortreads)+1 > length(ls_taxa)) {
-                is_monophyletic <- "INCOMPLETE"
-            } else if (length(n_shortreads)+1 < length(ls_taxa)) {
-                is_monophyletic <- "DUPLICATE"
-            }
+        if (is_monophyletic) {
+            out[[ref]] <- "REFBIAS"
+            next
         }
-        
+
         out[[ref]] <- is_monophyletic
     }
 
@@ -406,7 +410,6 @@ stopCluster(nwcl)
 
 # convert list into dataframe
 df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
-# df_output <- data.table::transpose(df_output, keep.names = "refseq", make.names = "busco")
 data.table::fwrite(df_output, file=fn_summary, sep="\t", quote=F, row.names=F)
 
 log4r::info(fn_logger, "File created: summary for BUSCO trees.")

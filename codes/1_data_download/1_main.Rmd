@@ -135,6 +135,9 @@ foreach (ref = ls_refseq) %dopar% {
         unzip(file_output, exdir=dir_output, overwrite=TRUE)
     }
 
+    # delete the zip file
+    unlink(file_output_zip)
+
     log4r::info(fn_logger, paste0("File downloaded: genome alignment for ", ref, "."))
 }
 

@@ -29,7 +29,9 @@ thread_samtools <- ifelse(params$thread < 10, params$thread, 10)
 ```
 
 ## QC of short reads
-```{r check-qc-reads}
+```{r check-readmap-qcreads}
+f_write_log(fn_log=fn_log, msg=c("", "----- Quality Control of FASTQ -----"))
+
 # select short reads
 df_shortreads <- data.table::fread(params$file_shortreads)
 ls_shortreads <- df_shortreads$id[df_shortreads$is_check]
@@ -51,7 +53,7 @@ foreach (read = ls_shortreads) %dopar% {
 
     # extract FASTQ files
     dir_reads <- paste0(dir_shortreads, read, "/fastq/")
-    ls_fastq <- list.files(dir_reads, pattern="*.fastq", recursive=F, full.names=T)
+    ls_fastq <- list.files(dir_reads, pattern="*.fastq$", recursive=F, full.names=T)
     len_ls_fastq <- length(ls_fastq)
 
     # run BWA-MEM2
@@ -69,6 +71,8 @@ stopCluster(nwcl)
 
 ## Map short reads to reference using BWA-MEM2
 ```{r check-readmap}
+f_write_log(fn_log=fn_log, msg=c("", "------------ Read Mapping ----------"))
+
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_bwamem2))
 doSNOW::registerDoSNOW(nwcl)
@@ -119,8 +123,7 @@ stopCluster(nwcl)
 
 ## Convert SAM to BAM
 ```{r check-readmap-conversion}
-f_write_log(fn_log=fn_log,
-            msg=c("", "--------- Data Preprocessing -------"))
+f_write_log(fn_log=fn_log, msg=c("", "---------- Data Conversion ---------"))
 
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_samtools))
