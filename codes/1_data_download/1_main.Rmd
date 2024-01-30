@@ -111,26 +111,31 @@ nwcl <- makeCluster(nthread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate through reference sequences
-foreach (i = ls_refseq) %dopar% {
-    # check if file exists
-    file_output <- paste0(dir_refseq, "/", i, ".zip")
-    if (file.exists(file_output) && !params$redo) {
-        log4r::warn(fn_logger, paste0("File found: genome alignment for ", i, ". Skipped."))
-    } else {
-        # delete the zip file
-        unlink(file_output)
+foreach (ref = ls_refseq) %dopar% {
+    # output files
+    file_output_zip <- paste0(dir_refseq, "/", ref, ".zip")
+    dir_output_fna <- paste0(dir_refseq, "/", ref, "/ncbi_dataset/data/", ref, "/")
 
-        # download the reference sequence
-        f_refseq_download(params$exe_datasets, i, file_output)
-        log4r::info(fn_logger, paste0("File downloaded: genome alignment for ", i, "."))
+    # check if file exists
+    if (length(list.files(dir_output_fna, pattern="*.fna$", recursive=F)) != 0 && !params$redo) {
+        log4r::warn(fn_logger, paste0("File found: genome alignment for ", ref, ". Skipped."))
+        return(NULL)
     }
+    
+    # delete the zip file
+    unlink(file_output_zip)
+
+    # download the reference sequence
+    f_refseq_download(params$exe_datasets, ref, file_output_zip)
 
     # check if folder exists
-    dir_output <- paste0(dir_refseq, i, "/")
+    dir_output <- paste0(dir_refseq, ref, "/")
     if (!dir.exists(dir_output) || params$redo) {
         dir.create(dir_output, recursive=T)
-        unzip(file_output, exdir=dir_output)
+        unzip(file_output, exdir=dir_output, overwrite=TRUE)
     }
+
+    log4r::info(fn_logger, paste0("File downloaded: genome alignment for ", ref, "."))
 }
 
 stopCluster(nwcl)
