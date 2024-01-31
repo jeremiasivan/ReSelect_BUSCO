@@ -10,16 +10,18 @@
 This pipeline requires several software and R packages to run. All software have to be executable (except for **SRA Toolkit** which points to `bin` directory), while the R packages should be installed either in your local directory or virtual environment. We recommend you to use environment management system (e.g. `conda`) to install the software and packages, but you can also use `install.packages()` built-in function in R or RStudio.
 
 ### Software
-- <a href="https://github.com/ncbi/datasets">NCBI Datasets</a>
-- <a href="https://github.com/ncbi/sra-tools">SRA Toolkit</a>
-- <a href="https://adapterremoval.readthedocs.io/en/stable/#">AdapterRemoval</a>
-- <a href="https://github.com/bwa-mem2/bwa-mem2">BWA-MEM2</a>
-- <a href="https://github.com/samtools/samtools">Samtools</a>
-- <a href="https://github.com/samtools/bcftools">Bcftools</a>
-- <a href="https://github.com/gpertea/gffread">Gffread</a>
-- <a href="https://busco.ezlab.org">BUSCO</a>
-- <a href="https://mafft.cbrc.jp/alignment/software/">MAFFT</a>
-- <a href="http://www.iqtree.org">IQ-TREE 2</a>
+| Name           | Website / Github                                                      |
+| -------------- |:---------------------------------------------------------------------:|
+| NCBI Datasets  | <a href="https://github.com/ncbi/datasets">Link</a>                   |
+| SRA Toolkit    | <a href="https://github.com/ncbi/sra-tools">Link</a>                  |
+| AdapterRemoval | <a href="https://adapterremoval.readthedocs.io/en/stable/#">Link</a>  |
+| BWA-MEM2       | <a href="https://github.com/bwa-mem2/bwa-mem2">Link</a>               |
+| Samtools       | <a href="https://github.com/samtools/samtools">Link</a>               |
+| Bcftools       | <a href="https://github.com/samtools/bcftools">Link</a>               |
+| GffRead        | <a href="https://github.com/gpertea/gffread">Link</a>                 |
+| BUSCO          | <a href="https://busco.ezlab.org">Link</a>                            |
+| MAFFT          | <a href="https://mafft.cbrc.jp/alignment/software/">Link</a>          |
+| IQ-TREE 2      | <a href="http://www.iqtree.org">Link</a>                              |
 
 ### R packages
 |    Name    |                                 CRAN / Bioconductor                                     |                                   Anaconda                               |
@@ -69,4 +71,4 @@ This pipeline requires several software and R packages to run. All software have
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `start`, but I have never tried it before. 
 
 ---
-*Last update: 30 January 2024 by Jeremias Ivan*
+*Last update: 31 January 2024 by Jeremias Ivan*
