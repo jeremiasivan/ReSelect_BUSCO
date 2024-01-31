@@ -85,6 +85,9 @@ f_write_log(fn_log=fn_log,
 ls_refseq <- NULL
 is_refseq_available <- FALSE
 
+ls_refseq_available <- NULL
+ls_refseq_download <- NULL
+
 # open the file that contains the list of reference sequences
 if (params$file_refseq != "" && !is.null(params$file_refseq)) {
   ls_refseq <- readLines(params$file_refseq)
@@ -95,15 +98,41 @@ if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
   f_write_log(fn_log=fn_log, msg="Warn: list of reference sequence has length zero")
 } else {
   f_write_log(fn_log=fn_log, msg=paste("Number of reference sequences:", length(ls_refseq)))
-  is_refseq_available <- TRUE
+
+  # update the list of reference sequences to be downloaded
+  if (params$redo) {
+    ls_refseq_download <- ls_refseq
+  } else {
+    for (ref in ls_refseq) {
+      dir_output_fna <- paste0(dir_refseq, "/", ref, "/ncbi_dataset/data/", ref, "/")
+
+      # check if file exists
+      if (length(list.files(dir_output_fna, pattern="*.fna$", recursive=F)) > 0) {
+        ls_refseq_available <- c(ls_refseq_available, paste("-", ref))
+      } else {
+        ls_refseq_download <- c(ls_refseq_download, ref)
+      }
+    }
+  }
+  
+  # output log file for available reference sequences
+  if (length(ls_refseq_available) > 0) {
+    ls_refseq_available <- c(paste0("Available reference sequences (", length(ls_refseq_available), "/", length(ls_refseq), ")"), ls_refseq_available)
+    f_write_log(fn_log=fn_log, msg=ls_refseq_available)
+  }
+
+  # update variable for the next analysis
+  if (length(ls_refseq_download) > 0) {
+    is_refseq_available <- TRUE
+  }
 }
 ```
 
 ```{r download-refseq, include=is_refseq_available, eval=is_refseq_available}
 # update number of thread
 nthread <- params$thread
-if (nthread > length(ls_refseq)) {
-  nthread <- length(ls_refseq)
+if (nthread > length(ls_refseq_download)) {
+  nthread <- length(ls_refseq_download)
 }
 
 # create doSNOW cluster
@@ -111,16 +140,9 @@ nwcl <- makeCluster(nthread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate through reference sequences
-foreach (ref = ls_refseq) %dopar% {
-    # output files
+foreach (ref = ls_refseq_download) %dopar% {
+    # output file
     file_output_zip <- paste0(dir_refseq, "/", ref, ".zip")
-    dir_output_fna <- paste0(dir_refseq, "/", ref, "/ncbi_dataset/data/", ref, "/")
-
-    # check if file exists
-    if (length(list.files(dir_output_fna, pattern="*.fna$", recursive=F)) != 0 && !params$redo) {
-        log4r::warn(fn_logger, paste0("File found: genome alignment for ", ref, ". Skipped."))
-        return(NULL)
-    }
     
     # delete the zip file
     unlink(file_output_zip)
