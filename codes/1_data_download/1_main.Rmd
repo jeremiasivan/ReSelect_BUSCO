@@ -117,7 +117,7 @@ if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
   
   # output log file for available reference sequences
   if (length(ls_refseq_available) > 0) {
-    ls_refseq_available <- c(paste0("Available reference sequences (", length(ls_refseq_available), "/", length(ls_refseq), ")"), ls_refseq_available)
+    ls_refseq_available <- c(paste0("Available reference sequences (", length(ls_refseq_available), "/", length(ls_refseq), ")"), ls_refseq_available, "")
     f_write_log(fn_log=fn_log, msg=ls_refseq_available)
   }
 
@@ -174,6 +174,9 @@ f_write_log(fn_log=fn_log,
 ls_shortreads <- NULL
 is_shortreads_available <- FALSE
 
+ls_reads_available <- NULL
+ls_reads_download <- NULL
+
 # open the file that contains the list of short reads
 if (params$file_shortreads != "" && !is.null(params$file_shortreads)) {
   df_shortreads <- read.table(params$file_shortreads, header=T)
@@ -185,15 +188,41 @@ if (length(ls_shortreads) == 0 || is.null(ls_shortreads)) {
   f_write_log(fn_log=fn_log, msg="Warn: list of short reads has length zero")
 } else {
   f_write_log(fn_log=fn_log, msg=paste("Number of short reads:", length(ls_shortreads)))
-  is_shortreads_available <- TRUE
+
+  # update the list of short reads to be downloaded
+  if (params$redo) {
+    ls_reads_download <- ls_shortreads
+  } else {
+    for (read in ls_shortreads) {
+      dir_output_fastq <- paste0(dir_shortreads, read, "/fastq/")
+
+      # check if file exists
+      if (length(list.files(dir_output_fastq, pattern="*.fastq$", recursive=F)) > 0) {
+        ls_reads_available <- c(ls_reads_available, paste("-", read))
+      } else {
+        ls_reads_download <- c(ls_reads_download, read)
+      }
+    }
+  }
+
+  # output log file for available short reads
+  if (length(ls_reads_available) > 0) {
+    ls_reads_available <- c(paste0("Available short reads (", length(ls_reads_available), "/", length(ls_shortreads), ")"), ls_reads_available, "")
+    f_write_log(fn_log=fn_log, msg=ls_reads_available)
+  }
+
+  # update variable for the next analysis
+  if (length(ls_reads_download) > 0) {
+    is_shortreads_available <- TRUE
+  }
 }
 ```
 
 ```{r download-shortreads, include=is_shortreads_available, eval=is_shortreads_available}
 # update number of thread
 nthread <- params$thread
-if (nthread > length(ls_shortreads)) {
-  nthread <- length(ls_shortreads)
+if (nthread > length(ls_reads_download)) {
+  nthread <- length(ls_reads_download)
 }
 
 # create doSNOW cluster
@@ -201,17 +230,10 @@ nwcl <- makeCluster(nthread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate through short reads
-foreach (i = ls_shortreads) %dopar% {
-    # check if file exists
-    dir_output_fastq <- paste0(dir_shortreads, i, "/fastq/")
-    if (length(list.files(dir_output_fastq, recursive=F)) != 0 && !params$redo) {
-        log4r::warn(fn_logger, paste0("File found: FASTQ alignment for ", i, ". Skipped."))
-        return(NULL)
-    }
-
+foreach (read = ls_reads_download) %dopar% {
     # download the short reads
-    f_shortreads_download(params$bin_sratoolkit, i, dir_shortreads)
-    log4r::info(fn_logger, paste0("File downloaded: FASTQ alignment for ", i, "."))
+    f_shortreads_download(params$bin_sratoolkit, read, dir_shortreads)
+    log4r::info(fn_logger, paste0("File downloaded: FASTQ alignment for ", read, "."))
 }
 
 stopCluster(nwcl)
