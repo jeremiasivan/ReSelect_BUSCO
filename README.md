@@ -68,4 +68,5 @@ This pipeline requires several software and R packages to run. All software have
 
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `start`, but I have never tried it before. 
 
+---
 *Last update: 30 January 2024 by Jeremias Ivan*

@@ -188,10 +188,10 @@ for (ref in ls_refseq) {
             log4r::info(fn_logger, paste0("File created: ", busco, " GFF file for ", ref, "."))
         } else {
             msg <- f_manipulate_gff(file_busco_gff, coordinates, busco, ref, file_busco_gff_out)
-            if (!is.null(msg$errmsg)) {
+            if (!is.null(msg) && !is.null(msg$errmsg)) {
                 f_write_log(fn_log=fn_log, msg=msg$errmsg)
                 return(NULL)
-            } else if (!is.null(msg$warnmsg)) {
+            } else if (!is.null(msg) && !is.null(msg$warnmsg)) {
                 f_write_log(fn_log=fn_log, msg=msg$warnmsg)
             }
         }
