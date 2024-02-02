@@ -341,8 +341,6 @@ doSNOW::registerDoSNOW(nwcl)
 
 # create a map for ID and species name
 ls_species_name <- c()
-ls_refseq_species <- NULL
-ls_shortreads_species <- NULL
 
 # iterate over reference sequences
 for (ref in ls_refseq) {
@@ -350,7 +348,6 @@ for (ref in ls_refseq) {
     species_name <- paste0(species_names[1],"_",species_names[2])
 
     ls_species_name[ref] <- species_name
-    ls_refseq_species <- c(ls_refseq_species, species_name)
 }
 
 # iterate over short reads
@@ -359,7 +356,6 @@ for (read in ls_shortreads) {
     species_name <- paste0(species_names[1],"_",species_names[2])
 
     ls_species_name[read] <- species_name
-    ls_shortreads_species <- c(ls_shortreads_species, species_name)
 }
 
 # iterate over shared BUSCOs
@@ -400,7 +396,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     read_out <- list(busco=busco)
 
     # check if treefile exists
-    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile.species")
+    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
     if (!file.exists(fn_tree)){
         log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
         return(NULL)
@@ -411,47 +407,47 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     ls_tips <- tre$tip.label
 
     # extract reference topology
-    topology_ref <- ape::keep.tip(tre, ls_refseq_species)
+    topology_ref <- ape::keep.tip(tre, ls_refseq)
     topology_ref$edge.length <- NULL
 
     # iterate over reference sequences
-    for (ref in ls_refseq_species) {
+    for (ref in ls_refseq) {
         # extract list of taxa with specific reference
         ls_taxa <- ls_tips[stringr::str_detect(ls_tips, ref)]
         if (length(ls_taxa) <= 1) {
-            ref_out[[ref]] <- "INVALID"
+            ref_out[[ls_species_name[ref]]] <- "INVALID"
             next
         } else if (length(ls_shortreads)+1 > length(ls_taxa)) {
-            ref_out[[ref]] <- "INCOMPLETE"
+            ref_out[[ls_species_name[ref]]] <- "INCOMPLETE"
             next
         }
 
         # check if reference-based clade is monophyletic
         is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
         if (is_monophyletic) {
-            ref_out[[ref]] <- "REFBIAS"
+            ref_out[[ls_species_name[ref]]] <- "REFBIAS"
             next
         }
 
-        ref_out[[ref]] <- "?"
+        ref_out[[ls_species_name[ref]]] <- "?"
     }
 
     # iterate over short reads
-    for (read in ls_shortreads_species) {
+    for (read in ls_shortreads) {
         # extract list of taxa with specific reference
         ls_taxa <- ls_tips[stringr::str_detect(ls_tips, read)]
         if (length(ls_taxa) <= 1) {
-            read_out[[read]] <- "INVALID"
+            read_out[[ls_species_name[read]]] <- "INVALID"
             next
         } else if (length(ls_refseq) > length(ls_taxa)) {
-            read_out[[read]] <- "INCOMPLETE"
+            read_out[[ls_species_name[read]]] <- "INCOMPLETE"
             next
         }
 
         # check if reference-based clade is monophyletic
         is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
         if (is_monophyletic) {
-            read_out[[read]] <- "PERFECT"
+            read_out[[ls_species_name[read]]] <- "PERFECT"
             next
         }
 
@@ -461,11 +457,11 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         topology_read$tip.label <- gsub(".*--", "", topology_read$tip.label)
 
         if (ape::all.equal.phylo(topology_ref, topology_read)) {
-            read_out[[read]] <- "TOPBIAS"
+            read_out[[ls_species_name[read]]] <- "TOPBIAS"
             next
         }
 
-        read_out[[read]] <- "?"
+        read_out[[ls_species_name[read]]] <- "?"
     }
 
     return(list(ref_out=ref_out, read_out=read_out))
