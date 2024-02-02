@@ -346,14 +346,18 @@ ls_shortreads_species <- NULL
 
 # iterate over reference sequences
 for (ref in ls_refseq) {
-    species_name <- f_extract_species_from_assembly(params$exe_efetch, ref)
+    ls_species_name <- unlist(strsplit(f_extract_species_from_assembly(params$exe_efetch, ref), split=" "))
+    species_name <- paste0(ls_species_name[1],"_",ls_species_name[2])
+
     ls_species_name[ref] <- species_name
     ls_refseq_species <- c(ls_refseq_species, species_name)
 }
 
 # iterate over short reads
 for (read in ls_shortreads) {
-    species_name <- f_extract_species_from_reads(params$exe_efetch, read)
+    ls_species_name <- unlist(strsplit(f_extract_species_from_reads(params$exe_efetch, read), split=" "))
+    species_name <- paste0(ls_species_name[1],"_",ls_species_name[2])
+
     ls_species_name[read] <- species_name
     ls_shortreads_species <- c(ls_shortreads_species, species_name)
 }
