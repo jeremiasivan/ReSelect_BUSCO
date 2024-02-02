@@ -447,10 +447,13 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 stopCluster(nwcl)
 
 # convert list into dataframe
-df_ref_output <- data.table::as.data.table(do.call(rbind, ls_output$ref_out), fill=TRUE)
+ls_ref_out <- ls_output[names(ls_output)=="ref_out"]
+ls_read_out <- ls_output[names(ls_output)=="read_out"]
+
+df_ref_output <- data.table::as.data.table(do.call(rbind, ls_ref_out), fill=TRUE)
 data.table::fwrite(df_ref_output, file=fn_ref_summary, sep="\t", quote=F, row.names=F)
 
-df_read_output <- data.table::as.data.table(do.call(rbind, ls_output$read_out), fill=TRUE)
+df_read_output <- data.table::as.data.table(do.call(rbind, ls_read_out), fill=TRUE)
 data.table::fwrite(df_read_output, file=fn_read_summary, sep="\t", quote=F, row.names=F)
 
 log4r::info(fn_logger, "File created: summary for BUSCO trees.")
