@@ -10,18 +10,19 @@
 This pipeline requires several software and R packages to run. All software have to be executable (except for **SRA Toolkit** which points to `bin` directory), while the R packages should be installed either in your local directory or virtual environment. We recommend you to use environment management system (e.g. `conda`) to install the software and packages, but you can also use `install.packages()` built-in function in R or RStudio.
 
 ### Software
-| Name           | Website / Github                                                      |
-| -------------- |:---------------------------------------------------------------------:|
-| NCBI Datasets  | <a href="https://github.com/ncbi/datasets">Link</a>                   |
-| SRA Toolkit    | <a href="https://github.com/ncbi/sra-tools">Link</a>                  |
-| AdapterRemoval | <a href="https://adapterremoval.readthedocs.io/en/stable/#">Link</a>  |
-| BWA-MEM2       | <a href="https://github.com/bwa-mem2/bwa-mem2">Link</a>               |
-| Samtools       | <a href="https://github.com/samtools/samtools">Link</a>               |
-| Bcftools       | <a href="https://github.com/samtools/bcftools">Link</a>               |
-| GffRead        | <a href="https://github.com/gpertea/gffread">Link</a>                 |
-| BUSCO          | <a href="https://busco.ezlab.org">Link</a>                            |
-| MAFFT          | <a href="https://mafft.cbrc.jp/alignment/software/">Link</a>          |
-| IQ-TREE 2      | <a href="http://www.iqtree.org">Link</a>                              |
+| Name             | Website / Github                                                      |
+| ---------------- |:---------------------------------------------------------------------:|
+| NCBI Datasets    | <a href="https://github.com/ncbi/datasets">Link</a>                   |
+| SRA Toolkit      | <a href="https://github.com/ncbi/sra-tools">Link</a>                  |
+| AdapterRemoval   | <a href="https://adapterremoval.readthedocs.io/en/stable/#">Link</a>  |
+| BWA-MEM2         | <a href="https://github.com/bwa-mem2/bwa-mem2">Link</a>               |
+| Samtools         | <a href="https://github.com/samtools/samtools">Link</a>               |
+| Bcftools         | <a href="https://github.com/samtools/bcftools">Link</a>               |
+| GffRead          | <a href="https://github.com/gpertea/gffread">Link</a>                 |
+| BUSCO            | <a href="https://busco.ezlab.org">Link</a>                            |
+| MAFFT            | <a href="https://mafft.cbrc.jp/alignment/software/">Link</a>          |
+| IQ-TREE 2        | <a href="http://www.iqtree.org">Link</a>                              |
+| Efetch (EDirect) | <a href="https://ftp.ncbi.nlm.nih.gov/entrez/entrezdirect/">Link</a>  |
 
 ### R packages
 |    Name    |                                 CRAN / Bioconductor                                     |                                   Anaconda                               |

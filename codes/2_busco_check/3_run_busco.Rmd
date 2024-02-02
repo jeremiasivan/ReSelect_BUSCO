@@ -352,7 +352,7 @@ for (ref in ls_refseq) {
 
 # iterate over short reads
 for (read in ls_shortreads) {
-    species_names <- unlist(strsplit(f_extract_species_from_reads(params$exe_efetch, read), split=" \\("))[1]
+    species_name <- unlist(strsplit(f_extract_species_from_reads(params$exe_efetch, read), split=" \\("))[1]
     species_name <- gsub(" ", "_", species_name)
 
     ls_species_name[read] <- species_name
