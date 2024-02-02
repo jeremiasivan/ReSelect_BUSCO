@@ -28,6 +28,8 @@ params:
   exe_iqtree2: ""
   exe_mafft: ""
 
+  exe_efetch: ""
+
   # BUSCO
   busco_lineage: ""
   busco_mode: "genome"
