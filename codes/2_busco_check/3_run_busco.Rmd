@@ -24,6 +24,7 @@ if (!dir.exists(dir_busco)) {
 # output file
 fn_ref_summary <- paste0(dir_busco, params$prefix, ".ref.sumtable")
 fn_read_summary <- paste0(dir_busco, params$prefix, ".read.sumtable")
+fn_read_monophyly_summary <- paste0(dir_busco, params$prefix, ".read.monophyly.sumtable")
 
 # set thread for BUSCO
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
@@ -480,4 +481,124 @@ df_read_output <- data.table::as.data.table(do.call(rbind, ls_read_out), fill=TR
 data.table::fwrite(df_read_output, file=fn_read_summary, sep="\t", quote=F, row.names=F)
 
 log4r::info(fn_logger, "File created: summary for BUSCO trees.")
+```
+
+```{r check-busco-tree-summary-monophyly}
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    # initiate variable
+    read_out <- list(busco=busco)
+
+    # check if treefile exists
+    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
+    if (!file.exists(fn_tree)){
+        log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
+        return(NULL)
+    }
+
+    # read tree
+    tre <- ape::read.tree(fn_tree)
+    ls_tips <- tre$tip.label
+
+    # iterate over short reads
+    for (read in ls_shortreads) {
+        # extract list of taxa with specific reference
+        ls_taxa <- ls_tips[stringr::str_detect(ls_tips, read)]
+
+        # set column names
+        colname_main <- paste(ls_species_name[read], "(Main)")
+        colname_sub <- paste(ls_species_name[read], "(Sub)")
+        colname_mono <- paste(ls_species_name[read], "(Mono)")
+
+        # set variables
+        all_idx <- c()
+        ls_idx <- list()
+        ls_ref <- list()
+
+        # iterate over reads
+        for (i in 1:length(ls_taxa)) {
+            # update the reference name
+            ref_i <- unlist(strsplit(ls_taxa[i], split="--))[2]
+            ref_i <- ls_species_name[ref_i]
+
+            # set up temporary variables
+            ls_name <- paste0("I", length(ls_idx))
+            ls_idx_temp <- i
+            ls_ref_temp <- ref_i
+
+            # check if idx has been recorded
+            if (i %in% all_idx) {
+                next
+            }
+
+            # check if idx is the last reference
+            if (i == length(ls_taxa)) {
+                all_idx <- c(all_idx, i)
+                
+                ls_idx[[ls_name]] <- i
+                ls_ref[[ls_name]] <- ref_i
+                next
+            }
+
+            # iterate over other references
+            for (j in (i+1):length(ls_taxa)) {
+                # update the reference name
+                ref_j <- unlist(strsplit(ls_taxa[j], split="--))[2]
+                ref_j <- ls_species_name[ref_j]
+
+                # check if idx has been recorded
+                if (j %in% all_idx) {
+                    next
+                }
+
+                # check if clade is monophyletic
+                is_monophyletic <- ape::is.monophyletic(tre, tips = c(ls_ref_temp, ls_taxa[j]))
+                if (is_monophyletic) {
+                    ls_idx_temp <- c(ls_idx_temp, j)
+                    ls_ref_temp <- c(ls_ref_temp, ref_j)
+                }
+            }
+
+            # update variables
+            all_idx <- c(all_idx, ls_idx_temp)
+            ls_idx[[ls_name]] <- ls_idx_temp
+            ls_ref[[ls_name]] <- ls_ref_temp
+        }
+
+        # update output table
+        max_len <- max(lengths(ls_idx))
+        len_main <- 0
+        len_sub <- 0
+        len_mono <- 0
+
+        for (k in 1:length(ls_idx)) {
+            item_len <- length(ls_idx[k])
+
+            if (item_len == 1) {
+                read_out[[colname_mono]] <- paste(read_out[[colname_mono]], ls_idx[k], sep= ";")
+                len_mono <- len_mono + item_len
+            } else if (item_len == max_len) {
+                read_out[[colname_main]] <- paste(read_out[[colname_main]], paste(ls_idx[k], collapse=","), sep= ";")
+                len_main <- len_main + item_len
+            } else {
+                read_out[[colname_sub]] <- paste(read_out[[colname_sub]], paste(ls_idx[k], collapse=","), sep= ";")
+                len_sub <- len_sub + item_len
+            }
+        }
+
+        read_out[[colname_mono]] <- paste0("(", len_mono, ") ", read_out[[colname_mono]])
+        read_out[[colname_main]] <- paste0("(", len_main, ") ", read_out[[colname_main]])
+        read_out[[colname_sub]] <- paste0("(", len_sub, ") ", read_out[[colname_sub]])
+    }
+
+    return(list(read_out))
+}
+
+stopCluster(nwcl)
+
+df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
+data.table::fwrite(df_output, file=fn_read_monophyly_summary, sep="\t", quote=F, row.names=F)
 ```

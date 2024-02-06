@@ -41,6 +41,7 @@ source(paste0(params$codedir, "/1_data_download/functions.R"))
 source(paste0(params$codedir, "/2_busco_check/functions.R"))
 
 library(doSNOW)
+library(dplyr)
 ```
 
 ```{r, include=FALSE}
