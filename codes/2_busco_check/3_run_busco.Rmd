@@ -561,13 +561,13 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         }
 
         # update output table
-        max_len <- max(lengths(ls_idx))
+        max_len <- max(lengths(ls_ref))
         len_main <- 0
         len_sub <- 0
         len_mono <- 0
 
-        for (k in 1:length(ls_idx)) {
-            item_len <- length(ls_idx[[k]])
+        for (k in 1:length(ls_ref)) {
+            item_len <- length(ls_ref[[k]])
 
             # convert ID to species name
             ls_ref_sp <- sapply(ls_ref[[k]], function(x) {
