@@ -520,14 +520,10 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
         # iterate over reads
         for (i in 1:length(ls_taxa)) {
-            # update the reference name
-            ref_i <- unlist(strsplit(ls_taxa[i], split="--))[2]
-            ref_i <- ls_species_name[ref_i]
-
             # set up temporary variables
             ls_name <- paste0("I", length(ls_idx))
             ls_idx_temp <- i
-            ls_ref_temp <- ref_i
+            ls_ref_temp <- ls_taxa[i]
 
             # check if idx has been recorded
             if (i %in% all_idx) {
@@ -539,16 +535,12 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
                 all_idx <- c(all_idx, i)
                 
                 ls_idx[[ls_name]] <- i
-                ls_ref[[ls_name]] <- ref_i
+                ls_ref[[ls_name]] <- ls_taxa[i]
                 next
             }
 
             # iterate over other references
             for (j in (i+1):length(ls_taxa)) {
-                # update the reference name
-                ref_j <- unlist(strsplit(ls_taxa[j], split="--))[2]
-                ref_j <- ls_species_name[ref_j]
-
                 # check if idx has been recorded
                 if (j %in% all_idx) {
                     next
@@ -558,7 +550,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
                 is_monophyletic <- ape::is.monophyletic(tre, tips = c(ls_ref_temp, ls_taxa[j]))
                 if (is_monophyletic) {
                     ls_idx_temp <- c(ls_idx_temp, j)
-                    ls_ref_temp <- c(ls_ref_temp, ref_j)
+                    ls_ref_temp <- c(ls_ref_temp, ls_taxa[j])
                 }
             }
 
@@ -575,16 +567,22 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         len_mono <- 0
 
         for (k in 1:length(ls_idx)) {
-            item_len <- length(ls_idx[k])
+            item_len <- length(ls_idx[[k]])
+
+            # convert ID to species name
+            ls_ref_sp <- sapply(ls_ref[[k]], function(x) {
+                tempname <- unlist(strsplit(x, split="--"))[2]
+                ls_species_name[tempname]
+            })
 
             if (item_len == 1) {
-                read_out[[colname_mono]] <- paste(read_out[[colname_mono]], ls_idx[k], sep= ";")
+                read_out[[colname_mono]] <- paste(read_out[[colname_mono]], ls_ref_sp, sep= ";")
                 len_mono <- len_mono + item_len
             } else if (item_len == max_len) {
-                read_out[[colname_main]] <- paste(read_out[[colname_main]], paste(ls_idx[k], collapse=","), sep= ";")
+                read_out[[colname_main]] <- paste(read_out[[colname_main]], paste(ls_ref_sp, collapse=","), sep= ";")
                 len_main <- len_main + item_len
             } else {
-                read_out[[colname_sub]] <- paste(read_out[[colname_sub]], paste(ls_idx[k], collapse=","), sep= ";")
+                read_out[[colname_sub]] <- paste(read_out[[colname_sub]], paste(ls_ref_sp, collapse=","), sep= ";")
                 len_sub <- len_sub + item_len
             }
         }
