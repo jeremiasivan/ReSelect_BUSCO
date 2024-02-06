@@ -575,21 +575,24 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
                 ls_species_name[tempname]
             })
 
+            ls_ref_sp <- paste(ls_ref_sp, collapse=",")
+
+            # update each column
             if (item_len == 1) {
-                read_out[[colname_mono]] <- paste(read_out[[colname_mono]], ls_ref_sp, sep= ";")
+                read_out[[colname_mono]] <- ifelse(is.null(read_out[[colname_mono]]), ls_ref_sp, paste(read_out[[colname_mono]], ls_ref_sp, sep= ";"))
                 len_mono <- len_mono + item_len
             } else if (item_len == max_len) {
-                read_out[[colname_main]] <- paste(read_out[[colname_main]], paste(ls_ref_sp, collapse=","), sep= ";")
+                read_out[[colname_main]] <- ifelse(is.null(read_out[[colname_main]]), ls_ref_sp, paste(read_out[[colname_main]], ls_ref_sp, sep= ";"))
                 len_main <- len_main + item_len
             } else {
-                read_out[[colname_sub]] <- paste(read_out[[colname_sub]], paste(ls_ref_sp, collapse=","), sep= ";")
+                read_out[[colname_sub]] <- ifelse(is.null(read_out[[colname_sub]]), ls_ref_sp, paste(read_out[[colname_sub]], ls_ref_sp, sep= ";"))
                 len_sub <- len_sub + item_len
             }
         }
 
-        read_out[[colname_mono]] <- paste0("(", len_mono, ") ", read_out[[colname_mono]])
         read_out[[colname_main]] <- paste0("(", len_main, ") ", read_out[[colname_main]])
         read_out[[colname_sub]] <- paste0("(", len_sub, ") ", read_out[[colname_sub]])
+        read_out[[colname_mono]] <- paste0("(", len_mono, ") ", read_out[[colname_mono]])
     }
 
     return(list(read_out))
