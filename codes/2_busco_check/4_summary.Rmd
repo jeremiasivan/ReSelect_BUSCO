@@ -1,8 +1,8 @@
 ---
-title: "Run BUSCO Pipeline on Reference Sequences and Short Reads"
+title: "Summarise BUSCO Trees"
 ---
 
-```{r check-busco-setup, include=FALSE}
+```{r check-summary-setup, include=FALSE}
 f_write_log(fn_log=fn_log,
             msg=c("", "####################################",
                       "####           Summary          ####",
@@ -16,7 +16,7 @@ fn_mntd_p <- paste0(dir_busco, params$prefix, ".mntd.p.sumtable")
 ```
 
 ## Check BUSCO trees
-```{r check-busco-tree-summary, eval=FALSE}
+```{r check-summary-tree, eval=FALSE}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -113,7 +113,7 @@ data.table::fwrite(df_read_output, file=fn_read_summary, sep="\t", quote=F, row.
 log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ```
 
-```{r check-busco-tree-mntd}
+```{r check-summary-mntd}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -150,7 +150,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     df_presence <- labdsv::matrify(df_presence)
 
     # run MNTD
-    mntd_result <- picante::ses.mntd(df_presence, tre)
+    mntd_result <- picante::ses.mntd(df_presence, cophenetic(tre))
 
     # iterate over reference sequences
     for (i in 1:nrow(mntd_result)) {
