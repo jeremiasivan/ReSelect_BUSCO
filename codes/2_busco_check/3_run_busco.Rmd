@@ -292,7 +292,7 @@ stopCluster(nwcl)
 ```
 
 ## Convert individual BUSCO alignments into MSA
-```{r check-busco-msa}
+```{r check-busco-msa, eval=FALSE}
 dir_busco_tree <- paste0(dir_busco, "trees/")
 if (!dir.exists(dir_busco_tree)) {
     dir.create(dir_busco_tree, recursive=T)
@@ -349,7 +349,7 @@ stopCluster(nwcl)
 ```
 
 ## Generate BUSCO trees
-```{r check-busco-tree}
+```{r check-busco-tree, eval=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "------------ BUSCO Trees -----------"))
               
 # create doSNOW cluster

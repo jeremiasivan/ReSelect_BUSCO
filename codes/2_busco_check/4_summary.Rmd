@@ -16,7 +16,7 @@ fn_mntd_p <- paste0(dir_busco, params$prefix, ".mntd.p.sumtable")
 ```
 
 ## Check BUSCO trees
-```{r check-busco-tree-summary}
+```{r check-busco-tree-summary, eval=FALSE}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)

@@ -85,6 +85,9 @@ knitr::opts_knit$set(root.dir = currentdir)
 ```{r child = paste0(params$codedir,"/2_busco_check/3_run_busco.Rmd")}
 ```
 
+```{r child = paste0(params$codedir,"/2_busco_check/4_summary.Rmd")}
+```
+
 ```{r, include=FALSE}
 # store final system time
 sys_toc <- Sys.time()
