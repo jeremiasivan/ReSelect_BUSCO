@@ -13,7 +13,7 @@ fn_ref_summary <- paste0(dir_busco, params$prefix, ".ref.sumtable")
 fn_read_summary <- paste0(dir_busco, params$prefix, ".read.sumtable")
 fn_mntd_z <- paste0(dir_busco, params$prefix, ".mntd.z.sumtable")
 fn_mntd_p <- paste0(dir_busco, params$prefix, ".mntd.p.sumtable")
-fn_mntd_sum <- paste0(dir_busco, params$prefix, ".mntd.sum")
+fn_mntd_summary <- paste0(dir_busco, params$prefix, ".mntd.sumtable")
 ```
 
 ## Check BUSCO trees
@@ -162,9 +162,9 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
         # update variables
         if (mntd_result$mntd.obs.z[i] > 0 && mntd_result$mntd.obs.p[i] > 0.95) {
-            mntd_sum[[ls_species_name[ref_name]]] <- "cluster"
+            mntd_sum[[ls_species_name[ref_name]]] <- "C"
         } else if (mntd_result$mntd.obs.z[i] < 0 && mntd_result$mntd.obs.p[i] < 0.05) {
-            mntd_sum[[ls_species_name[ref_name]]] <- "spread"
+            mntd_sum[[ls_species_name[ref_name]]] <- "S"
         } else {
             mntd_sum[[ls_species_name[ref_name]]] <- ""
         }
@@ -186,21 +186,5 @@ df_mntd_sum_output <- data.table::as.data.table(do.call(rbind, ls_mntd_sum_out),
 
 data.table::fwrite(df_mntd_z_output, file=fn_mntd_z, sep="\t", quote=F, row.names=F)
 data.table::fwrite(df_mntd_p_output, file=fn_mntd_p, sep="\t", quote=F, row.names=F)
-
-# extract column names
-df_mntd_colnames <- colnames(df_mntd_sum_output)
-df_mntd_colnames <- df_mntd_colnames[df_mntd_colnames != "busco"]
-
-# save summary file
-f_write_log(fn_log=fn_mntd_sum, msg="---------- CLUSTER ----------")
-for (ref in df_mntd_colnames) {
-    ls_busco <- df_mntd_sum_output$busco[df_mntd_sum_output[[ref]] == "cluster"]
-    f_write_log(fn_log=fn_mntd_sum, msg=c(ref, paste("-", ls_busco, "")))
-}
-
-f_write_log(fn_log=fn_mntd_sum, msg="----------  SPREAD ----------")
-for (ref in df_mntd_colnames) {
-    ls_busco <- df_mntd_sum_output$busco[df_mntd_sum_output[[ref]] == "spread"]
-    f_write_log(fn_log=fn_mntd_sum, msg=c(ref, paste("-", ls_busco, "")))
-}
+data.table::fwrite(df_mntd_sum_output, file=fn_mntd_summary, sep="\t", quote=F, row.names=F)
 ```
