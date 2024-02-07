@@ -21,10 +21,6 @@ if (!dir.exists(dir_busco)) {
   dir.create(dir_busco, recursive = T)
 }
 
-# output file
-fn_ref_summary <- paste0(dir_busco, params$prefix, ".ref.sumtable")
-fn_read_summary <- paste0(dir_busco, params$prefix, ".read.sumtable")
-
 # set thread for BUSCO
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
 ```
@@ -384,102 +380,4 @@ foreach (busco = shared_busco) %dopar% {
 }
 
 stopCluster(nwcl)
-```
-
-## Check BUSCO trees
-```{r check-busco-tree-summary}
-# create doSNOW cluster
-nwcl <- makeCluster(params$thread)
-doSNOW::registerDoSNOW(nwcl)
-
-ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
-    # initiate variable
-    ref_out <- list(busco=busco)
-    read_out <- list(busco=busco)
-
-    # check if treefile exists
-    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
-    if (!file.exists(fn_tree)){
-        log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
-        return(NULL)
-    }
-
-    # read tree
-    tre <- ape::read.tree(fn_tree)
-    ls_tips <- tre$tip.label
-
-    # extract reference topology
-    topology_ref <- ape::keep.tip(tre, ls_refseq)
-    topology_ref$edge.length <- NULL
-
-    # iterate over reference sequences
-    for (ref in ls_refseq) {
-        # extract list of taxa with specific reference
-        ls_taxa <- ls_tips[stringr::str_detect(ls_tips, ref)]
-        if (length(ls_taxa) <= 1) {
-            ref_out[[ls_species_name[ref]]] <- "INVALID"
-            next
-        } else if (length(ls_shortreads)+1 > length(ls_taxa)) {
-            ref_out[[ls_species_name[ref]]] <- "INCOMPLETE"
-            next
-        }
-
-        # check if reference-based clade is monophyletic
-        is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
-        if (is_monophyletic) {
-            ref_out[[ls_species_name[ref]]] <- "REFBIAS"
-            next
-        }
-
-        ref_out[[ls_species_name[ref]]] <- "?"
-    }
-
-    # iterate over short reads
-    for (read in ls_shortreads) {
-        # extract list of taxa with specific reference
-        ls_taxa <- ls_tips[stringr::str_detect(ls_tips, read)]
-        if (length(ls_taxa) <= 1) {
-            read_out[[ls_species_name[read]]] <- "INVALID"
-            next
-        } else if (length(ls_refseq) > length(ls_taxa)) {
-            read_out[[ls_species_name[read]]] <- "INCOMPLETE"
-            next
-        }
-
-        # check if reference-based clade is monophyletic
-        is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
-        if (is_monophyletic) {
-            read_out[[ls_species_name[read]]] <- "PERFECT"
-            next
-        }
-
-        # check for topology-based reference bias
-        topology_read <- ape::keep.tip(tre, ls_taxa)
-        topology_read$edge.length <- NULL
-        topology_read$tip.label <- gsub(".*--", "", topology_read$tip.label)
-
-        if (ape::all.equal.phylo(topology_ref, topology_read)) {
-            read_out[[ls_species_name[read]]] <- "TOPBIAS"
-            next
-        }
-
-        read_out[[ls_species_name[read]]] <- "?"
-    }
-
-    return(list(ref_out=ref_out, read_out=read_out))
-}
-
-stopCluster(nwcl)
-
-# convert list into dataframe
-ls_ref_out <- ls_output[names(ls_output)=="ref_out"]
-ls_read_out <- ls_output[names(ls_output)=="read_out"]
-
-df_ref_output <- data.table::as.data.table(do.call(rbind, ls_ref_out), fill=TRUE)
-data.table::fwrite(df_ref_output, file=fn_ref_summary, sep="\t", quote=F, row.names=F)
-
-df_read_output <- data.table::as.data.table(do.call(rbind, ls_read_out), fill=TRUE)
-data.table::fwrite(df_read_output, file=fn_read_summary, sep="\t", quote=F, row.names=F)
-
-log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ```

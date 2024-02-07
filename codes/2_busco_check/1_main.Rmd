@@ -41,14 +41,15 @@ source(paste0(params$codedir, "/1_data_download/functions.R"))
 source(paste0(params$codedir, "/2_busco_check/functions.R"))
 
 library(doSNOW)
-library(dplyr)
 ```
 
 ```{r, include=FALSE}
 # install.packages("ape")
 # install.packages("Biostrings")
 # install.packages("data.table")
+# install.packages("labdsv")
 # install.packages("log4r")
+# install.packages("picante")
 # install.packages("stringr")
 
 # store initial system time
