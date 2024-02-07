@@ -292,7 +292,7 @@ stopCluster(nwcl)
 ```
 
 ## Convert individual BUSCO alignments into MSA
-```{r check-busco-msa, eval=FALSE}
+```{r check-busco-msa}
 dir_busco_tree <- paste0(dir_busco, "trees/")
 if (!dir.exists(dir_busco_tree)) {
     dir.create(dir_busco_tree, recursive=T)

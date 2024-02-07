@@ -141,16 +141,16 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         ls_taxa <- ls_tips[stringr::str_detect(ls_tips, ref)]
         
         # add taxa to the presence/absence table
-        sapply(ls_taxa, function(x){
-            df_presence <- rbind(df_presence, c(refs=ref, reads=x, present=1))
-        })
+        for (taxon in ls_taxa) {
+            df_presence <- rbind(df_presence, c(refs=ref, reads=taxon, present=1))
+        }
     }
 
     # transform data.frame to community format used in picante
     df_presence <- labdsv::matrify(df_presence)
 
     # run MNTD
-    mntd_result <- picante::ses.mntd(df_presence, cophenetic(tre))
+    mntd_result <- picante::ses.mntd(df_presence, ape::cophenetic.phylo(tre))
 
     # iterate over reference sequences
     for (i in 1:nrow(mntd_result)) {
