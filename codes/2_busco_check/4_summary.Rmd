@@ -27,7 +27,7 @@ fn_mntd_spread_png <- paste0(dir_check_summary, params$prefix, ".mntd.spread.png
 fn_dist_png <- paste0(dir_check_summary, params$prefix, ".dist.png")
 ```
 
-## Check BUSCO trees
+## Check reference bias on BUSCO trees
 ```{r check-summary-tree, eval=FALSE}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
@@ -125,7 +125,8 @@ data.table::fwrite(df_read_output, file=fn_read_summary, sep="\t", quote=F, row.
 log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ```
 
-```{r check-summary-mntd}
+## Calculate MNTD on BUSCO trees
+```{r check-summary-mntd, eval=FALSE}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -200,8 +201,8 @@ data.table::fwrite(df_mntd_p_output, file=fn_mntd_p, sep="\t", quote=F, row.name
 data.table::fwrite(df_mntd_sum_output, file=fn_mntd_summary, sep="\t", quote=F, row.names=F)
 ```
 
-```{r check-summary-visualization}
-df_mntd <- data.table::fread(df_mntd_sum_output)
+```{r check-summary-visualization, eval=FALSE}
+df_mntd <- data.table::fread(fn_mntd_summary)
 
 # generate plots
 df_mntd_melt <- reshape2::melt(df_mntd, id.vars="busco")
@@ -235,6 +236,7 @@ ggplot(df_mntd_melt_spread, aes(x=variable, y=busco)) +
 dev.off()
 ```
 
+## Calculate phylogenetic distance between mapped reads and references
 ```{r check-summary-individual}
 # extract representative species
 df_reads_ref <- data.table::data.table(species=character(), reads=character(), ref=character())
@@ -247,7 +249,7 @@ for (i in 1:nrow(df_reads_subset)) {
     ref_id <- df_refs$id[df_refs$species == species_name]
 
     # update data.frame
-    df_reads_ref <- rbind(df_reads_ref, c(species=species_name, reads=df_reads_subset$id[i], ref=ref_id))
+    df_reads_ref <- rbind(df_reads_ref, data.table::data.table(species=species_name, reads=df_reads_subset$id[i], ref=ref_id))
 }
 
 # create doSNOW cluster
@@ -272,7 +274,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     # iterate over reads
     ls_dist <- c()
     for (i in 1:nrow(df_reads_ref)) {
-        ls_dist <- c(ls_dist, distance_tre[rownames(distance_tre)==df_reads_ref$reads[i],
+        ls_dist <- c(ls_dist, distance_tre[rownames(distance_tre)==paste0(df_reads_ref$reads[i],"--",df_reads_ref$ref[i]),
                                            colnames(distance_tre)==df_reads_ref$ref[i]])
     }
     
