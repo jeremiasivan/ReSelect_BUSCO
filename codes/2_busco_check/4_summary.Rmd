@@ -23,6 +23,8 @@ fn_mntd_summary <- paste0(dir_check_summary, params$prefix, ".mntd.sumtable")
 
 fn_mntd_cluster_png <- paste0(dir_check_summary, params$prefix, ".mntd.cluster.png")
 fn_mntd_spread_png <- paste0(dir_check_summary, params$prefix, ".mntd.spread.png")
+
+fn_dist_png <- paste0(dir_check_summary, params$prefix, ".dist.png")
 ```
 
 ## Check BUSCO trees
@@ -196,14 +198,18 @@ df_mntd_sum_output <- data.table::as.data.table(do.call(rbind, ls_mntd_sum_out),
 data.table::fwrite(df_mntd_z_output, file=fn_mntd_z, sep="\t", quote=F, row.names=F)
 data.table::fwrite(df_mntd_p_output, file=fn_mntd_p, sep="\t", quote=F, row.names=F)
 data.table::fwrite(df_mntd_sum_output, file=fn_mntd_summary, sep="\t", quote=F, row.names=F)
+```
+
+```{r check-summary-visualization}
+df_mntd <- data.table::fread(df_mntd_sum_output)
 
 # generate plots
-df_mntd_sum_melt <- reshape2::melt(df_mntd_sum_output, id.vars="busco")
-df_mntd_sum_melt_cluster <- df_mntd_sum_melt[df_mntd_sum_melt$value == "C" | df_mntd_sum_melt$value == "",]
-df_mntd_sum_melt_spread <- df_mntd_sum_melt[df_mntd_sum_melt$value == "S" | df_mntd_sum_melt$value == "",]
+df_mntd_melt <- reshape2::melt(df_mntd, id.vars="busco")
+df_mntd_melt_cluster <- df_mntd_melt[df_mntd_melt$value == "C" | df_mntd_melt$value == "",]
+df_mntd_melt_spread <- df_mntd_melt[df_mntd_melt$value == "S" | df_mntd_melt$value == "",]
 
 png(file=fn_mntd_cluster_png, width=1024, height=768)
-ggplot(df_mntd_sum_melt_cluster, aes(x=variable, y=busco)) +
+ggplot(df_mntd_melt_cluster, aes(x=variable, y=busco)) +
     geom_tile(aes(fill=value), color="white") +
     ggtitle("BUSCOs with Reference-based Clusters") + ylab("BUSCO") +
     scale_fill_manual(values=c("white","red")) +
@@ -216,7 +222,7 @@ ggplot(df_mntd_sum_melt_cluster, aes(x=variable, y=busco)) +
 dev.off()
 
 png(file=fn_mntd_spread_png, width=1024, height=768)
-ggplot(df_mntd_sum_melt_spread, aes(x=variable, y=busco)) +
+ggplot(df_mntd_melt_spread, aes(x=variable, y=busco)) +
     geom_tile(aes(fill=value), color="white") +
     ggtitle("BUSCOs with Reference-based Spreads") + ylab("BUSCO") +
     scale_fill_manual(values=c("white","blue")) +
@@ -224,6 +230,63 @@ ggplot(df_mntd_sum_melt_spread, aes(x=variable, y=busco)) +
     theme(axis.text.y = element_blank(),
           axis.ticks.y = element_blank(),
           axis.title.x = element_blank(),
+          plot.title = element_text(hjust=0.5, size=14, face="bold"),
+          legend.position = "none")
+dev.off()
+```
+
+```{r check-summary-individual}
+# extract representative species
+df_reads_ref <- data.table::data.table(species=character(), reads=character(), ref=character())
+
+df_reads_subset <- df_reads[df_reads$is_check,]
+for (i in 1:nrow(df_reads_subset)) {
+    species_name <- df_reads_subset$species[i]
+
+    # extract reference ID
+    ref_id <- df_refs$id[df_refs$species == species_name]
+
+    # update data.frame
+    df_reads_ref <- rbind(df_reads_ref, c(species=species_name, reads=df_reads_subset$id[i], ref=ref_id))
+}
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    # check if treefile exists
+    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
+    if (!file.exists(fn_tree)){
+        log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
+        return(NULL)
+    }
+
+    # read tree
+    tre <- ape::read.tree(fn_tree)
+    ls_tips <- tre$tip.label
+
+    # calculate phylogenetic distance
+    distance_tre <- ape::cophenetic.phylo(tre)
+
+    # iterate over reads
+    ls_dist <- c()
+    for (i in 1:nrow(df_reads_ref)) {
+        ls_dist <- c(ls_dist, distance_tre[rownames(distance_tre)==df_reads_ref$reads[i],
+                                           colnames(distance_tre)==df_reads_ref$ref[i]])
+    }
+    
+    return(ls_dist)
+}
+
+stopCluster(nwcl)
+
+# visualization
+png(file=fn_dist_png, width=1024, height=768)
+ggplot(data.frame(ls_output), aes(x=ls_output, xmin=0)) + 
+    geom_density() +
+    ggtitle("BUSCO Phylogenetic Distance between Mapped Reads and Reference") + ylab("Density") +
+    theme(axis.title.x = element_blank(),
           plot.title = element_text(hjust=0.5, size=14, face="bold"),
           legend.position = "none")
 dev.off()
