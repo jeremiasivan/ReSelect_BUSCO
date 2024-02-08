@@ -347,7 +347,7 @@ stopCluster(nwcl)
 ```
 
 ## Generate BUSCO trees
-```{r check-busco-tree, eval=FALSE}
+```{r check-busco-tree}
 f_write_log(fn_log=fn_log, msg=c("", "------------ BUSCO Trees -----------"))
               
 # create doSNOW cluster
