@@ -8,12 +8,21 @@ f_write_log(fn_log=fn_log,
                       "####           Summary          ####",
                       "####################################"))
 
+# output directory
+dir_check_summary <- paste0(dir_busco, "summary/")
+if (!dir.exists(dir_check_summary)){
+    dir.create(dir_check_summary, recursive=T)
+}
+
 # output files
-fn_ref_summary <- paste0(dir_busco, params$prefix, ".ref.sumtable")
-fn_read_summary <- paste0(dir_busco, params$prefix, ".read.sumtable")
-fn_mntd_z <- paste0(dir_busco, params$prefix, ".mntd.z.sumtable")
-fn_mntd_p <- paste0(dir_busco, params$prefix, ".mntd.p.sumtable")
-fn_mntd_summary <- paste0(dir_busco, params$prefix, ".mntd.sumtable")
+fn_ref_summary <- paste0(dir_check_summary, params$prefix, ".ref.sumtable")
+fn_read_summary <- paste0(dir_check_summary, params$prefix, ".read.sumtable")
+fn_mntd_z <- paste0(dir_check_summary, params$prefix, ".mntd.z.sumtable")
+fn_mntd_p <- paste0(dir_check_summary, params$prefix, ".mntd.p.sumtable")
+fn_mntd_summary <- paste0(dir_check_summary, params$prefix, ".mntd.sumtable")
+
+fn_mntd_cluster_png <- paste0(dir_check_summary, params$prefix, ".mntd.cluster.png")
+fn_mntd_spread_png <- paste0(dir_check_summary, params$prefix, ".mntd.spread.png")
 ```
 
 ## Check BUSCO trees
@@ -162,9 +171,9 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
         # update variables
         if (mntd_result$mntd.obs.z[i] > 0 && mntd_result$mntd.obs.p[i] > 0.95) {
-            mntd_sum[[ls_species_name[ref_name]]] <- "C"
-        } else if (mntd_result$mntd.obs.z[i] < 0 && mntd_result$mntd.obs.p[i] < 0.05) {
             mntd_sum[[ls_species_name[ref_name]]] <- "S"
+        } else if (mntd_result$mntd.obs.z[i] < 0 && mntd_result$mntd.obs.p[i] < 0.05) {
+            mntd_sum[[ls_species_name[ref_name]]] <- "C"
         } else {
             mntd_sum[[ls_species_name[ref_name]]] <- ""
         }
@@ -187,4 +196,35 @@ df_mntd_sum_output <- data.table::as.data.table(do.call(rbind, ls_mntd_sum_out),
 data.table::fwrite(df_mntd_z_output, file=fn_mntd_z, sep="\t", quote=F, row.names=F)
 data.table::fwrite(df_mntd_p_output, file=fn_mntd_p, sep="\t", quote=F, row.names=F)
 data.table::fwrite(df_mntd_sum_output, file=fn_mntd_summary, sep="\t", quote=F, row.names=F)
+
+# generate plots
+df_mntd_sum_melt <- reshape2::melt(df_mntd_sum_output, id.vars="busco")
+df_mntd_sum_melt_cluster <- df_mntd_sum_melt[df_mntd_sum_melt$value == "C" | df_mntd_sum_melt$value == "",]
+df_mntd_sum_melt_spread <- df_mntd_sum_melt[df_mntd_sum_melt$value == "S" | df_mntd_sum_melt$value == "",]
+
+png(file=fn_mntd_cluster_png, width=1024, height=768)
+ggplot(df_mntd_sum_melt_cluster, aes(x=variable, y=busco)) +
+    geom_tile(aes(fill=value), color="white") +
+    ggtitle("BUSCOs with Reference-based Clusters") + ylab("BUSCO") +
+    scale_fill_manual(values=c("white","red")) +
+    scale_x_discrete(guide = guide_axis(angle = 45)) +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.title.x = element_blank(),
+          plot.title = element_text(hjust=0.5, size=14, face="bold"),
+          legend.position = "none")
+dev.off()
+
+png(file=fn_mntd_spread_png, width=1024, height=768)
+ggplot(df_mntd_sum_melt_spread, aes(x=variable, y=busco)) +
+    geom_tile(aes(fill=value), color="white") +
+    ggtitle("BUSCOs with Reference-based Spreads") + ylab("BUSCO") +
+    scale_fill_manual(values=c("white","blue")) +
+    scale_x_discrete(guide = guide_axis(angle = 45)) +
+    theme(axis.text.y = element_blank(),
+          axis.ticks.y = element_blank(),
+          axis.title.x = element_blank(),
+          plot.title = element_text(hjust=0.5, size=14, face="bold"),
+          legend.position = "none")
+dev.off()
 ```

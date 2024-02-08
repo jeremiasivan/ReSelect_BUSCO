@@ -28,6 +28,7 @@ library(doSNOW)
 ```
 
 ```{r, include=FALSE}
+# install.packages("data.table")
 # install.packages("log4r")
 
 # store initial system time
@@ -90,7 +91,8 @@ ls_refseq_download <- NULL
 
 # open the file that contains the list of reference sequences
 if (params$file_refseq != "" && !is.null(params$file_refseq)) {
-  ls_refseq <- readLines(params$file_refseq)
+  ls_refseq <- data.table::fread(params$file_refseq, select="id")
+  ls_refseq <- ls_refseq$id
 }
 
 # check the length of the reference sequences
@@ -179,8 +181,8 @@ ls_reads_download <- NULL
 
 # open the file that contains the list of short reads
 if (params$file_shortreads != "" && !is.null(params$file_shortreads)) {
-  df_shortreads <- read.table(params$file_shortreads, header=T)
-  ls_shortreads <- df_shortreads$id
+  ls_shortreads <- data.table::fread(params$file_shortreads, select="id")
+  ls_shortreads <- ls_shortreads$id
 }
 
 # check the length of the short reads
