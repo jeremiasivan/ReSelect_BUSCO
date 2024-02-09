@@ -365,7 +365,7 @@ f_mntd_visualization <- function(fn_mntd_summary, prefix) {
 
     # plot significant clusters
     tiff(file=fn_mntd_cluster_tiff, units="px", width=2880, height=1800)
-    ggplot(df_mntd_melt_cluster, aes(x=variable, y=busco)) +
+    print(ggplot(df_mntd_melt_cluster, aes(x=variable, y=busco)) +
         geom_tile(aes(fill=value), color="white") +
         ggtitle("BUSCOs with Reference-based Clusters") + ylab("BUSCO") +
         scale_fill_manual(values=c("white","red")) +
@@ -377,12 +377,12 @@ f_mntd_visualization <- function(fn_mntd_summary, prefix) {
             axis.text.x = element_text(size=30),
             axis.text.y = element_blank(),
             axis.title.y = element_text(size=40),
-            legend.position = "none")
+            legend.position = "none"))
     dev.off()
 
     # save significnat spreads
     tiff(file=fn_mntd_spread_tiff, units="px", width=2880, height=1800)
-    ggplot(df_mntd_melt_spread, aes(x=variable, y=busco)) +
+    print(ggplot(df_mntd_melt_spread, aes(x=variable, y=busco)) +
         geom_tile(aes(fill=value), color="white") +
         ggtitle("BUSCOs with Reference-based Spreads") + ylab("BUSCO") +
         scale_fill_manual(values=c("white","blue")) +
@@ -394,7 +394,7 @@ f_mntd_visualization <- function(fn_mntd_summary, prefix) {
             axis.text.x = element_text(size=30),
             axis.text.y = element_blank(),
             axis.title.y = element_text(size=40),
-            legend.position = "none")
+            legend.position = "none"))
     dev.off()
 }
 
