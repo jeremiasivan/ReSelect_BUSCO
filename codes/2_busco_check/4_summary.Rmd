@@ -8,18 +8,19 @@ f_write_log(fn_log=fn_log,
                       "####           Summary          ####",
                       "####################################"))
 
-# output directory
+# output directories
 dir_check_summary <- paste0(dir_busco, "summary/")
 dir_check_summary_noref <- paste0(dir_check_summary, "noref/")
-if (!dir.exists(dir_check_summary_noref)){
-    dir.create(dir_check_summary_noref, recursive=T)
-}
+dir_check_summary_busco <- paste0(dir_check_summary, "busco/")
+lapply(list(dir_check_summary_noref,dir_check_summary_busco), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
 # output files
 fn_ref_summary <- paste0(dir_check_summary, params$prefix, ".ref.sumtable")
 fn_read_summary <- paste0(dir_check_summary, params$prefix, ".read.sumtable")
 
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
+
+fn_cor_summary <- paste0(dir_check_summary_busco, params$prefix, ".cor.sumtable")
 ```
 
 ## Check reference bias on BUSCO trees
@@ -191,4 +192,101 @@ ggplot(data.frame(ls_output), aes(x=ls_output, xmin=0)) +
         axis.title.y = element_text(size=40, margin=margin(t=0, r=20, b=0, l=0)),
         legend.position = "none")
 dev.off()
+```
+
+```{r check-summary-correlation}
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over BUSCOs
+ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    # output variables
+    df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
+    read_out <- list(busco=busco)
+
+    # check if treefile exists
+    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
+    if (!file.exists(fn_tree)){
+        log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
+        return(NULL)
+    }
+
+    # read tree
+    tre <- ape::read.tree(fn_tree)
+    ls_tips <- tre$tip.label
+
+    # calculate phylogenetic distance
+    distance_tre <- ape::cophenetic.phylo(tre)
+
+    # iterate over short reads
+    for (read in ls_shortreads) {
+        # temporary data.table
+        df_reads_ref <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
+
+        # extract taxa list
+        read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
+
+        # iterate over reference sequence
+        for (ref in ls_refseq) {
+            # extract species name
+            ref_species_name <- df_reads_ref$species[df_reads_ref$ref==ref]
+
+            # calculate distance for reference
+            ref_dist <- NULL
+            if (read_species_name == ref_species_name) {
+                ref_dist <- 0
+            } else {
+                ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
+                ref_dist <- distance_tre[rownames(distance_tre)==ref_id, colnames(distance_tre)==ref]
+            }
+
+            # calculate distance for short reads
+            read_dist <- distance_tre[rownames(distance_tre)==paste0(read,"--",ref), colnames(distance_tre)==ref]
+
+            # update data.frame
+            df_reads_ref <- rbind(df_reads_ref, data.table::data.table(read=ls_species_name[read],
+                                                                       ref=ls_species_name[ref],
+                                                                       ref_dist=ref_dist,
+                                                                       read_dist=read_dist))
+        }
+
+        # run linear model
+        lm_result <- lm(read_dist~ref_dist, data=df_reads_ref)
+        read_out[[ls_species_name[read]]] <- paste0(round(summary(lm_result)$r.squared, 3),
+                                                    " (", round(summary(lm_result)$coefficients[2,4], 3), ")")
+
+        # update data.table
+        df_dist <- rbind(df_dist, df_reads_ref)
+    }
+
+    # generate plots
+    fn_busco_tiff <- paste0(dir_check_summary_busco, busco, ".tiff")
+
+    tiff(file=fn_busco_tiff, units="px", width=1600, height=2100)
+    print(ggplot(df_dist, aes(x=ref_dist, y=read_dist, color=read) +
+        geom_point() +
+        facet_wrap(~species, ncol=1)) +
+        ggtitle("Correlation between References and Short Reads BUSCO Phylogenetic Distances") +
+        xlab("Reference Distance") + ylab("Short Reads Distance") +
+        theme(
+            plot.title = element_text(hjust = 0.5, size = 50),
+            plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
+            axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
+            axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
+            axis.text.y=element_text(size=30),
+            axis.text.x=element_text(size=30),
+            legend.title=element_text(size=30),
+            legend.text=element_text(size=30),
+            legend.key.size=unit(2,"cm")
+        ))
+        
+    dev.off()
+
+    return(list(read_out))
+}
+
+# save the data.frame
+df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
+data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
 ```
