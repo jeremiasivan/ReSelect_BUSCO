@@ -256,6 +256,148 @@ f_iqtree2 <- function(fn_input, exe_iqtree2) {
     system(cmd_iqtree2)
 }
 
+# run MNTD on BUSCOs
+f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_species_name, prefix, thread) {
+    # output files
+    fn_mntd_z <- paste0(prefix, ".mntd.z.sumtable")
+    fn_mntd_p <- paste0(prefix, ".mntd.p.sumtable")
+    fn_mntd_summary <- paste0(prefix, ".mntd.sumtable")
+
+    # create doSNOW cluster
+    nwcl <- makeCluster(thread)
+    doSNOW::registerDoSNOW(nwcl)
+
+    # iterate over BUSCOs
+    ls_output <- foreach (busco = ls_busco, .combine='c') %dopar% {
+        # initiate variables
+        df_presence <- data.frame(refs=character(), reads=character(), present=numeric())
+
+        # output variables
+        mntd_z <- list(busco=busco)
+        mntd_p <- list(busco=busco)
+        mntd_sum <- list(busco=busco)
+
+        # check if treefile exists
+        fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
+        if (!file.exists(fn_tree)){
+            return(NULL)
+        }
+
+        # read tree
+        tre <- ape::read.tree(fn_tree)
+        ls_tips <- tre$tip.label
+
+        # iterate over reference sequences
+        for (ref in ls_refseq) {
+            # extract list of taxa with specific reference
+            ls_taxa <- ls_tips[stringr::str_detect(ls_tips, ref)]
+            
+            # remove reference sequence if variable is FALSE
+            if (!is_ref_included) {
+                ls_taxa <- ls_taxa[ls_taxa != ref]
+            }
+            
+            # add taxa to the presence/absence table
+            for (taxon in ls_taxa) {
+                df_presence <- rbind(df_presence, c(refs=ref, reads=taxon, present=1))
+            }
+        }
+
+        # transform data.frame to community format used in picante
+        df_presence <- labdsv::matrify(df_presence)
+
+        # run MNTD
+        mntd_result <- picante::ses.mntd(df_presence, ape::cophenetic.phylo(tre))
+
+        # iterate over reference sequences
+        for (i in 1:nrow(mntd_result)) {
+            ref_name <- rownames(mntd_result)[i]
+            mntd_z[[ls_species_name[ref_name]]] <- mntd_result$mntd.obs.z[i]
+            mntd_p[[ls_species_name[ref_name]]] <- mntd_result$mntd.obs.p[i]
+
+            # update variables
+            if (mntd_result$mntd.obs.z[i] > 0 && mntd_result$mntd.obs.p[i] > 0.95) {
+                mntd_sum[[ls_species_name[ref_name]]] <- "S"
+            } else if (mntd_result$mntd.obs.z[i] < 0 && mntd_result$mntd.obs.p[i] < 0.05) {
+                mntd_sum[[ls_species_name[ref_name]]] <- "C"
+            } else {
+                mntd_sum[[ls_species_name[ref_name]]] <- ""
+            }
+        }
+
+        return(list(mntd_z=mntd_z, mntd_p=mntd_p, mntd_sum=mntd_sum))
+    }
+
+    stopCluster(nwcl)
+
+    # save MNTD Z score
+    ls_mntd_z_out <- ls_output[names(ls_output)=="mntd_z"]
+    df_mntd_z_output <- data.table::as.data.table(do.call(rbind, ls_mntd_z_out), fill=TRUE)
+    data.table::fwrite(df_mntd_z_output, file=fn_mntd_z, sep="\t", quote=F, row.names=F)
+
+    # save MNTD p-value
+    ls_mntd_p_out <- ls_output[names(ls_output)=="mntd_p"]
+    df_mntd_p_output <- data.table::as.data.table(do.call(rbind, ls_mntd_p_out), fill=TRUE)
+    data.table::fwrite(df_mntd_p_output, file=fn_mntd_p, sep="\t", quote=F, row.names=F)
+
+    # save significant clusters and spreads
+    ls_mntd_sum_out <- ls_output[names(ls_output)=="mntd_sum"]
+    df_mntd_sum_output <- data.table::as.data.table(do.call(rbind, ls_mntd_sum_out), fill=TRUE)
+    data.table::fwrite(df_mntd_sum_output, file=fn_mntd_summary, sep="\t", quote=F, row.names=F)
+
+    # plot data.frame
+    f_mntd_visualization(fn_mntd_summary, prefix)
+}
+
+# function: plot MNTD results
+f_mntd_visualization <- function(fn_mntd_summary, prefix) {
+    # output files
+    fn_mntd_cluster_tiff <- paste0(prefix, ".mntd.cluster.tiff")
+    fn_mntd_spread_tiff <- paste0(prefix, ".mntd.spread.tiff")
+
+    # open file
+    df_mntd <- data.table::fread(fn_mntd_summary)
+
+    # generate plots
+    df_mntd_melt <- reshape2::melt(df_mntd, id.vars="busco")
+    df_mntd_melt_cluster <- df_mntd_melt[df_mntd_melt$value == "C" | df_mntd_melt$value == "",]
+    df_mntd_melt_spread <- df_mntd_melt[df_mntd_melt$value == "S" | df_mntd_melt$value == "",]
+
+    # plot significant clusters
+    tiff(file=fn_mntd_cluster_tiff, units="px", width=2880, height=1800)
+    ggplot(df_mntd_melt_cluster, aes(x=variable, y=busco)) +
+        geom_tile(aes(fill=value), color="white") +
+        ggtitle("BUSCOs with Reference-based Clusters") + ylab("BUSCO") +
+        scale_fill_manual(values=c("white","red")) +
+        scale_x_discrete(guide = guide_axis(angle = 45)) +
+        theme(plot.title = element_text(hjust = 0.5, size = 50),
+            plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
+            axis.ticks.y = element_blank(),
+            axis.title.x = element_blank(),
+            axis.text.x = element_text(size=30),
+            axis.text.y = element_blank(),
+            axis.title.y = element_text(size=40),
+            legend.position = "none")
+    dev.off()
+
+    # save significnat spreads
+    tiff(file=fn_mntd_spread_tiff, units="px", width=2880, height=1800)
+    ggplot(df_mntd_melt_spread, aes(x=variable, y=busco)) +
+        geom_tile(aes(fill=value), color="white") +
+        ggtitle("BUSCOs with Reference-based Spreads") + ylab("BUSCO") +
+        scale_fill_manual(values=c("white","blue")) +
+        scale_x_discrete(guide = guide_axis(angle = 45)) +
+        theme(plot.title = element_text(hjust = 0.5, size = 50),
+            plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
+            axis.ticks.y = element_blank(),
+            axis.title.x = element_blank(),
+            axis.text.x = element_text(size=30),
+            axis.text.y = element_blank(),
+            axis.title.y = element_text(size=40),
+            legend.position = "none")
+    dev.off()
+}
+
 # function: run entrez-direct to extract species from assembly accession number
 f_extract_species_from_assembly <- function(exe_efetch, accession) {
     cmd_entrez <- paste(exe_efetch, "-db assembly -id", accession, "-format docsum")
