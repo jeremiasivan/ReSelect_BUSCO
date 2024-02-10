@@ -222,7 +222,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     # iterate over short reads
     for (read in ls_shortreads) {
         # temporary data.table
-        df_reads_ref <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
+        temp_df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
 
         # extract taxa list
         read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
@@ -245,19 +245,19 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
             read_dist <- distance_tre[rownames(distance_tre)==paste0(read,"--",ref), colnames(distance_tre)==ref]
 
             # update data.frame
-            df_reads_ref <- rbind(df_reads_ref, data.table::data.table(read=ls_species_name[read],
+            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=ls_species_name[read],
                                                                        ref=ls_species_name[ref],
                                                                        ref_dist=ref_dist,
                                                                        read_dist=read_dist))
         }
 
         # run linear model
-        lm_result <- lm(read_dist~ref_dist, data=df_reads_ref)
+        lm_result <- lm(read_dist~ref_dist, data=temp_df_dist)
         read_out[[ls_species_name[read]]] <- paste0(round(summary(lm_result)$r.squared, 3),
                                                     " (", round(summary(lm_result)$coefficients[2,4], 3), ")")
 
         # update data.table
-        df_dist <- rbind(df_dist, df_reads_ref)
+        df_dist <- rbind(df_dist, temp_df_dist)
     }
 
     # generate plots
@@ -280,7 +280,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
             legend.text=element_text(size=30),
             legend.key.size=unit(2,"cm")
         ))
-        
+
     dev.off()
 
     return(list(read_out))
