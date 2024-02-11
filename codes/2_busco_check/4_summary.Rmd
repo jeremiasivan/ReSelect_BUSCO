@@ -226,11 +226,19 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
         # extract taxa list
         read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
+        if (length(read_species_name) != 1){
+            log4r::info(fn_logger, paste0("Error: multiple entries are found for read ", read, ". Skipped."))
+            next
+        }
 
         # iterate over reference sequence
         for (ref in ls_refseq) {
             # extract species name
             ref_species_name <- df_reads_ref$species[df_reads_ref$ref==ref]
+            if (length(ref_species_name) != 1){
+                log4r::info(fn_logger, paste0("Error: multiple entries are found for ref ", ref, ". Skipped."))
+                next
+            }
 
             # calculate distance for reference
             ref_dist <- NULL
@@ -245,19 +253,29 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
             read_dist <- distance_tre[rownames(distance_tre)==paste0(read,"--",ref), colnames(distance_tre)==ref]
 
             # update data.frame
-            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=ls_species_name[read],
-                                                                       ref=ls_species_name[ref],
+            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read_species_name,
+                                                                       ref=ref_species_name,
                                                                        ref_dist=ref_dist,
                                                                        read_dist=read_dist))
         }
 
+        # check if table is empty
+        if (nrow(temp_df_dist) < 1){
+            log4r::info(fn_logger, paste("Error: temporary distance table for", read, "has", nrow(temp_df_dist), "row(s). Skipped."))
+            next
+        }
+
         # run linear model
         lm_result <- lm(read_dist~ref_dist, data=temp_df_dist)
-        read_out[[ls_species_name[read]]] <- paste0(round(summary(lm_result)$r.squared, 3),
-                                                    " (", round(summary(lm_result)$coefficients[2,4], 3), ")")
+        read_out[[read_species_name]] <- paste0(round(summary(lm_result)$r.squared, 3),
+                                                " (", round(summary(lm_result)$coefficients[2,4], 3), ")")
 
         # update data.table
         df_dist <- rbind(df_dist, temp_df_dist)
+        if (nrow(df_dist) < 1){
+            log4r::info(fn_logger, paste("Error: distance table after", read, "has", nrow(temp_df_dist), "row(s)."))
+            next
+        }
     }
 
     # generate plots
