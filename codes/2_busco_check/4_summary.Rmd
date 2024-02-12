@@ -201,6 +201,8 @@ doSNOW::registerDoSNOW(nwcl)
 
 # iterate over BUSCOs
 ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    library(ggplot2)
+
     # output variables
     df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
     read_out <- list(busco=busco)
@@ -224,28 +226,28 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         # temporary data.table
         temp_df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
 
-        # extract taxa list
-        read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
-        if (length(read_species_name) != 1){
-            log4r::info(fn_logger, paste0("Error: multiple entries are found for read ", read, ". Skipped."))
+        # extract index
+        idx_entry_read <- match(read, df_reads_ref$reads)
+        if (is.na(idx_entry_read)){
+            log4r::info(fn_logger, paste0("Error: no entry is found for ", read, ". Skipped."))
             next
         }
 
         # iterate over reference sequence
         for (ref in ls_refseq) {
-            # extract species name
-            ref_species_name <- df_reads_ref$species[df_reads_ref$ref==ref]
-            if (length(ref_species_name) != 1){
-                log4r::info(fn_logger, paste0("Error: multiple entries are found for ref ", ref, ". Skipped."))
+            # extract index
+            idx_entry_ref <- match(ref, df_reads_ref$ref)
+            if (is.na(idx_entry_ref)){
+                log4r::info(fn_logger, paste0("Error: no entry is found for ", ref, ". Skipped."))
                 next
             }
 
             # calculate distance for reference
             ref_dist <- NULL
-            if (read_species_name == ref_species_name) {
+            if (idx_entry_read == idx_entry_ref) {
                 ref_dist <- 0
             } else {
-                ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
+                ref_id <- df_reads_ref$ref[idx_entry_read]
                 ref_dist <- distance_tre[rownames(distance_tre)==ref_id, colnames(distance_tre)==ref]
             }
 
@@ -253,8 +255,8 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
             read_dist <- distance_tre[rownames(distance_tre)==paste0(read,"--",ref), colnames(distance_tre)==ref]
 
             # update data.frame
-            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read_species_name,
-                                                                       ref=ref_species_name,
+            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=df_reads_ref$species[idx_entry_read],
+                                                                       ref=df_reads_ref$species[idx_entry_ref],
                                                                        ref_dist=ref_dist,
                                                                        read_dist=read_dist))
         }
