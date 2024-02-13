@@ -272,6 +272,13 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         }
     }
 
+    # identify outliers based on IQR criterion
+    value_refs_out <- boxplot.stats(df_dist$ref_dist)$out
+    value_read_out <- boxplot.stats(df_dist$read_dist)$out
+
+    df_refs_outlier <- df_dist[df_dist$ref_dist %in% value_refs_out,]
+    df_read_outlier <- df_dist[df_dist$read_dist %in% value_read_out,]
+
     # generate plots
     fn_busco_tiff <- paste0(dir_check_summary_busco, busco, ".tiff")
 
@@ -279,6 +286,8 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     print(ggplot(df_dist, aes(x=ref_dist, y=read_dist, color=read)) +
         geom_point(shape=16, aes(size=20)) +
         geom_smooth(method='lm', formula= y~x, aes(linewidth=4)) +
+        geom_text(data=df_refs_outlier, aes(label=rownames(df_refs_outlier), size=20), vjust=-1.2, hjust=0.5) +
+        geom_text(data=df_read_outlier, aes(label=rownames(df_read_outlier), size=20), vjust=-1.2, hjust=0.5) +
         facet_wrap(~read, ncol=1) +
         ggtitle("Correlation of BUSCO Phylogenetic Distances") +
         xlab("Reference Distance") + ylab("Short Reads Distance") +
@@ -290,9 +299,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
             axis.text.y=element_text(size=30),
             axis.text.x=element_text(size=30),
             strip.text = element_text(size = 30),
-            legend.title=element_text(size=30),
-            legend.text=element_text(size=30),
-            legend.key.size=unit(2,"cm")
+            legend.position = "none"
         ))
 
     dev.off()
