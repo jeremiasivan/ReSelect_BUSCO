@@ -283,8 +283,8 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     print(ggplot(df_dist, aes(x=ref_dist, y=read_dist, color=read)) +
         geom_point(shape=16, aes(size=20)) +
         geom_smooth(method='lm', formula= y~x, aes(linewidth=4)) +
-        geom_text_repel(data=df_refs_outlier, aes(label=df_refs_outlier$ref, size=30)) +
-        geom_text_repel(data=df_read_outlier, aes(label=df_refs_outlier$read, size=30)) +
+        geom_text_repel(data=df_refs_outlier, aes(label=df_refs_outlier$ref), size=30) +
+        geom_text_repel(data=df_read_outlier, aes(label=df_read_outlier$read), size=30) +
         facet_wrap(~read, ncol=1) +
         ggtitle("Correlation of BUSCO Phylogenetic Distances") +
         xlab("Reference Distance") + ylab("Short Reads Distance") +
