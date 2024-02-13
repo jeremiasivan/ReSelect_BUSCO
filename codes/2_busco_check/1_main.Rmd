@@ -41,7 +41,6 @@ source(paste0(params$codedir, "/2_busco_check/functions.R"))
 
 library(doSNOW)
 library(ggplot2)
-library(ggrepel)
 ```
 
 ```{r, include=FALSE}

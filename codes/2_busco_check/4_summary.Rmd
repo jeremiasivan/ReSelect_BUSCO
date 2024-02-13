@@ -202,6 +202,7 @@ doSNOW::registerDoSNOW(nwcl)
 # iterate over BUSCOs
 ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     library(ggplot2)
+    library(ggrepel)
 
     # output variables
     df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
