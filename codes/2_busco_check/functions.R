@@ -16,7 +16,7 @@ f_qc_short_reads <- function(fastq, fn_adapters, prefix, min_quality, thread, ex
 
     # set the minimum quality score and merge overlapping reads
     cmd_qc <- paste(cmd_qc, "--basename", prefix,
-                    "--trimqualities --minquality", min_quality,
+                    "--trimqualities --trimns --minquality", min_quality,
                     "--collapse")
     
     # run AdapterRemoval to get prefix.collapsed.truncated
@@ -53,10 +53,10 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
 
     # run samtools
     cmd_samtools <- paste(exe_samtools, "view", nthread, "-b -u", fn_sam, "|", # convert to uncompressed (-u) BAM (-b)
-                          exe_samtools, "collate", nthread, "-O -u - |", # group reads with the same name together, output as STDOUT (-O)
-                          exe_samtools, "fixmate", nthread, "-m -u - - |", # correct flags used in the file, adding mate score tags (-m)
-                          exe_samtools, "sort", nthread, "-u - |", # sort the reads based on their positions
-                          exe_samtools, "rmdup", nthread, "-", fn_bam) # remove duplicates based on the mate score tags
+                          exe_samtools, "collate", nthread, "-O -u - |",       # group reads with the same name together, output as STDOUT (-O)
+                          exe_samtools, "fixmate", nthread, "-m -u - - |",     # correct flags used in the file, adding mate score tags (-m)
+                          exe_samtools, "sort", nthread, "-u - |",             # sort the reads based on their positions
+                          exe_samtools, "rmdup -s", nthread, "-", fn_bam)      # remove duplicates based on the mate score tags
     system(cmd_samtools)
 
     # index BAM file
@@ -65,9 +65,9 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
 
     # run bcftools mpileup
     cmd_bcftools <- paste(exe_bcftools, "mpileup", nthread, "-Ou -f", refseq, fn_bam, "|", # generate genotype likelihoods at each position with coverage
-                          exe_bcftools, "call", nthread, "-Ou -mv |", # variant calling with default settings (-m) and output only variant sites (-v)
-                          exe_bcftools, "view", nthread, "-i 'QUAL>20' |", # filter out variants with low quality score
-                          exe_bcftools, "norm", nthread, "-f", refseq, "-Oz -o", fn_vcf) # normalize variants
+                          exe_bcftools, "call", nthread, "-Ou -mv |",                      # variant calling with default settings (-m) and output only variant sites (-v)
+                          exe_bcftools, "view", nthread, "-i 'QUAL>20' |",                 # filter out variants with low quality score
+                          exe_bcftools, "norm", nthread, "-f", refseq, "-Oz -o", fn_vcf)   # normalize variants
     system(cmd_bcftools)
 
     # index VCF file
