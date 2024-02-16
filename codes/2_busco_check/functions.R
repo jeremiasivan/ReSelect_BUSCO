@@ -56,8 +56,12 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
                           exe_samtools, "collate", nthread, "-O -u - |", # group reads with the same name together, output as STDOUT (-O)
                           exe_samtools, "fixmate", nthread, "-m -u - - |", # correct flags used in the file, adding mate score tags (-m)
                           exe_samtools, "sort", nthread, "-u - |", # sort the reads based on their positions
-                          exe_samtools, "markdup", nthread, "-", fn_bam) # mark duplicates based on the mate score tags
+                          exe_samtools, "rmdup", nthread, "-", fn_bam) # remove duplicates based on the mate score tags
     system(cmd_samtools)
+
+    # index BAM file
+    cmd_bam_index <- paste(exe_samtools, "index", nthread, fn_bam)
+    system(cmd_bam_index)
 
     # run bcftools mpileup
     cmd_bcftools <- paste(exe_bcftools, "mpileup", nthread, "-Ou -f", refseq, fn_bam, "|", # generate genotype likelihoods at each position with coverage
