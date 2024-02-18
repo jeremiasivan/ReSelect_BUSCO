@@ -56,7 +56,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
                           exe_samtools, "collate", nthread, "-O -u - |",       # group reads with the same name together, output as STDOUT (-O)
                           exe_samtools, "fixmate", nthread, "-m -u - - |",     # correct flags used in the file, adding mate score tags (-m)
                           exe_samtools, "sort", nthread, "-u - |",             # sort the reads based on their positions
-                          exe_samtools, "rmdup -s", nthread, "-", fn_bam)      # remove duplicates based on the mate score tags
+                          exe_samtools, "markdup -r", nthread, "-", fn_bam)      # remove duplicates based on the mate score tags
     system(cmd_samtools)
 
     # index BAM file

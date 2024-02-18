@@ -144,7 +144,7 @@ doSNOW::registerDoSNOW(nwcl)
 # iterate through reference sequences
 foreach (ref = ls_refseq_download) %dopar% {
     # output file
-    file_output_zip <- paste0(dir_refseq, "/", ref, ".zip")
+    file_output_zip <- paste0(dir_refseq, ref, ".zip")
     
     # delete the zip file
     unlink(file_output_zip)
@@ -156,7 +156,7 @@ foreach (ref = ls_refseq_download) %dopar% {
     dir_output <- paste0(dir_refseq, ref, "/")
     if (!dir.exists(dir_output) || params$redo) {
         dir.create(dir_output, recursive=T)
-        unzip(file_output, exdir=dir_output, overwrite=TRUE)
+        unzip(file_output_zip, exdir=dir_output, overwrite=TRUE)
     }
 
     # delete the zip file
