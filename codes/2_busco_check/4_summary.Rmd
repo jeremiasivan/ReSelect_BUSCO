@@ -23,6 +23,37 @@ fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
 fn_cor_summary <- paste0(dir_check_summary, params$prefix, ".cor.sumtable")
 ```
 
+```{r check-summary-busco-update}
+# iterate over BUSCOs
+for (busco in shared_busco) {
+    # check if treefile exists
+    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
+    if (!file.exists(fn_tree)){
+        shared_busco <- shared_busco[shared_busco != busco]
+
+        log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Removed from analysis."))
+        next
+    }
+
+    # read tree
+    tre <- ape::read.tree(fn_tree)
+    ls_tips <- tre$tip.label
+
+    # extract reference tips
+    output <- tryCatch({
+        ape::keep.tip(tre, ls_refseq)
+    }, error = function(err) {
+        return(err)
+    })
+
+    # remove BUSCO if reference sequences are incomplete
+    if (all(class(output) != "phylo")) {
+        shared_busco <- shared_busco[shared_busco != busco]
+        log4r::info(fn_logger, paste0("Error: incomplete references for ", busco, " tree. Removed from analysis."))
+    }
+}
+```
+
 ## Check reference bias on BUSCO trees
 ```{r check-summary-tree}
 # create doSNOW cluster
