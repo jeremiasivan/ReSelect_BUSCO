@@ -8,60 +8,96 @@ f_write_log(fn_log=fn_log,
                       "####        Read Mapping        ####",
                       "####################################"))
 
-# refseq and short reads directories
-dir_refseq <- paste0(getwd(), "/refseq/")
-dir_shortreads <- paste0(getwd(), "/short_reads/")
+# get current working directory
+dir_current <- getwd()
 
-# list of refseq
+# directories for reference sequence and short reads
+dir_refseq <- paste0(dir_current, "/refseq/")
+dir_shortreads <- paste0(dir_current, "/short_reads/")
+
+# list of reference sequences
 ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
 
-# create output directory
-dir_check_shortreads <- paste0(getwd(), "/busco_check/short_reads/")
-dir_readmap <- paste0(getwd(), "/busco_check/readmap/")
+# list of short reads
+df_shortreads <- data.table::fread(params$file_shortreads)
+ls_shortreads <- df_shortreads$id[df_shortreads$is_check]
+
+# coutput directories
+dir_check_shortreads <- paste0(dir_current, "/busco_check/short_reads/")
+dir_readmap <- paste0(dir_current, "/busco_check/readmap/")
 
 # create directory if not exist
 lapply(list(dir_check_shortreads,dir_readmap), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+```
 
-# set thread for bwamem2 and samtools
+```{r check-readmap-thread, include=FALSE}
 thread_bwamem2 <- ifelse(params$thread < 50, params$thread, 50)
 thread_adapterremoval <- ifelse(params$thread < 10, params$thread, 10)
 thread_samtools <- ifelse(params$thread < 10, params$thread, 10)
 ```
 
 ## QC of short reads
-```{r check-readmap-qcreads}
+```{r, include=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "----- Quality Control of FASTQ -----"))
 
-# select short reads
-df_shortreads <- data.table::fread(params$file_shortreads)
-ls_shortreads <- df_shortreads$id[df_shortreads$is_check]
+# set up variables
+is_qcreads <- FALSE
+
+ls_shortread_done <- c()
+ls_shortread_qc <- c()
+
+# iterate over short reads
+if (params$redo) {
+    ls_shortread_qc <- ls_shortreads
+} else {
+    for (read in ls_shortreads) {
+        # check if output file exists
+        file_fastq <- paste0(dir_check_shortreads, read, ".collapsed.truncated")
+        if (file.exists(file_fastq)) {
+            ls_shortread_done <- c(ls_shortread_done, paste("-", read))
+            next
+        }
+
+        # add short reads to to-do-list
+        ls_shortread_qc <- c(ls_shortread_qc, read)
+    }
+}
+
+# output log file for available filtered short reads
+if (length(ls_shortread_done) > 0) {
+    ls_shortread_done <- c(paste0("Available filtered short reads (", length(ls_shortread_done), "/", length(ls_shortreads), ")"), ls_shortread_done, "")
+    f_write_log(fn_log=fn_log, msg=ls_shortread_done)
+}
+
+# update variable for the next analysis
+if (length(ls_shortread_qc) > 0) {
+    is_qcreads <- TRUE
+}
+```
+
+```{r check-readmap-qcreads, include=is_qcreads, eval=is_qcreads}
+f_write_log(fn_log=fn_log, msg=paste("Running AdapterRemoval using", thread_adapterremoval, "threads"))
 
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_adapterremoval))
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over short reads
-foreach (read = ls_shortreads) %dopar% {
+foreach (read = ls_shortread_qc) %dopar% {
     prefix <- paste0(dir_check_shortreads, read)
-
-    # check if file exists
-    file_fastq <- paste0(prefix, ".collapsed.truncated")
-    if (file.exists(file_fastq) && !params$redo) {
-        log4r::warn(fn_logger, paste0("File found: filtered FASTQ file for ", prefix, ". Skipped."))
-        return(NULL)
-    }
 
     # extract FASTQ files
     dir_reads <- paste0(dir_shortreads, read, "/fastq/")
     ls_fastq <- list.files(dir_reads, pattern="*.fastq$", recursive=F, full.names=T)
+    
+    # check the number of FASTQ files
     len_ls_fastq <- length(ls_fastq)
-
-    # run BWA-MEM2
     if (len_ls_fastq != 1 && len_ls_fastq != 2) {
         log4r::warn(fn_logger, paste0("Warn: invalid number of FASTQ file for ", prefix, " (", len_ls_fastq, "). Skipped."))
         return(NULL)
     }
     
+    # run BWA-MEM2
     f_qc_short_reads(ls_fastq, params$file_adapters, prefix, 25, thread_adapterremoval, params$exe_adapterremoval)
     log4r::info(fn_logger, paste0("File created: filtered FASTQ file for ", prefix, "."))
 }

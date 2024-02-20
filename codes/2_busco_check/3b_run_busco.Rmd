@@ -1,12 +1,9 @@
 ---
-title: "Run BUSCO Pipeline on Reference Sequences and Short Reads"
+title: "Run BUSCO Pipeline on Individual Reference Sequences and Mapped Reads"
 ---
 
 ```{r check-busco-setup-b, include=FALSE}
-f_write_log(fn_log=fn_log,
-            msg=c("", "####################################",
-                      "####            BUSCO           ####",
-                      "####################################"))
+f_write_log(fn_log=fn_log, msg=c("", "-------- INDIVIDUAL ASSEMBLY -------"))
 
 # list of reference sequences
 dir_refseq <- paste0(getwd(), "/refseq/")

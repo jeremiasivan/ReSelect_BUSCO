@@ -1,12 +1,13 @@
 ---
-title: "Run BUSCO Pipeline on Reference Sequences and Short Reads"
+title: "Run Coordinate-based BUSCO Analysis on Reference Sequences and Short Reads"
 ---
 
 ```{r check-busco-setup, include=FALSE}
 f_write_log(fn_log=fn_log,
             msg=c("", "####################################",
                       "####            BUSCO           ####",
-                      "####################################"))
+                      "####################################", "",
+                      "--------- COORDINATE-BASED ---------"))
 
 # list of reference sequences
 dir_refseq <- paste0(getwd(), "/refseq/")
