@@ -106,10 +106,15 @@ for (ref in ls_refseq) {
         }
 
         # extract FASTQ file
-        file_fastq <- paste0(dir_check_shortreads, read, ".collapsed.truncated")
+        file_fastq <- paste0(dir_check_shortreads, read, ".pair1.truncated")
         if (!file.exists(file_fastq)) {
             log4r::warn(fn_logger, paste0("File not found: filtered FASTQ file for ", read, ". Skipped."))
             return(NULL)
+        }
+
+        file_fastq_second <- paste0(dir_check_shortreads, read, ".pair2.truncated")
+        if (file.exists(file_fastq_second)) {
+            file_fastq <- c(file_fastq, file_fastq_second)
         }
         
         # run BWA-MEM2
