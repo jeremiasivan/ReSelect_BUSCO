@@ -16,7 +16,7 @@ ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
 dir_readmap <- paste0(getwd(), "/busco_check/readmap/")
 
 # create output directory
-dir_busco <- paste0(getwd(), "/busco_check/busco/")
+dir_busco <- paste0(getwd(), "/busco_check/busco_coordinates/")
 if (!dir.exists(dir_busco)) {
   dir.create(dir_busco, recursive = T)
 }
