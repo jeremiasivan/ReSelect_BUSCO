@@ -9,20 +9,16 @@ f_write_log(fn_log=fn_log,
                       "####################################", "",
                       "--------- COORDINATE-BASED ---------"))
 
-# list of reference sequences
-dir_refseq <- paste0(getwd(), "/refseq/")
-ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
-
 # output directories
-dir_readmap <- paste0(getwd(), "/busco_check/readmap/")
+dir_busco <- paste0(dir_current, "/busco_check/busco_coordinates/")
+dir_busco_lineage <- paste0(dir_current, "/busco_lineage/")
 
-# create output directory
-dir_busco <- paste0(getwd(), "/busco_check/busco_coordinates/")
-if (!dir.exists(dir_busco)) {
-  dir.create(dir_busco, recursive = T)
-}
+dir_busco_ref <- paste0(dir_busco, "refseq/")
 
-# set thread for BUSCO
+lapply(list(dir_busco,dir_busco_lineage), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+```
+
+```{r check-busco-thread, include=FALSE}
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
 ```
 
@@ -47,13 +43,7 @@ for (read in 1:nrow(df_reads)) {
 
 ## Download BUSCO lineage dataset
 ```{r busco-lineage-download}
-# create directory for BUSCO lineage
-dir_busco_lineage <- paste0(getwd(), "/busco_lineage/")
-if (!dir.exists(dir_busco_lineage)) {
-    dir.create(dir_busco_lineage, recursive=T)
-}
-
-# specific BUSCO lineage
+# download specific BUSCO lineage
 dir_lineage <- paste0(dir_busco_lineage, "lineages/", params$busco_lineage)
 if (!dir.exists(dir_lineage)) {
     busco_cmd <- paste(params$exe_busco, "--download_path", dir_busco_lineage, "--download", params$busco_lineage)
@@ -62,13 +52,49 @@ if (!dir.exists(dir_lineage)) {
 ```
 
 ## Run BUSCO on reference sequences
-```{r check-busco-ref}
+```{r, include=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "--------- Reference Sequence -------"))
 
-dir_busco_ref <- paste0(dir_busco, "refseq/")
-if (!dir.exists(dir_busco_ref)) {
-    dir.create(dir_busco_ref, recursive=T)
+# set up variables
+is_busco_ref <- FALSE
+
+ls_busco_ref_done <- c()
+ls_busco_ref_run <- c()
+
+# iterate over reference sequences
+if (params$redo) {
+    ls_busco_ref_run <- ls_refseq
+} else {
+    for (ref in ls_refseq) {
+        # check if BUSCO run exists
+        file_busco_log <- paste0(dir_busco_ref, ref, "/logs/busco.log")
+        if (file.exists(file_busco_log)) {
+            finish_msg <- system(paste("grep 'BUSCO analysis done'", file_busco_log), intern=T)
+            if (length(finish_msg) != 0) {
+                ls_busco_ref_done <- c(ls_busco_ref_done, paste("-", ref))
+                next
+            }
+        }
+
+        # add reference sequence to to-do-list
+        ls_busco_ref_run <- c(ls_busco_ref_run, ref)
+    }
 }
+
+# output log file for available reference BUSCO runs
+if (length(ls_busco_ref_done) > 0) {
+    ls_busco_ref_done <- c(paste0("Available reference BUSCO runs (", length(ls_busco_ref_done), "/", length(ls_refseq), ")"), ls_busco_ref_done, "")
+    f_write_log(fn_log=fn_log, msg=ls_busco_ref_done)
+}
+
+# update variable for the next analysis
+if (length(ls_busco_ref_run) > 0) {
+    is_busco_ref <- TRUE
+}
+```
+
+```{r check-busco-ref, include=is_busco_ref, eval=is_busco_ref}
+f_write_log(fn_log=fn_log, msg=paste("Running BUSCO using", thread_busco, "threads"))
 
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_busco))
@@ -76,35 +102,19 @@ doSNOW::registerDoSNOW(nwcl)
 
 # iterate over reference sequences
 foreach (ref = ls_refseq) %dopar% {
-    # initiate variable
-    is_busco_run <- TRUE
-
     # extract reference sequence
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
     file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
     
+    # check if there are multiple reference sequences
     if (length(file_ref) > 1) {
         file_ref <- file_ref[1]
         log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
     }
 
-    # check if BUSCO run exists
-    file_busco_log <- paste0(dir_busco_ref, ref, "/logs/busco.log")
-    if (file.exists(file_busco_log) && !params$redo) {
-        finish_msg <- system(paste("grep 'BUSCO analysis done'", file_busco_log), intern=T)
-        if (length(finish_msg) != 0) {
-            log4r::info(fn_logger, paste0("File found: BUSCO run for ", ref, ". Skipped."))
-            is_busco_run <- FALSE
-        }
-    }
-
     # run BUSCO
-    if (is_busco_run) {
-        f_run_busco(file_ref, dir_lineage, ref, dir_busco_ref, params$busco_mode, thread_busco, params$exe_busco)
-        log4r::info(fn_logger, paste0("File created: BUSCO run for ", ref, "."))
-    }
-
-    return(NULL)
+    f_run_busco(file_ref, dir_lineage, ref, dir_busco_ref, params$busco_mode, thread_busco, params$exe_busco)
+    log4r::info(fn_logger, paste0("File created: BUSCO run for ", ref, "."))
 }
 
 stopCluster(nwcl)
