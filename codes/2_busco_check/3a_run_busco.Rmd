@@ -14,8 +14,10 @@ dir_busco <- paste0(dir_current, "/busco_check/busco_coordinates/")
 dir_busco_lineage <- paste0(dir_current, "/busco_lineage/")
 
 dir_busco_ref <- paste0(dir_busco, "refseq/")
+dir_busco_read <- paste0(dir_busco, "short_reads/")
+dir_busco_tree <- paste0(dir_busco, "trees/")
 
-lapply(list(dir_busco,dir_busco_lineage), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+lapply(list(dir_busco_lineage,dir_busco_ref,dir_busco_read,dir_busco_tree), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 ```
 
 ```{r check-busco-thread, include=FALSE}
@@ -171,10 +173,6 @@ for (ref in ls_refseq) {
         dir_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco)
         file_busco_fas <- paste0(dir_busco_gff, ".fna")
         file_busco_gff <- paste0(dir_busco_gff, ".gff")
-        if (!file.exists(file_busco_fas)) {
-            log4r::warn(fn_logger, paste0("File not found: FASTA file for ", ref, ". Skipped."))
-            return(NULL)
-        }
         
         # extract header
         busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
@@ -185,10 +183,8 @@ for (ref in ls_refseq) {
         file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
 
         # check if file exists
-        if (file.exists(file_busco_concat) && !params$redo) {
-            if (file.size(file_busco_concat) != 0L) {
-                return(NULL)
-            }
+        if (file.exists(file_busco_concat) && file.size(file_busco_concat) != 0L && !params$redo) {
+            return(NULL)
         }
 
         # extract BUSCO coordinates
@@ -201,14 +197,16 @@ for (ref in ls_refseq) {
         # manipulate GFF file
         if (!file.exists(file_busco_gff)) {
             f_create_gff(coordinates, busco, file_busco_gff_out)
-            log4r::info(fn_logger, paste0("File created: ", busco, " GFF file for ", ref, "."))
+            log4r::warn(fn_logger, paste0("File not found: ", busco, " GFF file for ", ref, ". Extracting the whole alignment."))
         } else {
             msg <- f_manipulate_gff(file_busco_gff, coordinates, busco, ref, file_busco_gff_out)
-            if (!is.null(msg) && !is.null(msg$errmsg)) {
-                f_write_log(fn_log=fn_log, msg=msg$errmsg)
-                return(NULL)
-            } else if (!is.null(msg) && !is.null(msg$warnmsg)) {
-                f_write_log(fn_log=fn_log, msg=msg$warnmsg)
+            if (!is.null(msg)) {
+                if (!is.null(msg$errmsg)) {
+                    f_write_log(fn_log=fn_log, msg=msg$errmsg)
+                    return(NULL)
+                } else if (!is.null(msg$warnmsg)) {
+                    f_write_log(fn_log=fn_log, msg=msg$warnmsg)
+                }
             }
         }
         
@@ -216,7 +214,7 @@ for (ref in ls_refseq) {
         f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
     }
 
-    log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", ref, "."))
+    log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", ref, "."))
 }
 
 stopCluster(nwcl)
@@ -225,14 +223,6 @@ stopCluster(nwcl)
 ## Extract BUSCOs for short reads
 ```{r check-busco-extract-reads}
 f_write_log(fn_log=fn_log, msg=c("", "------------ Short Reads -----------"))
-
-dir_busco_read <- paste0(dir_busco, "short_reads/")
-if (!dir.exists(dir_busco_read)) {
-    dir.create(dir_busco_read, recursive=T)
-}
-
-# extract list of short reads
-ls_prefix <- list.dirs(dir_readmap, recursive=F, full.names=F)
 
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
@@ -273,17 +263,15 @@ for (prefix in ls_prefix) {
         file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
 
         # check if file exists
-        if (file.exists(file_busco_concat) && !params$redo) {
-            if (file.size(file_busco_concat) != 0L) {
-                return(NULL)
-            }
+        if (file.exists(file_busco_concat) && file.size(file_busco_concat) != 0L && !params$redo) {
+            return(NULL)
         }
 
         # extract BUSCO
         f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
     }
 
-    log4r::info(fn_logger, paste0("File created/modified: BUSCOs for ", prefix, "."))
+    log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", prefix, "."))
 }
 
 stopCluster(nwcl)
@@ -291,11 +279,6 @@ stopCluster(nwcl)
 
 ## Convert individual BUSCO alignments into MSA
 ```{r check-busco-msa}
-dir_busco_tree <- paste0(dir_busco, "trees/")
-if (!dir.exists(dir_busco_tree)) {
-    dir.create(dir_busco_tree, recursive=T)
-}
-
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -318,8 +301,7 @@ foreach (busco = shared_busco) %dopar% {
     }
 
     # extract BUSCO alignment from reference sequences
-    ls_busco_ref <- list.dirs(dir_busco_ref, recursive=F, full.names=F)
-    for (ref in ls_busco_ref) {
+    for (ref in ls_refseq) {
         file_busco_ref <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".fna")
         if (!file.exists(file_busco_ref)) {
             next
@@ -329,8 +311,7 @@ foreach (busco = shared_busco) %dopar% {
     }
 
     # extract BUSCO alignment from short reads
-    ls_busco_reads <- list.dirs(dir_busco_read, recursive=F, full.names=F)
-    for (read in ls_busco_reads) {
+    for (read in ls_prefix) {
         file_busco_read <- paste0(dir_busco_read, read, "/", busco, ".fna")
         if (!file.exists(file_busco_read)) {
             next
@@ -377,5 +358,6 @@ foreach (busco = shared_busco) %dopar% {
     }
 }
 
+log4r::info(fn_logger, "File created/modified: BUSCO trees.")
 stopCluster(nwcl)
 ```

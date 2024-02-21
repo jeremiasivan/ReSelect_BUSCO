@@ -156,7 +156,7 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     # extract relevant GFF entry
     df_gff <- df_gff[df_gff$seqname==coordinates$seqname & df_gff$strand==coordinates$strand]
     if (nrow(df_gff) == 0) {
-        return(list(errmsg=paste0("Error: ", busco, " GFF extraction for ", prefix, ". Skipped.")))
+        return(list(errmsg=paste0("Error: ", busco, " GFF entry is not found for ", prefix, ". Skipped.")))
     }
 
     # extract the respective gene index
