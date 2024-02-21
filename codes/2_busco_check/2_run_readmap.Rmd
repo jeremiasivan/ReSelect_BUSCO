@@ -154,6 +154,25 @@ f_write_log(fn_log=fn_log, msg=paste("Running BWA-MEM2 using", thread_bwamem2, "
 nwcl <- makeCluster(floor(params$thread/thread_bwamem2))
 doSNOW::registerDoSNOW(nwcl)
 
+# create data.frame to store directory of reference sequence
+df_refseq_dir <- data.frame(id=character(), dir=character())
+
+# iterate over reference sequence
+for (ref in ls_refseq) {
+    # extract reference sequence
+    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
+    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
+
+    # check if there are multiple reference sequences
+    if (length(file_ref) > 1) {
+        file_ref <- file_ref[1]
+        log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
+    }
+
+    # update data.frame
+    df_refseq_dir <- rbind(df_refseq_dir, data.frame(id=ref, dir=file_ref))
+}
+
 # iterate over prefix
 foreach (prefix = ls_readmap_run) %dopar% {
     # output directory
@@ -169,15 +188,8 @@ foreach (prefix = ls_readmap_run) %dopar% {
     read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
-    # extract reference sequence
-    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
-    
-    # check if there are multiple reference sequences
-    if (length(file_ref) > 1) {
-        file_ref <- file_ref[1]
-        log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
-    }
+    # extract reference file location
+    file_ref <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
     # extract FASTQ file
     file_fastq <- paste0(dir_check_shortreads, read, ".pair1.truncated")
@@ -259,19 +271,9 @@ foreach (prefix = ls_convert_run) %dopar% {
         return(NULL)
     }
 
-    # extract reference and short reads
-    read <- unlist(strsplit(prefix, split="--"))[1]
+    # extract reference file location
     ref <- unlist(strsplit(prefix, split="--"))[2]
-
-    # extract reference sequence
-    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
-    
-    # check if there are multiple reference sequences
-    if (length(file_ref) > 1) {
-        file_ref <- file_ref[1]
-        log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
-    }
+    file_ref <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
     # convert SAM
     f_variant_calling(prefix, dir_output, thread_samtools, file_ref, params$exe_samtools, params$exe_bcftools)

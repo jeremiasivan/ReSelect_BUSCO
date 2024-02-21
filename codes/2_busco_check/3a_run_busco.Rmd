@@ -102,15 +102,8 @@ doSNOW::registerDoSNOW(nwcl)
 
 # iterate over reference sequences
 foreach (ref = ls_refseq) %dopar% {
-    # extract reference sequence
-    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
-    
-    # check if there are multiple reference sequences
-    if (length(file_ref) > 1) {
-        file_ref <- file_ref[1]
-        log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
-    }
+    # extract reference file location
+    file_ref <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
     # run BUSCO
     f_run_busco(file_ref, dir_lineage, ref, dir_busco_ref, params$busco_mode, thread_busco, params$exe_busco)
@@ -122,9 +115,6 @@ stopCluster(nwcl)
 
 ## Extract common BUSCOs between reference sequences
 ```{r check-busco-common}
-# list BUSCO directories for reference sequences
-ls_refseq <- list.dirs(dir_busco_ref, full.names=F, recursive=F)
-
 # initiate variable
 shared_busco <- c()
 
@@ -168,9 +158,8 @@ for (ref in ls_refseq) {
         dir.create(dir_busco_out, recursive=T)
     }
   
-    # input file
-    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_fas <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)[1]
+    # extract reference file location
+    file_fas <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
     # iterate over shared BUSCOs
     foreach (busco = shared_busco) %dopar% {
