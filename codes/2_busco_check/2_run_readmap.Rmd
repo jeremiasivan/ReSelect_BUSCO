@@ -126,7 +126,7 @@ if (params$redo) {
         # check if file exists
         file_sam <- paste0(dir_readmap, prefix, "/", prefix, ".sam")
         if (file.exists(file_sam)) {
-            ls_readmap_done <- c(ls_readmap_done, prefix)
+            ls_readmap_done <- c(ls_readmap_done, paste("-", prefix))
             next
         }
 
@@ -200,52 +200,82 @@ stopCluster(nwcl)
 ```
 
 ## Convert SAM to BAM
-```{r check-readmap-conversion}
-f_write_log(fn_log=fn_log, msg=c("", "---------- Data Conversion ---------"))
+```{r, include=FALSE}
+f_write_log(fn_log=fn_log, msg=c("", "---------- File Conversion ---------"))
+
+# set up variables
+is_convert <- FALSE
+
+ls_convert_done <- c()
+ls_convert_run <- c()
+
+# iterate over prefix
+if (params$redo) {
+    ls_convert_run <- ls_prefix
+} else {
+    for (prefix in ls_prefix) {
+        # check if file exists
+        file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
+        file_vcf <- paste0(dir_readmap, prefix, "/", prefix, ".vcf.gz")
+        file_fas <- paste0(dir_readmap, prefix, "/", prefix, ".fa")
+        if (all(file.exists(file_bam, file_vcf, file_fas))) {
+            ls_convert_done <- c(ls_convert_done, paste("-", prefix))
+            next
+        }
+
+        # add prefix to to-do-list
+        ls_convert_run <- c(ls_convert_run, prefix)
+    }
+}
+
+# output log file for available converted files
+if (length(ls_convert_done) > 0) {
+    ls_convert_done <- c(paste0("Available converted files (", length(ls_convert_done), "/", length(ls_prefix), ")"), ls_convert_done, "")
+    f_write_log(fn_log=fn_log, msg=ls_convert_done)
+}
+
+# update variable for the next analysis
+if (length(ls_convert_run) > 0) {
+    is_convert <- TRUE
+}
+```
+
+```{r check-readmap-conversion, include=is_convert, eval=is_convert}
+f_write_log(fn_log=fn_log, msg=paste("Running Samtools and Bcftools using", thread_samtools, "threads"))
 
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_samtools))
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over reference sequences
-for (ref in ls_refseq) {
+foreach (prefix = ls_convert_run) %dopar% {
+    # output directory
+    dir_output <- paste0(dir_readmap, prefix, "/")
+
+    # check if input file exists
+    file_sam <- paste0(dir_output, prefix, ".sam")
+    if (!file.exists(file_sam)) {
+        log4r::warn(fn_logger, paste0("File not found: SAM file for ", prefix, ". Skipped."))
+        return(NULL)
+    }
+
+    # extract reference and short reads
+    read <- unlist(strsplit(prefix, split="--"))[1]
+    ref <- unlist(strsplit(prefix, split="--"))[2]
+
     # extract reference sequence
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
     file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
     
+    # check if there are multiple reference sequences
     if (length(file_ref) > 1) {
         file_ref <- file_ref[1]
         log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
     }
 
-    # iterate over short reads
-    foreach (read = ls_shortreads) %dopar% {
-        prefix <- paste0(read, "--", ref)
-        
-        # output directory
-        dir_output <- paste0(dir_readmap, prefix, "/")
-
-        # check if input file exists
-        file_sam <- paste0(dir_output, prefix, ".sam")
-        if (!file.exists(file_sam)) {
-            log4r::warn(fn_logger, paste0("File not found: SAM file for ", prefix, ". Skipped."))
-            return(NULL)
-        }
-
-        # check if file exists
-        file_fas <- paste0(dir_output, prefix, ".fa")
-        if (file.exists(file_fas) && !params$redo) {
-            # check if file is not empty
-            if (file.size(file_fas) != 0L) {
-                log4r::warn(fn_logger, paste0("File found: FASTA file for ", prefix, ". Skipped."))
-                return(NULL)
-            }
-        }
-
-        # convert SAM to BAM and VCF
-        f_variant_calling(prefix, dir_output, thread_samtools, file_ref, params$exe_samtools, params$exe_bcftools)
-        log4r::info(fn_logger, paste0("File created: BAM and VCF files for ", prefix, "."))
-    }
+    # convert SAM
+    f_variant_calling(prefix, dir_output, thread_samtools, file_ref, params$exe_samtools, params$exe_bcftools)
+    log4r::info(fn_logger, paste0("File created: BAM, VCF, and FASTA files for ", prefix, "."))
 }
 
 stopCluster(nwcl)
