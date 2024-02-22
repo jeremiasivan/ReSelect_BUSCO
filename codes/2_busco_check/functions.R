@@ -283,9 +283,6 @@ f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_
 
         # check if treefile exists
         fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
-        if (!file.exists(fn_tree)){
-            return(NULL)
-        }
 
         # read tree
         tre <- ape::read.tree(fn_tree)

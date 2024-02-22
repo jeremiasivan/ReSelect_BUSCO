@@ -19,8 +19,8 @@ dir_shortreads <- paste0(dir_current, "/short_reads/")
 ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
 
 # list of short reads
-df_shortreads <- data.table::fread(params$file_shortreads)
-ls_shortreads <- df_shortreads$id[df_shortreads$is_check]
+df_reads <- data.table::fread(params$file_shortreads)
+ls_shortreads <- df_reads$id[df_reads$is_check]
 
 # list of prefix
 ls_prefix <- outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--"))

@@ -13,26 +13,29 @@ library(ggplot2)
 
 # output directories
 dir_check_summary <- paste0(dir_busco, "summary/")
-dir_check_summary_noref <- paste0(dir_check_summary, "noref/")
-dir_check_summary_busco <- paste0(dir_check_summary, "busco/")
-lapply(list(dir_check_summary_noref,dir_check_summary_busco), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+dir_check_summary_mntd <- paste0(dir_check_summary, "mntd/")
+dir_check_summary_mntd_noref <- paste0(dir_check_summary, "mntd_noref/")
+dir_check_summary_correlation <- paste0(dir_check_summary, "correlation/")
+lapply(list(dir_check_summary_mntd,dir_check_summary_mntd_noref,dir_check_summary_correlation), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
 # output files
 fn_ref_summary <- paste0(dir_check_summary, params$prefix, ".ref.sumtable")
 fn_read_summary <- paste0(dir_check_summary, params$prefix, ".read.sumtable")
+fn_cor_summary <- paste0(dir_check_summary, params$prefix, ".cor.sumtable")
 
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
-
-fn_cor_summary <- paste0(dir_check_summary, params$prefix, ".cor.sumtable")
 ```
 
 ```{r check-summary-busco-update}
+# create a new vector to store the list of BUSCOs
+shared_busco_filtered <- shared_busco
+
 # iterate over BUSCOs
-for (busco in shared_busco) {
+for (busco in shared_busco_filtered) {
     # check if treefile exists
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
     if (!file.exists(fn_tree)){
-        shared_busco <- shared_busco[shared_busco != busco]
+        shared_busco_filtered <- shared_busco_filtered[shared_busco_filtered != busco]
 
         log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Removed from analysis."))
         next
@@ -51,7 +54,7 @@ for (busco in shared_busco) {
 
     # remove BUSCO if reference sequences are incomplete
     if (all(class(output) != "phylo")) {
-        shared_busco <- shared_busco[shared_busco != busco]
+        shared_busco_filtered <- shared_busco_filtered[shared_busco_filtered != busco]
         log4r::info(fn_logger, paste0("Error: incomplete references for ", busco, " tree. Removed from analysis."))
     }
 }
@@ -63,17 +66,13 @@ for (busco in shared_busco) {
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
-ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     # initiate variable
     ref_out <- list(busco=busco)
     read_out <- list(busco=busco)
 
     # check if treefile exists
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
-    if (!file.exists(fn_tree)){
-        log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
-        return(NULL)
-    }
 
     # read tree
     tre <- ape::read.tree(fn_tree)
@@ -102,7 +101,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
             next
         }
 
-        ref_out[[ls_species_name[ref]]] <- "?"
+        ref_out[[ls_species_name[ref]]] <- ""
     }
 
     # iterate over short reads
@@ -134,7 +133,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
             next
         }
 
-        read_out[[ls_species_name[read]]] <- "?"
+        read_out[[ls_species_name[read]]] <- ""
     }
 
     return(list(ref_out=ref_out, read_out=read_out))
@@ -146,6 +145,7 @@ stopCluster(nwcl)
 ls_ref_out <- ls_output[names(ls_output)=="ref_out"]
 ls_read_out <- ls_output[names(ls_output)=="read_out"]
 
+# save the dataframes as TSV
 df_ref_output <- data.table::as.data.table(do.call(rbind, ls_ref_out), fill=TRUE)
 data.table::fwrite(df_ref_output, file=fn_ref_summary, sep="\t", quote=F, row.names=F)
 
@@ -158,15 +158,15 @@ log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ## Calculate MNTD on BUSCO trees
 ```{r check-summary-mntd}
 # run MNTD with reference sequence
-prefix <- paste0(dir_check_summary, params$prefix)
-f_run_mntd(shared_busco, ls_refseq, TRUE, dir_busco_tree, ls_species_name, prefix, params$thread)
+prefix <- paste0(dir_check_summary_mntd, params$prefix)
+f_run_mntd(shared_busco_filtered, ls_refseq, TRUE, dir_busco_tree, ls_species_name, prefix, params$thread)
 
 # run MNTD without reference sequence
-prefix <- paste0(dir_check_summary_noref, params$prefix)
-f_run_mntd(shared_busco, ls_refseq, FALSE, dir_busco_tree, ls_species_name, prefix, params$thread)
+prefix <- paste0(dir_check_summary_mntd_noref, params$prefix)
+f_run_mntd(shared_busco_filtered, ls_refseq, FALSE, dir_busco_tree, ls_species_name, prefix, params$thread)
 ```
 
-## Calculate phylogenetic distance between mapped reads and references
+## Calculate phylogenetic distance between mapped reads and reference from the same taxon
 ```{r check-summary-individual}
 # extract representative species
 df_reads_ref <- data.table::data.table(species=character(), reads=character(), ref=character())
@@ -186,13 +186,10 @@ for (i in 1:nrow(df_reads_subset)) {
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
-ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+# iterate over BUSCOs
+ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     # check if treefile exists
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
-    if (!file.exists(fn_tree)){
-        log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
-        return(NULL)
-    }
 
     # read tree
     tre <- ape::read.tree(fn_tree)
@@ -234,7 +231,7 @@ nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over BUSCOs
-ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     library(ggplot2)
     library(ggrepel)
 
@@ -244,10 +241,6 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
     # check if treefile exists
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
-    if (!file.exists(fn_tree)){
-        log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Skipped."))
-        return(NULL)
-    }
 
     # read tree
     tre <- ape::read.tree(fn_tree)
@@ -311,7 +304,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     df_read_outlier <- df_dist[df_dist$read_dist %in% value_read_out,]
 
     # generate plots
-    fn_busco_tiff <- paste0(dir_check_summary_busco, busco, ".tiff")
+    fn_busco_tiff <- paste0(dir_check_summary_correlation, busco, ".tiff")
 
     tiff(file=fn_busco_tiff, units="px", width=1600, height=2100)
     print(ggplot(df_dist, aes(x=ref_dist, y=read_dist, color=read)) +

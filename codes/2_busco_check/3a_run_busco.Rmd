@@ -30,7 +30,6 @@ ls_species_name <- c()
 
 # read input file
 df_refs <- data.table::fread(params$file_refseq)
-df_reads <- data.table::fread(params$file_shortreads)
 
 # iterate over reference sequences
 for (ref in 1:nrow(df_refs)) {
