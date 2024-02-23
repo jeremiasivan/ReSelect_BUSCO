@@ -87,10 +87,13 @@ knitr::opts_knit$set(root.dir = currentdir)
 ```{r child = paste0(params$codedir,"/2_busco_check/3a_run_busco.Rmd")}
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/4_summary.Rmd")}
+```{r child = paste0(params$codedir,"/2_busco_check/4a_summary.Rmd")}
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/3b_run_busco.Rmd"), eval=FALSE}
+```{r child = paste0(params$codedir,"/2_busco_check/3b_run_busco.Rmd")}
+```
+
+```{r child = paste0(params$codedir,"/2_busco_check/4b_summary.Rmd")}
 ```
 
 ```{r, include=FALSE}
