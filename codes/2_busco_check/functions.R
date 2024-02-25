@@ -168,6 +168,9 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
             return(list(errmsg=paste0("Error: ", busco, " gene extraction for ", prefix, ". Skipped.")))
         }
 
+        # remove entry with length == 1
+        df_gff_cds <- df_gff_cds[abs(df_gff_cds$start-df_gff_cds$end)!=1,]
+
         # save the new GFF file
         data.table::fwrite(df_gff_cds, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
         return(list(warnmsg=paste0("Warn: ", busco, " GFF file for ", prefix, " is CDS-only.")))
@@ -185,6 +188,9 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
         df_gff_subset <- df_gff[gene_idx:ls_gene_idx[entry_idx+1]-1]
     }
     
+    # remove entry with length == 1
+    df_gff_subset <- df_gff_subset[abs(df_gff_subset$start-df_gff_subset$end)!=1,]
+
     # save the new GFF file
     data.table::fwrite(df_gff_subset, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
 }
