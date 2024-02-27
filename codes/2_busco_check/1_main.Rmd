@@ -40,13 +40,14 @@ source(paste0(params$codedir, "/1_data_download/functions.R"))
 source(paste0(params$codedir, "/2_busco_check/functions.R"))
 
 library(doSNOW)
-library(ggplot2)
 ```
 
 ```{r, include=FALSE}
 # install.packages("ape")
 # install.packages("Biostrings")
 # install.packages("data.table")
+# install.packages("ggplot2")
+# install.packages("ggrepel")
 # install.packages("labdsv")
 # install.packages("log4r")
 # install.packages("picante")
@@ -83,10 +84,16 @@ knitr::opts_knit$set(root.dir = currentdir)
 ```{r child = paste0(params$codedir,"/2_busco_check/2_run_readmap.Rmd")}
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/3_run_busco.Rmd")}
+```{r child = paste0(params$codedir,"/2_busco_check/3a_run_busco.Rmd")}
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/4_summary.Rmd")}
+```{r child = paste0(params$codedir,"/2_busco_check/4a_summary.Rmd")}
+```
+
+```{r child = paste0(params$codedir,"/2_busco_check/3b_run_busco.Rmd"), include=FALSE, eval=FALSE}
+```
+
+```{r child = paste0(params$codedir,"/2_busco_check/4b_summary.Rmd"), include=FALSE, eval=FALSE}
 ```
 
 ```{r, include=FALSE}

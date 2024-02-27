@@ -1,0 +1,189 @@
+---
+title: "Run BUSCO Pipeline on Individual Reference Sequences and Mapped Reads"
+---
+
+```{r check-busco-setup-b, include=FALSE}
+f_write_log(fn_log=fn_log,
+            msg=c("", "-------- INDIVIDUAL ASSEMBLY -------"))
+
+# create output directory
+dir_busco_b <- paste0(dir_current, "/busco_check/busco_individual/")
+dir_busco_b_read <- paste0(dir_busco_b, "short_reads/")
+dir_busco_b_tree <- paste0(dir_busco_b, "trees/")
+
+lapply(list(dir_busco_b_read,dir_busco_b_read), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+```
+
+## Run BUSCO on mapped reads
+```{r, include=FALSE}
+f_write_log(fn_log=fn_log, msg=c("", "------------ Mapped Reads ----------"))
+
+# set up variables
+is_busco_read <- FALSE
+
+ls_busco_read_done <- c()
+ls_busco_read_run <- c()
+
+# iterate over reference sequences
+if (params$redo) {
+    ls_busco_read_run <- ls_prefix
+} else {
+    for (read in ls_prefix) {
+        # check if BUSCO run exists
+        file_busco_log <- paste0(dir_busco_b_read, read, "/logs/busco.log")
+        if (file.exists(file_busco_log)) {
+            finish_msg <- system(paste("grep 'BUSCO analysis done'", file_busco_log), intern=T)
+            if (length(finish_msg) != 0) {
+                ls_busco_read_done <- c(ls_busco_read_done, paste("-", read))
+                next
+            }
+        }
+
+        # add reference sequence to to-do-list
+        ls_busco_read_run <- c(ls_busco_read_run, read)
+    }
+}
+
+# output log file for available reference BUSCO runs
+if (length(ls_busco_read_done) > 0) {
+    ls_busco_read_done <- c(paste0("Available reference BUSCO runs (", length(ls_busco_read_done), "/", length(ls_prefix), ")"), ls_busco_read_done, "")
+    f_write_log(fn_log=fn_log, msg=ls_busco_read_done)
+}
+
+# update variable for the next analysis
+if (length(ls_busco_read_run) > 0) {
+    is_busco_read <- TRUE
+}
+```
+
+```{r check-busco-read-b, include=is_busco_read, eval=is_busco_read}
+f_write_log(fn_log=fn_log, msg=paste("Running BUSCO using", thread_busco, "threads"))
+
+# create doSNOW cluster
+nwcl <- makeCluster(floor(params$thread/thread_busco))
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over mapped reads
+foreach (prefix = ls_busco_read_run) %dopar% {
+    # input FASTA file
+    file_read <- paste0(dir_readmap, read, "/", read, ".fa")
+
+    # run BUSCO
+    f_run_busco(file_read, dir_lineage, read, dir_busco_b_read, params$busco_mode, thread_busco, params$exe_busco)
+    log4r::info(fn_logger, paste0("File created: BUSCO run for ", read, "."))
+}
+
+stopCluster(nwcl)
+```
+
+## Extract common BUSCOs between reference sequences and mapped reads
+```{r check-busco-common-b}
+# initiate new variable to store list of shared BUSCOs
+shared_busco_b <- shared_busco
+
+# iterate over mapped reads
+for (prefix in ls_prefix) {
+  # directory for BUSCO alignments
+  dir_buscos <- paste0(dir_busco_b_read, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
+  
+  # remove file extension .fna
+  busco_ids <- list.files(dir_buscos, pattern = "*.fna$", full.names = F, recursive = F)
+  busco_ids <- sapply(busco_ids, function(x) { gsub(".fna", "", x) })
+  
+  # extract shared BUSCOs between reference sequences
+  shared_busco_b <- intersect(shared_busco_b, busco_ids)
+}
+
+# check if shared BUSCOs found
+if (length(shared_busco_b) == 0) {
+    log4r::error(fn_logger, paste0("Error: no BUSCO shared between sequences. Exited."))
+    knitr::knit_exit()
+} else {
+    f_write_log(fn_log=fn_log, msg=c("", paste0("Number of complete single-copy BUSCOs: ", length(shared_busco_b), ".")))
+}
+```
+
+## Convert individual BUSCO alignments into MSA
+```{r check-busco-msa-b}
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over shared BUSCOs
+foreach (busco = shared_busco_b) %dopar% {
+    dir_output <- paste0(dir_busco_b_tree, busco, "/")
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
+    }
+
+    # output MSA file
+    fn_out <- paste0(dir_output, busco, ".fa")
+    fn_out_aligned <- paste0(dir_output, busco, "_aligned.fa")
+    if (all(file.exists(fn_out, fn_out_aligned)) && !params$redo) {
+        # check if file is not empty
+        if (file.size(fn_out_aligned) != 0L) {
+            return(NULL)
+        }
+    }
+
+    # extract BUSCO alignment from reference sequences
+    for (ref in ls_refseq) {
+        file_busco_ref <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
+        if (!file.exists(file_busco_ref)) {
+            next
+        }
+
+        f_fasta2msa(file_busco_ref, ref, fn_out)
+    }
+
+    # extract BUSCO alignment from short reads
+    for (read in ls_prefix) {
+        file_busco_read <- paste0(dir_busco_b_read, read, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
+        if (!file.exists(file_busco_read)) {
+            next
+        }
+
+        f_fasta2msa(file_busco_read, read, fn_out)
+    }
+
+    # align using MAFFT FFT-NS-2
+    f_mafft(fn_out, fn_out_aligned, "--retree 2", params$exe_mafft)
+}
+
+stopCluster(nwcl)
+```
+
+## Generate BUSCO trees
+```{r check-busco-tree-b}
+f_write_log(fn_log=fn_log, msg=c("", "------------ BUSCO Trees -----------"))
+              
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over shared BUSCOs
+foreach (busco = shared_busco_b) %dopar% {
+    dir_output <- paste0(dir_busco_b_tree, busco, "/")
+
+    # output IQ-Tree2 files
+    fn_fasta <- paste0(dir_output, busco, "_aligned.fa")
+    fn_treefile <- paste0(dir_output, busco, "_aligned.fa.treefile")
+    if (!file.exists(fn_treefile) || params$redo) {
+        # run IQ-Tree2
+        f_iqtree2(fn_fasta, params$exe_iqtree2)
+    }
+
+    # change the ID into species name
+    fn_treefile_species <- paste0(dir_output, busco, "_aligned.fa.treefile.species")
+    if (!file.exists(fn_treefile_species) || params$redo) {
+        tre <- readLines(fn_treefile)
+        for (id in names(ls_species_name)) {
+            tre <- gsub(id, ls_species_name[id], tre)
+        }
+        writeLines(tre, con=fn_treefile_species)
+    }
+}
+
+log4r::info(fn_logger, "File created/modified: BUSCO trees.")
+stopCluster(nwcl)
+```

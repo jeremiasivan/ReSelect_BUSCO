@@ -8,60 +8,99 @@ f_write_log(fn_log=fn_log,
                       "####        Read Mapping        ####",
                       "####################################"))
 
-# refseq and short reads directories
-dir_refseq <- paste0(getwd(), "/refseq/")
-dir_shortreads <- paste0(getwd(), "/short_reads/")
+# get current working directory
+dir_current <- getwd()
 
-# list of refseq
+# directories for reference sequence and short reads
+dir_refseq <- paste0(dir_current, "/refseq/")
+dir_shortreads <- paste0(dir_current, "/short_reads/")
+
+# list of reference sequences
 ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
 
-# create output directory
-dir_check_shortreads <- paste0(getwd(), "/busco_check/short_reads/")
-dir_readmap <- paste0(getwd(), "/busco_check/readmap/")
+# list of short reads
+df_reads <- data.table::fread(params$file_shortreads)
+ls_shortreads <- df_reads$id[df_reads$is_check]
+
+# list of prefix
+ls_prefix <- outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--"))
+
+# coutput directories
+dir_check_shortreads <- paste0(dir_current, "/busco_check/short_reads/")
+dir_readmap <- paste0(dir_current, "/busco_check/readmap/")
 
 # create directory if not exist
 lapply(list(dir_check_shortreads,dir_readmap), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+```
 
-# set thread for bwamem2 and samtools
+```{r check-readmap-thread, include=FALSE}
 thread_bwamem2 <- ifelse(params$thread < 50, params$thread, 50)
 thread_adapterremoval <- ifelse(params$thread < 10, params$thread, 10)
 thread_samtools <- ifelse(params$thread < 10, params$thread, 10)
 ```
 
 ## QC of short reads
-```{r check-readmap-qcreads}
+```{r, include=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "----- Quality Control of FASTQ -----"))
 
-# select short reads
-df_shortreads <- data.table::fread(params$file_shortreads)
-ls_shortreads <- df_shortreads$id[df_shortreads$is_check]
+# set up variables
+is_qcreads <- FALSE
+
+ls_shortread_done <- c()
+ls_shortread_qc <- c()
+
+# iterate over short reads
+if (params$redo) {
+    ls_shortread_qc <- ls_shortreads
+} else {
+    for (read in ls_shortreads) {
+        # check if output file exists
+        file_fastq <- paste0(dir_check_shortreads, read, ".collapsed.truncated")
+        if (file.exists(file_fastq)) {
+            ls_shortread_done <- c(ls_shortread_done, paste("-", read))
+            next
+        }
+
+        # add short reads to to-do-list
+        ls_shortread_qc <- c(ls_shortread_qc, read)
+    }
+}
+
+# output log file for available filtered short reads
+if (length(ls_shortread_done) > 0) {
+    ls_shortread_done <- c(paste0("Available filtered short reads (", length(ls_shortread_done), "/", length(ls_shortreads), ")"), ls_shortread_done, "")
+    f_write_log(fn_log=fn_log, msg=ls_shortread_done)
+}
+
+# update variable for the next analysis
+if (length(ls_shortread_qc) > 0) {
+    is_qcreads <- TRUE
+}
+```
+
+```{r check-readmap-qcreads, include=is_qcreads, eval=is_qcreads}
+f_write_log(fn_log=fn_log, msg=paste("Running AdapterRemoval using", thread_adapterremoval, "threads"))
 
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_adapterremoval))
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over short reads
-foreach (read = ls_shortreads) %dopar% {
+foreach (read = ls_shortread_qc) %dopar% {
     prefix <- paste0(dir_check_shortreads, read)
-
-    # check if file exists
-    file_fastq <- paste0(prefix, ".collapsed.truncated")
-    if (file.exists(file_fastq) && !params$redo) {
-        log4r::warn(fn_logger, paste0("File found: filtered FASTQ file for ", prefix, ". Skipped."))
-        return(NULL)
-    }
 
     # extract FASTQ files
     dir_reads <- paste0(dir_shortreads, read, "/fastq/")
     ls_fastq <- list.files(dir_reads, pattern="*.fastq$", recursive=F, full.names=T)
+    
+    # check the number of FASTQ files
     len_ls_fastq <- length(ls_fastq)
-
-    # run BWA-MEM2
     if (len_ls_fastq != 1 && len_ls_fastq != 2) {
         log4r::warn(fn_logger, paste0("Warn: invalid number of FASTQ file for ", prefix, " (", len_ls_fastq, "). Skipped."))
         return(NULL)
     }
     
+    # run BWA-MEM2
     f_qc_short_reads(ls_fastq, params$file_adapters, prefix, 25, thread_adapterremoval, params$exe_adapterremoval)
     log4r::info(fn_logger, paste0("File created: filtered FASTQ file for ", prefix, "."))
 }
@@ -70,109 +109,175 @@ stopCluster(nwcl)
 ```
 
 ## Map short reads to reference using BWA-MEM2
-```{r check-readmap}
+```{r, include=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "------------ Read Mapping ----------"))
+
+# set up variables
+is_readmap <- FALSE
+
+ls_readmap_done <- c()
+ls_readmap_run <- c()
+
+# iterate over pairs of reference sequence and short reads
+if (params$redo) {
+    ls_readmap_run <- ls_prefix
+} else {
+    for (prefix in ls_prefix) {
+        # check if file exists
+        file_sam <- paste0(dir_readmap, prefix, "/", prefix, ".sam")
+        if (file.exists(file_sam)) {
+            ls_readmap_done <- c(ls_readmap_done, paste("-", prefix))
+            next
+        }
+
+        # add prefix to to-do-list
+        ls_readmap_run <- c(ls_readmap_run, prefix)
+    }
+}
+
+# output log file for available mapped reads
+if (length(ls_readmap_done) > 0) {
+    ls_readmap_done <- c(paste0("Available mapped reads (", length(ls_readmap_done), "/", length(ls_prefix), ")"), ls_readmap_done, "")
+    f_write_log(fn_log=fn_log, msg=ls_readmap_done)
+}
+
+# update variable for the next analysis
+if (length(ls_readmap_run) > 0) {
+    is_readmap <- TRUE
+}
+```
+
+```{r check-readmap, include=is_readmap, eval=is_readmap}
+f_write_log(fn_log=fn_log, msg=paste("Running BWA-MEM2 using", thread_bwamem2, "threads"))
 
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_bwamem2))
 doSNOW::registerDoSNOW(nwcl)
 
-# iterate over reference sequences
+# create data.frame to store directory of reference sequence
+df_refseq_dir <- data.frame(id=character(), dir=character())
+
+# iterate over reference sequence
 for (ref in ls_refseq) {
     # extract reference sequence
     dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
     file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
-    
+
+    # check if there are multiple reference sequences
     if (length(file_ref) > 1) {
         file_ref <- file_ref[1]
         log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
     }
 
-    # iterate over short reads
-    foreach (read = ls_shortreads) %dopar% {
-        prefix <- paste0(read, "--", ref)
+    # update data.frame
+    df_refseq_dir <- rbind(df_refseq_dir, data.frame(id=ref, dir=file_ref))
+}
 
-        # output directory
-        dir_output <- paste0(dir_readmap, prefix, "/")
-        if (!dir.exists(dir_output)) {
-            dir.create(dir_output, recursive=T)
-        }
-
-        # check if file exists
-        file_sam <- paste0(dir_output, prefix, ".sam")
-        if (file.exists(file_sam) && !params$redo) {
-            log4r::warn(fn_logger, paste0("File found: SAM file for ", prefix, ". Skipped."))
-            return(NULL)
-        }
-
-        # extract FASTQ file
-        file_fastq <- paste0(dir_check_shortreads, read, ".pair1.truncated")
-        if (!file.exists(file_fastq)) {
-            log4r::warn(fn_logger, paste0("File not found: filtered FASTQ file for ", read, ". Skipped."))
-            return(NULL)
-        }
-
-        file_fastq_second <- paste0(dir_check_shortreads, read, ".pair2.truncated")
-        if (file.exists(file_fastq_second)) {
-            file_fastq <- c(file_fastq, file_fastq_second)
-        }
-        
-        # run BWA-MEM2
-        f_read_mapping(file_ref, file_fastq, thread_bwamem2, params$exe_bwamem2, file_sam)
-        log4r::info(fn_logger, paste0("File created: SAM file for ", prefix, "."))
+# iterate over prefix
+foreach (prefix = ls_readmap_run) %dopar% {
+    # output directory
+    dir_output <- paste0(dir_readmap, prefix, "/")
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
     }
+
+    # output file
+    file_sam <- paste0(dir_output, prefix, ".sam")
+
+    # extract reference and short reads
+    read <- unlist(strsplit(prefix, split="--"))[1]
+    ref <- unlist(strsplit(prefix, split="--"))[2]
+
+    # extract reference file location
+    file_ref <- df_refseq_dir$dir[df_refseq_dir$id==ref]
+
+    # extract FASTQ file
+    file_fastq <- paste0(dir_check_shortreads, read, ".pair1.truncated")
+    if (!file.exists(file_fastq)) {
+        log4r::warn(fn_logger, paste0("File not found: filtered FASTQ file for ", read, ". Skipped."))
+        return(NULL)
+    }
+
+    file_fastq_second <- paste0(dir_check_shortreads, read, ".pair2.truncated")
+    if (file.exists(file_fastq_second)) {
+        file_fastq <- c(file_fastq, file_fastq_second)
+    }
+    
+    # run BWA-MEM2
+    f_read_mapping(file_ref, file_fastq, thread_bwamem2, params$exe_bwamem2, file_sam)
+    log4r::info(fn_logger, paste0("File created: SAM file for ", prefix, "."))
 }
 
 stopCluster(nwcl)
 ```
 
 ## Convert SAM to BAM
-```{r check-readmap-conversion}
-f_write_log(fn_log=fn_log, msg=c("", "---------- Data Conversion ---------"))
+```{r, include=FALSE}
+f_write_log(fn_log=fn_log, msg=c("", "---------- File Conversion ---------"))
+
+# set up variables
+is_convert <- FALSE
+
+ls_convert_done <- c()
+ls_convert_run <- c()
+
+# iterate over prefix
+if (params$redo) {
+    ls_convert_run <- ls_prefix
+} else {
+    for (prefix in ls_prefix) {
+        # check if file exists
+        file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
+        file_vcf <- paste0(dir_readmap, prefix, "/", prefix, ".vcf.gz")
+        file_fas <- paste0(dir_readmap, prefix, "/", prefix, ".fa")
+        if (all(file.exists(file_bam, file_vcf, file_fas))) {
+            ls_convert_done <- c(ls_convert_done, paste("-", prefix))
+            next
+        }
+
+        # add prefix to to-do-list
+        ls_convert_run <- c(ls_convert_run, prefix)
+    }
+}
+
+# output log file for available converted files
+if (length(ls_convert_done) > 0) {
+    ls_convert_done <- c(paste0("Available converted files (", length(ls_convert_done), "/", length(ls_prefix), ")"), ls_convert_done, "")
+    f_write_log(fn_log=fn_log, msg=ls_convert_done)
+}
+
+# update variable for the next analysis
+if (length(ls_convert_run) > 0) {
+    is_convert <- TRUE
+}
+```
+
+```{r check-readmap-conversion, include=is_convert, eval=is_convert}
+f_write_log(fn_log=fn_log, msg=paste("Running Samtools and Bcftools using", thread_samtools, "threads"))
 
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_samtools))
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over reference sequences
-for (ref in ls_refseq) {
-    # extract reference sequence
-    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
-    
-    if (length(file_ref) > 1) {
-        file_ref <- file_ref[1]
-        log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
+foreach (prefix = ls_convert_run) %dopar% {
+    # output directory
+    dir_output <- paste0(dir_readmap, prefix, "/")
+
+    # check if input file exists
+    file_sam <- paste0(dir_output, prefix, ".sam")
+    if (!file.exists(file_sam)) {
+        log4r::warn(fn_logger, paste0("File not found: SAM file for ", prefix, ". Skipped."))
+        return(NULL)
     }
 
-    # iterate over short reads
-    foreach (read = ls_shortreads) %dopar% {
-        prefix <- paste0(read, "--", ref)
-        
-        # output directory
-        dir_output <- paste0(dir_readmap, prefix, "/")
+    # extract reference file location
+    ref <- unlist(strsplit(prefix, split="--"))[2]
+    file_ref <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
-        # check if input file exists
-        file_sam <- paste0(dir_output, prefix, ".sam")
-        if (!file.exists(file_sam)) {
-            log4r::warn(fn_logger, paste0("File not found: SAM file for ", prefix, ". Skipped."))
-            return(NULL)
-        }
-
-        # check if file exists
-        file_fas <- paste0(dir_output, prefix, ".fa")
-        if (file.exists(file_fas) && !params$redo) {
-            # check if file is not empty
-            if (file.size(file_fas) != 0L) {
-                log4r::warn(fn_logger, paste0("File found: FASTA file for ", prefix, ". Skipped."))
-                return(NULL)
-            }
-        }
-
-        # convert SAM to BAM and VCF
-        f_variant_calling(prefix, dir_output, thread_samtools, file_ref, params$exe_samtools, params$exe_bcftools)
-        log4r::info(fn_logger, paste0("File created: BAM and VCF files for ", prefix, "."))
-    }
+    # convert SAM
+    f_variant_calling(prefix, dir_output, thread_samtools, file_ref, params$exe_samtools, params$exe_bcftools)
+    log4r::info(fn_logger, paste0("File created: BAM, VCF, and FASTA files for ", prefix, "."))
 }
 
 stopCluster(nwcl)

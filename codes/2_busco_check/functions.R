@@ -156,7 +156,7 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     # extract relevant GFF entry
     df_gff <- df_gff[df_gff$seqname==coordinates$seqname & df_gff$strand==coordinates$strand]
     if (nrow(df_gff) == 0) {
-        return(list(errmsg=paste0("Error: ", busco, " GFF extraction for ", prefix, ". Skipped.")))
+        return(list(errmsg=paste0("Error: ", busco, " GFF entry is not found for ", prefix, ". Skipped.")))
     }
 
     # extract the respective gene index
@@ -167,6 +167,9 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
         if (nrow(df_gff_cds) == 0) {
             return(list(errmsg=paste0("Error: ", busco, " gene extraction for ", prefix, ". Skipped.")))
         }
+
+        # remove entry with length == 1
+        df_gff_cds <- df_gff_cds[abs(df_gff_cds$start-df_gff_cds$end)!=1,]
 
         # save the new GFF file
         data.table::fwrite(df_gff_cds, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
@@ -185,6 +188,9 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
         df_gff_subset <- df_gff[gene_idx:ls_gene_idx[entry_idx+1]-1]
     }
     
+    # remove entry with length == 1
+    df_gff_subset <- df_gff_subset[abs(df_gff_subset$start-df_gff_subset$end)!=1,]
+
     # save the new GFF file
     data.table::fwrite(df_gff_subset, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
 }
@@ -283,9 +289,6 @@ f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_
 
         # check if treefile exists
         fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
-        if (!file.exists(fn_tree)){
-            return(NULL)
-        }
 
         # read tree
         tre <- ape::read.tree(fn_tree)
