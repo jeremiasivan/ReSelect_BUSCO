@@ -211,6 +211,12 @@ for (ref in ls_refseq) {
         
         # extract BUSCO
         f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
+
+        # sanity check if FASTA is the same
+        is_fasta_same <- f_compare_fasta(file_busco_fas, file_busco_concat)
+        if (!is_fasta_same){
+            log4r::warn(fn_logger, paste0("Warn: ", busco, " FASTA file for ", ref, ". Files are not the same."))
+        }
     }
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", ref, "."))

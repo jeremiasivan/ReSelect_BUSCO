@@ -226,6 +226,24 @@ f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out
     Biostrings::writeXStringSet(concat_cds, filepath=fn_concat_out)
 }
 
+# function: compare two FASTA files
+f_compare_fasta <- function(fn_fasta_one, fn_fasta_two) {
+    # open the two FASTA files
+    fasta_one <- Biostrings::readDNAStringSet(fn_fasta_one)
+    fasta_two <- Biostrings::readDNAStringSet(fn_fasta_two)
+
+    # check if there is only one sequence
+    header_one <- names(fasta_one)
+    header_two <- names(fasta_two)
+
+    if (length(header_one) != 1 || length(header_two) != 1) {
+        return(FALSE)
+    }
+
+    # compare if the two are equal
+    return(identical(fasta_one[[header_one]], fasta_two[[header_two]]))
+}
+
 # function: combine individual FASTA as MSA
 f_fasta2msa <- function(fn_input, header, fn_out) {
     # initiate variable
