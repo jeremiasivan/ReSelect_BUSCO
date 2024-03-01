@@ -56,7 +56,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
                           exe_samtools, "collate", nthread, "-O -u - |",       # group reads with the same name together, output as STDOUT (-O)
                           exe_samtools, "fixmate", nthread, "-m -u - - |",     # correct flags used in the file, adding mate score tags (-m)
                           exe_samtools, "sort", nthread, "-u - |",             # sort the reads based on their positions
-                          exe_samtools, "markdup -r", nthread, "-", fn_bam)      # remove duplicates based on the mate score tags
+                          exe_samtools, "markdup -r", nthread, "-", fn_bam)    # remove duplicates based on the mate score tags
     system(cmd_samtools)
 
     # index BAM file
@@ -66,7 +66,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
     # run bcftools mpileup
     cmd_bcftools <- paste(exe_bcftools, "mpileup", nthread, "-Ou -f", refseq, fn_bam, "|", # generate genotype likelihoods at each position with coverage
                           exe_bcftools, "call", nthread, "-Ou -mv |",                      # variant calling with default settings (-m) and output only variant sites (-v)
-                          exe_bcftools, "view", nthread, "-i 'QUAL>20' |",                 # filter out variants with low quality score
+                          exe_bcftools, "view", nthread, "-V indels -i 'QUAL>20' |",       # filter out variants with low quality score
                           exe_bcftools, "norm", nthread, "-f", refseq, "-Oz -o", fn_vcf)   # normalize variants
     system(cmd_bcftools)
 
