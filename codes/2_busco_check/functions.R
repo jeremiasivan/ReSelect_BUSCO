@@ -195,6 +195,28 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     data.table::fwrite(df_gff_subset, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
 }
 
+# function: check read depth
+f_calculate_read_depth <- function(fn_bam, fn_gff, exe_samtools) {
+    # open GFF file
+    df_gff <- data.table::fread(fn_gff)
+    df_gff_cds <- df_gff[df_gff$feature=="CDS",]
+
+    # initiate variable
+    read_depth <- c()
+
+    # iterate over CDS
+    for (i in 1:nrow(df_gff_cds)) {
+        # calculate the read depth
+        cmd_depth <- paste(exe_samtools, "depth -a", 
+                            "-f", fn_bam,
+                            "-r", paste0(df_gff_cds$seqname[i], ":", df_gff_cds$start[i], "-", df_gff_cds$end[i]))
+        read_depth <- c(read_depth, as.numeric(system(cmd_depth, intern=T)))
+    }
+
+    # return average depth
+    return(mean(read_depth))
+}
+
 # function: extract all BUSCO alignments from GFF
 f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out, exe_gffread){
     # run gffread

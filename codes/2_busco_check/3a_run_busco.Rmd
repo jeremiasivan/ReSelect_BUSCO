@@ -256,10 +256,11 @@ for (prefix in ls_prefix) {
         require(Biostrings)
         require(stringr)
 
-        # BUSCO file
+        # input files
+        file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
         file_busco_gff_out <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".gff")
         if (!file.exists(file_busco_gff_out)) {
-            f_write_log(fn_log=fn_log, msg=paste0("File not found: ", busco, " GFF for ", ref, ". Skipped."))
+            log4r::warn(fn_logger, msg=paste0("File not found: ", busco, " GFF for ", ref, ". Skipped."))
             return(NULL)
         }
 
@@ -269,6 +270,13 @@ for (prefix in ls_prefix) {
 
         # check if file exists
         if (file.exists(file_busco_concat) && file.size(file_busco_concat) != 0L && !params$redo) {
+            return(NULL)
+        }
+
+        # calculate read depth
+        read_depth <- f_calculate_read_depth(file_bam, file_busco_gff_out, params$exe_samtools)
+        if (read_depth < 20) {
+            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with read depth of", read_depth))
             return(NULL)
         }
 
