@@ -274,9 +274,9 @@ for (prefix in ls_prefix) {
         }
 
         # calculate read depth
-        read_depth <- f_calculate_read_depth(file_bam, file_busco_gff_out, params$exe_samtools)
-        if (read_depth < 20) {
-            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with read depth of", read_depth))
+        read_coverage <- f_calculate_read_coverage(file_bam, file_busco_gff_out, params$exe_samtools)
+        if (read_coverage < 30) {
+            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with read depth of", read_coverage))
             return(NULL)
         }
 

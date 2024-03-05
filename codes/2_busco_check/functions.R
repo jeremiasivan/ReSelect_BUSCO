@@ -196,25 +196,32 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
 }
 
 # function: check read depth
-f_calculate_read_depth <- function(fn_bam, fn_gff, exe_samtools) {
+f_calculate_read_coverage <- function(fn_bam, fn_gff, exe_samtools) {
     # open GFF file
     df_gff <- data.table::fread(fn_gff)
     df_gff_cds <- df_gff[df_gff$feature=="CDS",]
 
     # initiate variable
-    read_depth <- c()
+    read_coverage <- c()
 
     # iterate over CDS
     for (i in 1:nrow(df_gff_cds)) {
         # calculate the read depth
-        cmd_depth <- paste(exe_samtools, "depth -a", 
-                            "-f", fn_bam,
-                            "-r", paste0(df_gff_cds$seqname[i], ":", df_gff_cds$start[i], "-", df_gff_cds$end[i]))
-        read_depth <- c(read_depth, as.numeric(system(cmd_depth, intern=T)))
+        cmd_coverage <- paste(exe_samtools, "coverage",
+                              "-r", paste0(df_gff_cds$seqname[i], ":", df_gff_cds$start[i], "-", df_gff_cds$end[i]),
+                              fn_bam)
+        stdout_coverage <- system(cmd_coverage, intern=T)
+        
+        # convert result to data.frame
+        df_coverage <- read.table(text=stdout_coverage, sep="\t")
+        colnames(df_coverage) <- c("rname", "startpos", "endpos", "numreads", "covbases", "coverage", "meandepth", "meanbaseq", "meanmapq")
+
+        # update the vector
+        read_coverage <- c(read_coverage, as.numeric(df_coverage$meandepth[1]))
     }
 
-    # return average depth
-    return(mean(read_depth))
+    # return average coverage
+    return(mean(read_coverage))
 }
 
 # function: extract all BUSCO alignments from GFF
