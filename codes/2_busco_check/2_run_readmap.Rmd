@@ -108,6 +108,27 @@ foreach (read = ls_shortread_qc) %dopar% {
 stopCluster(nwcl)
 ```
 
+```{r check-readmap-refmap, include=FALSE}
+# create data.frame to store directory of reference sequence
+df_refseq_dir <- data.frame(id=character(), dir=character())
+
+# iterate over reference sequence
+for (ref in ls_refseq) {
+    # extract reference sequence
+    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
+    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
+
+    # check if there are multiple reference sequences
+    if (length(file_ref) > 1) {
+        file_ref <- file_ref[1]
+        log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
+    }
+
+    # update data.frame
+    df_refseq_dir <- rbind(df_refseq_dir, data.frame(id=ref, dir=file_ref))
+}
+```
+
 ## Map short reads to reference using BWA-MEM2
 ```{r, include=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "------------ Read Mapping ----------"))
@@ -153,25 +174,6 @@ f_write_log(fn_log=fn_log, msg=paste("Running BWA-MEM2 using", thread_bwamem2, "
 # create doSNOW cluster
 nwcl <- makeCluster(floor(params$thread/thread_bwamem2))
 doSNOW::registerDoSNOW(nwcl)
-
-# create data.frame to store directory of reference sequence
-df_refseq_dir <- data.frame(id=character(), dir=character())
-
-# iterate over reference sequence
-for (ref in ls_refseq) {
-    # extract reference sequence
-    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
-
-    # check if there are multiple reference sequences
-    if (length(file_ref) > 1) {
-        file_ref <- file_ref[1]
-        log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
-    }
-
-    # update data.frame
-    df_refseq_dir <- rbind(df_refseq_dir, data.frame(id=ref, dir=file_ref))
-}
 
 # iterate over prefix
 foreach (prefix = ls_readmap_run) %dopar% {

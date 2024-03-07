@@ -49,7 +49,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
     fn_vcf <- paste0(dir_output, "/", prefix, ".vcf.gz")
     fn_fas <- paste0(dir_output, "/", prefix, ".fa")
 
-    nthread <- paste("-@", thread)
+    nthread <- paste("--threads", thread)
 
     # run samtools
     cmd_samtools <- paste(exe_samtools, "view", nthread, "-b -u", fn_sam, "|", # convert to uncompressed (-u) BAM (-b)
