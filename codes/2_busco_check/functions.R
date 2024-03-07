@@ -41,14 +41,13 @@ f_read_mapping <- function(refseq, fastq, thread, exe_bwamem2, file_sam) {
     system(cmd_readmap)
 }
 
-# function: convert SAM to BAM and VCF
-f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, exe_bcftools) {
+# function: convert SAM to BAM
+f_sam_to_bam <- function(prefix, dir_output, thread, exe_samtools) {
     # initiate variables
     fn_sam <- paste0(dir_output, "/", prefix, ".sam")
     fn_bam <- paste0(dir_output, "/", prefix, ".bam")
-    fn_vcf <- paste0(dir_output, "/", prefix, ".vcf.gz")
-    fn_fas <- paste0(dir_output, "/", prefix, ".fa")
 
+    # set the number of threads
     nthread <- paste("--threads", thread)
 
     # run samtools
@@ -62,6 +61,16 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_samtools, 
     # index BAM file
     cmd_bam_index <- paste(exe_samtools, "index", nthread, fn_bam)
     system(cmd_bam_index)
+}
+
+# function: variant calling
+f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_bcftools) {
+    # initiate variables
+    fn_bam <- paste0(dir_output, "/", prefix, ".bam")
+    fn_vcf <- paste0(dir_output, "/", prefix, ".vcf.gz")
+    fn_fas <- paste0(dir_output, "/", prefix, ".fa")
+
+    nthread <- paste("--threads", thread)
 
     # run bcftools mpileup
     cmd_bcftools <- paste(exe_bcftools, "mpileup", nthread, "-Ou -f", refseq, fn_bam, "|", # generate genotype likelihoods at each position with coverage
