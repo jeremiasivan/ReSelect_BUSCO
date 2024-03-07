@@ -16,8 +16,7 @@ f_qc_short_reads <- function(fastq, fn_adapters, prefix, min_quality, thread, ex
 
     # set the minimum quality score and merge overlapping reads
     cmd_qc <- paste(cmd_qc, "--basename", prefix,
-                    "--trimqualities --trimns --minquality", min_quality,
-                    "--collapse")
+                    "--trimqualities --trimns --minquality", min_quality)
     
     # run AdapterRemoval to get prefix.collapsed.truncated
     system(cmd_qc)
@@ -459,29 +458,4 @@ f_mntd_visualization <- function(fn_mntd_summary, prefix) {
             axis.title.y = element_text(size=40),
             legend.position = "none"))
     dev.off()
-}
-
-# function: run entrez-direct to extract species from assembly accession number
-f_extract_species_from_assembly <- function(exe_efetch, accession) {
-    cmd_entrez <- paste(exe_efetch, "-db assembly -id", accession, "-format docsum")
-    metadata <- system(cmd_entrez, intern=T)
-
-    # extract the species name
-    species_name <- metadata[grep("<Organism>", metadata)]
-    species_name <- gsub(".*<Organism>(.+)<\\/Organism>.*", "\\1", species_name)
-
-    return(species_name)
-}
-
-# function: run entrez-direct to extract species from SRA accession number
-f_extract_species_from_reads <- function(exe_efetch, accession) {
-    cmd_entrez <- paste(exe_efetch, "-db sra -id", accession, "-format runinfo")
-    metadata <- system(cmd_entrez, intern=T)
-
-    # extract index of the species name
-    ls_metadata <- strsplit(metadata, split=",") 
-    idx_species <- which(ls_metadata[[1]] == "ScientificName")
-    species_name <- ls_metadata[[2]][idx_species]
-
-    return(species_name)
 }
