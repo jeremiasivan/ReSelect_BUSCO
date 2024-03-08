@@ -24,7 +24,7 @@ is_busco_read <- FALSE
 ls_busco_read_done <- c()
 ls_busco_read_run <- c()
 
-# iterate over reference sequences
+# iterate over mapped sequences
 if (params$redo) {
     ls_busco_read_run <- ls_prefix
 } else {
@@ -39,14 +39,14 @@ if (params$redo) {
             }
         }
 
-        # add reference sequence to to-do-list
+        # add mapped sequence to to-do-list
         ls_busco_read_run <- c(ls_busco_read_run, read)
     }
 }
 
-# output log file for available reference BUSCO runs
+# output log file for available mapped sequence BUSCO runs
 if (length(ls_busco_read_done) > 0) {
-    ls_busco_read_done <- c(paste0("Available reference BUSCO runs (", length(ls_busco_read_done), "/", length(ls_prefix), ")"), ls_busco_read_done, "")
+    ls_busco_read_done <- c(paste0("Available mapped sequence BUSCO runs (", length(ls_busco_read_done), "/", length(ls_prefix), ")"), ls_busco_read_done, "")
     f_write_log(fn_log=fn_log, msg=ls_busco_read_done)
 }
 

@@ -28,7 +28,7 @@ fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
 
 ```{r check-summary-busco-update}
 # create a new vector to store the list of BUSCOs
-shared_busco_filtered <- shared_busco
+shared_busco_filtered <- shared_busco_b
 
 # iterate over BUSCOs
 for (busco in shared_busco_filtered) {
