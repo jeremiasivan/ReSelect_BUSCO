@@ -207,7 +207,13 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
 f_calculate_read_coverage <- function(fn_bam, fn_gff, exe_samtools) {
     # open GFF file
     df_gff <- data.table::fread(fn_gff)
+    data.table::setnames(df_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+
+    # extract CDS
     df_gff_cds <- df_gff[df_gff$feature=="CDS",]
+    if (nrow(df_gff_cds) == 0) {
+        return(NULL)
+    }
 
     # initiate variable
     read_coverage <- c()
