@@ -383,15 +383,8 @@ f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_
 
         # check if there is only one reference sequence
         uq_refs <- unique(df_presence$refs)
-
         if (length(uq_refs) == 1) {
-            # extract other taxa
-            other_taxa <- ls_tips[!ls_tips %in% unique(df_presence$reads)]
-
-            # update the data.frame
-            for (taxon in other_taxa) {
-                df_presence <- rbind(df_presence, list(refs=uq_refs, reads=taxon, present=0))
-            }
+            return(NULL)
         }
 
         # transform data.frame to community format used in picante
