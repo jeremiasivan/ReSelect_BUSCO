@@ -287,6 +287,12 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
             next
         }
 
+        # check if all values are NA
+        if (all(is.na(temp_df_dist$read_dist)) || all(is.na(temp_df_dist$ref_dist))) {
+            log4r::info(fn_logger, paste("Error: temporary distance table for", read, "has all NA column(s). Skipped."))
+            next
+        }
+
         # run linear model
         lm_result <- lm(read_dist~ref_dist, data=temp_df_dist)
         read_out[[read_species_name]] <- paste0(round(summary(lm_result)$r.squared, 3),
