@@ -235,7 +235,7 @@ f_calculate_read_coverage <- function(fn_bam, fn_gff, exe_samtools) {
     }
 
     # return average coverage
-    return(mean(read_coverage))
+    return(round(mean(read_coverage),3))
 }
 
 # function: extract all BUSCO alignments from GFF
@@ -364,10 +364,33 @@ f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_
             if (!is_ref_included) {
                 ls_taxa <- ls_taxa[ls_taxa != ref]
             }
+
+            # check the number of taxa
+            if (length(ls_taxa) < 3) {
+                next
+            }
             
             # add taxa to the presence/absence table
             for (taxon in ls_taxa) {
-                df_presence <- rbind(df_presence, c(refs=ref, reads=taxon, present=1))
+                df_presence <- rbind(df_presence, list(refs=ref, reads=taxon, present=1))
+            }
+        }
+
+        # check if data.frame is empty
+        if (nrow(df_presence) == 0) {
+            return(NULL)
+        }
+
+        # check if there is only one reference sequence
+        uq_refs <- unique(df_presence$refs)
+
+        if (length(uq_refs) == 1) {
+            # extract other taxa
+            other_taxa <- ls_tips[!ls_tips %in% unique(df_presence$reads)]
+
+            # update the data.frame
+            for (taxon in other_taxa) {
+                df_presence <- rbind(df_presence, list(refs=uq_refs, reads=taxon, present=0))
             }
         }
 
