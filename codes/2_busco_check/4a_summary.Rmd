@@ -302,6 +302,11 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         df_dist <- rbind(df_dist, temp_df_dist)
     }
 
+    # check if data.frame is empty
+    if (nrow(df_dist) == 0) {
+        return(NULL)
+    }
+
     # identify outliers based on IQR criterion
     value_refs_out <- boxplot.stats(df_dist$ref_dist)$out
     value_read_out <- boxplot.stats(df_dist$read_dist)$out
@@ -312,12 +317,9 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     # generate plots
     fn_busco_tiff <- paste0(dir_check_summary_correlation, busco, ".tiff")
 
-    tiff(file=fn_busco_tiff, units="px", width=1600, height=2100)
-    print(ggplot(df_dist, aes(x=ref_dist, y=read_dist, color=read)) +
+    plot <- ggplot(df_dist, aes(x=ref_dist, y=read_dist, color=read)) +
         geom_point(shape=16, aes(size=20)) +
         geom_smooth(method='lm', formula= y~x, aes(linewidth=4)) +
-        geom_text_repel(data=df_refs_outlier, aes(label=df_refs_outlier$ref), size=12) +
-        geom_text_repel(data=df_read_outlier, aes(label=rep("READ", nrow(df_read_outlier))), size=12) +
         facet_wrap(~read, ncol=1) +
         ggtitle("Correlation of BUSCO Phylogenetic Distances") +
         xlab("Reference Distance") + ylab("Short Reads Distance") +
@@ -330,8 +332,20 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
             axis.text.x=element_text(size=30),
             strip.text = element_text(size = 30),
             legend.position = "none"
-        ))
+        )
 
+    # add outliers label
+    if (nrow(df_refs_outlier) > 0){
+        plot <- plot + geom_text_repel(data=df_refs_outlier, aes(label=df_refs_outlier$ref), size=12)
+    }
+
+    if (nrow(df_read_outlier) > 0) {
+        plot <- plot + geom_text_repel(data=df_read_outlier, aes(label=rep("READ", nrow(df_read_outlier))), size=12)
+    }
+
+    # save the plot
+    tiff(file=fn_busco_tiff, units="px", width=1600, height=2100)
+    print(plot)
     dev.off()
 
     return(list(read_out))
