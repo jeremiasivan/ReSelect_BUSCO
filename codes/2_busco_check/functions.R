@@ -154,6 +154,27 @@ f_create_gff <- function(coordinates, busco, fn_out) {
 
 # function: manipulate and save GFF file
 f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
+    # create a child function to check if CDS comes from multiple genes
+    f_check_cds_target_id <- function(df_gff) {
+        # extract attributes
+        ls_attribute <- df_gff$attribute
+        ls_target_id <- sapply(ls_attribute, function(x){
+            str_match(x, "Target_ID=([^;]+)")[2]
+        })
+
+        if (unique(ls_target_id) != 1) {
+            # extract the most common target ID
+            tb_target_id <- table(ls_target_id)
+            target_id <- names(tb_target_id[max(tb_target_id)])[1]
+
+            # extract the GFF entries
+            df_gff_filter <- df_gff[grepl(target_id, df_gff$attribute),]
+            return(df_gff_filter)
+        }
+
+        return(df_gff)
+    }
+
     # read GFF file
     df_gff <- data.table::fread(fn_input, header=FALSE, select=1:9)
     data.table::setnames(df_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
@@ -179,6 +200,9 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
         # remove entry with length == 1
         df_gff_cds <- df_gff_cds[abs(df_gff_cds$start-df_gff_cds$end)!=1,]
 
+        # remove multiple genes
+        df_gff_cds <- f_check_cds_target_id(df_gff_cds)
+
         # save the new GFF file
         data.table::fwrite(df_gff_cds, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
         return(list(warnmsg=paste0("Warn: ", busco, " GFF file for ", prefix, " is CDS-only.")))
@@ -198,6 +222,9 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     
     # remove entry with length == 1
     df_gff_subset <- df_gff_subset[abs(df_gff_subset$start-df_gff_subset$end)!=1,]
+
+    # remove multiple genes
+    df_gff_subset <- f_check_cds_target_id(df_gff_subset)
 
     # save the new GFF file
     data.table::fwrite(df_gff_subset, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
