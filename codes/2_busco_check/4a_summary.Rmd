@@ -295,8 +295,21 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         # run linear model
         lm_result <- lm(read_dist~ref_dist, data=temp_df_dist)
-        read_out[[read_species_name]] <- paste0(round(summary(lm_result)$r.squared, 3),
-                                                " (", round(summary(lm_result)$coefficients[2,4], 3), ")")
+
+        # extract R2 and p-value
+        rsquared <- tryCatch({
+            round(summary(lm_result)$r.squared, 3)
+        }, error = function(err) {
+            return("-")
+        })
+
+        pvalue <- tryCatch({
+            round(summary(lm_result)$coefficients[2,4], 3)
+        }, error = function(err) {
+            return("-")
+        })
+
+        read_out[[read_species_name]] <- paste0(rsquared, " (", pvalue, ")")
 
         # update data.table
         df_dist <- rbind(df_dist, temp_df_dist)
@@ -314,14 +327,14 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     df_refs_outlier <- df_dist[df_dist$ref_dist %in% value_refs_out,]
     df_read_outlier <- df_dist[df_dist$read_dist %in% value_read_out,]
 
-    # generate plots
+    # generate plot
     fn_busco_tiff <- paste0(dir_check_summary_correlation, busco, ".tiff")
 
     plot <- ggplot(df_dist, aes(x=ref_dist, y=read_dist, color=read)) +
         geom_point(shape=16, aes(size=20)) +
         geom_smooth(method='lm', formula= y~x, aes(linewidth=4)) +
         facet_wrap(~read, ncol=1) +
-        ggtitle("Correlation of BUSCO Phylogenetic Distances") +
+        ggtitle(paste("Correlation of BUSCO", busco, "Phylogenetic Distances")) +
         xlab("Reference Distance") + ylab("Short Reads Distance") +
         theme(
             plot.title = element_text(hjust = 0.5, size = 50),
