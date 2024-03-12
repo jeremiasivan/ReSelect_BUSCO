@@ -20,8 +20,9 @@ dir_busco_tree <- paste0(dir_busco, "trees/")
 lapply(list(dir_busco_lineage,dir_busco_ref,dir_busco_read,dir_busco_tree), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 ```
 
-```{r check-busco-thread, include=FALSE}
+```{r check-busco-params, include=FALSE}
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
+min_busco_depth <- 20
 ```
 
 ```{r busco-check-species-map, include=FALSE}
@@ -213,9 +214,13 @@ for (ref in ls_refseq) {
         f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
 
         # sanity check if FASTA is the same
-        is_fasta_same <- f_compare_fasta(file_busco_fas, file_busco_concat)
-        if (!is_fasta_same){
-            log4r::warn(fn_logger, paste0("Warn: ", busco, " FASTA file for ", ref, ". Files are not the same."))
+        output <- f_compare_fasta(file_busco_fas, file_busco_concat)
+        if (!is.null(output$errmsg)) {
+            log4r::warn(fn_logger, paste0("Warn: ", busco, " FASTA files for ", ref, ". Headers are non-identical."))
+        } else {
+            if (!output$is_identical){
+                log4r::warn(fn_logger, paste0("Warn: ", busco, " FASTA file for ", ref, ". Sequences are non-identical (identity=", output$score, ")."))
+            }
         }
     }
 
@@ -278,7 +283,7 @@ for (prefix in ls_prefix) {
         if (is.null(read_coverage)) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with no CDS"))
             return(NULL)
-        } else if (read_coverage < 30) {
+        } else if (read_coverage < min_busco_depth) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with read depth of", read_coverage))
             return(NULL)
         }
