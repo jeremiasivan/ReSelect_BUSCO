@@ -159,13 +159,13 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
         # extract attributes
         ls_attribute <- df_gff$attribute
         ls_target_id <- sapply(ls_attribute, function(x){
-            str_match(x, "Target_ID=([^;]+)")[2]
+            stringr::str_match(x, "Target_ID=([^;]+)")[2]
         })
 
-        if (unique(ls_target_id) != 1) {
+        if (length(unique(ls_target_id)) != 1) {
             # extract the most common target ID
             tb_target_id <- table(ls_target_id)
-            target_id <- names(tb_target_id[max(tb_target_id)])[1]
+            target_id <- names(tb_target_id[tb_target_id==max(tb_target_id)])[1]
 
             # extract the GFF entries
             df_gff_filter <- df_gff[grepl(target_id, df_gff$attribute),]
