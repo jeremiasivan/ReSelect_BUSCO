@@ -55,7 +55,7 @@ if (params$redo) {
 } else {
     for (read in ls_shortreads) {
         # check if output file exists
-        file_fastq <- paste0(dir_check_shortreads, read, ".collapsed.truncated")
+        file_fastq <- paste0(dir_check_shortreads, read, ".pair1.truncated")
         if (file.exists(file_fastq)) {
             ls_shortread_done <- c(ls_shortread_done, paste("-", read))
             next

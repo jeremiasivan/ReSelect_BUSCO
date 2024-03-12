@@ -22,7 +22,8 @@ lapply(list(dir_busco_lineage,dir_busco_ref,dir_busco_read,dir_busco_tree), func
 
 ```{r check-busco-params, include=FALSE}
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
-min_busco_depth <- 20
+min_busco_depth <- 10
+max_busco_depth <- 60
 ```
 
 ```{r busco-check-species-map, include=FALSE}
@@ -283,7 +284,7 @@ for (prefix in ls_prefix) {
         if (is.null(read_coverage)) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with no CDS"))
             return(NULL)
-        } else if (read_coverage < min_busco_depth) {
+        } else if (read_coverage < min_busco_depth || read_coverage > max_busco_depth) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with read depth of", read_coverage))
             return(NULL)
         }
