@@ -25,6 +25,7 @@ thread_busco <- ifelse(params$thread < 50, params$thread, 50)
 min_busco_depth <- 10
 max_busco_depth <- 60
 
+min_ref_busco_identity <- 99
 include_incomplete <- FALSE
 ```
 
@@ -151,6 +152,9 @@ if (length(shared_busco) == 0) {
 
 ## Extract BUSCOs for reference sequences
 ```{r check-busco-extract-ref}
+# non-identical BUSCOs
+ls_nonidentical_busco <- c()
+
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -167,7 +171,7 @@ for (ref in ls_refseq) {
     file_fas <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
     # iterate over shared BUSCOs
-    foreach (busco = shared_busco) %dopar% {
+    output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         require(data.table)
         require(Biostrings)
         require(stringr)
@@ -220,17 +224,30 @@ for (ref in ls_refseq) {
         output <- f_compare_fasta(file_busco_fas, file_busco_concat)
         if (!is.null(output$errmsg)) {
             log4r::warn(fn_logger, paste0("Warn: ", busco, " FASTA files for ", ref, ". Headers are non-identical."))
+            return(busco)
         } else {
             if (!output$is_identical){
                 log4r::warn(fn_logger, paste0("Warn: ", busco, " FASTA file for ", ref, ". Sequences are non-identical (identity=", output$score, ")."))
+
+                if (output$score < min_ref_busco_identity) {
+                    return(busco)
+                }
             }
         }
     }
+
+    # update the list of non-identical BUSCO
+    ls_nonidentical_busco <- c(ls_nonidentical_busco, output)
+    ls_nonidentical_busco <- unique(ls_nonidentical_busco)
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", ref, "."))
 }
 
 stopCluster(nwcl)
+
+# remove the BUSCO from further analyses
+shared_busco <- shared_busco[!shared_busco %in% ls_nonidentical_busco]
+f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering non-identical genes: ", length(shared_busco), ".")))
 ```
 
 ## Extract BUSCOs for short reads
@@ -313,7 +330,7 @@ stopCluster(nwcl)
 ```{r check-busco-msa}
 if (!include_incomplete) {
     shared_busco <- shared_busco[!shared_busco %in% ls_incomplete_busco]
-    f_write_log(fn_log=fn_log, msg=c("", paste0("Updated number of BUSCO after filtering: ", length(shared_busco), ".")))
+    f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering incomplete genes: ", length(shared_busco), ".")))
 }
 
 # create doSNOW cluster
