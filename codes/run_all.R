@@ -27,6 +27,7 @@ exe_mafft <- "mafft"
 
 busco_lineage <- "eudicots_odb10"
 busco_mode <- "genome"
+type <- "coordinate"
 #################################
 
 # set up outdir
@@ -50,7 +51,7 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                               exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools,
                               exe_gffread=exe_gffread, exe_busco=exe_busco, exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft,
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters, 
-                              busco_lineage=busco_lineage, busco_mode=busco_mode),
+                              busco_lineage=busco_lineage, busco_mode=busco_mode, type=type),
                   quiet=TRUE)
 
 #################################

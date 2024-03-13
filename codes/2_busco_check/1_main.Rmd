@@ -32,6 +32,7 @@ params:
   # BUSCO
   busco_lineage: ""
   busco_mode: "genome"
+  type: "coordinate"
 ---
 
 ## Load required libraries and functions
@@ -81,19 +82,13 @@ if (!file.exists(fn_log) || params$redo) {
 knitr::opts_knit$set(root.dir = currentdir)
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/2_run_readmap.Rmd")}
+```{r child = paste0(params$codedir,"/2_busco_check/2_readmap.Rmd")}
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/3a_run_busco.Rmd")}
+```{r child = paste0(params$codedir,"/2_busco_check/3_busco_ref.Rmd")}
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/4a_summary.Rmd")}
-```
-
-```{r child = paste0(params$codedir,"/2_busco_check/3b_run_busco.Rmd"), include=FALSE, eval=FALSE}
-```
-
-```{r child = paste0(params$codedir,"/2_busco_check/4b_summary.Rmd"), include=FALSE, eval=FALSE}
+```{r child = paste0(params$codedir,"/2_busco_check/4_summary.Rmd")}
 ```
 
 ```{r, include=FALSE}

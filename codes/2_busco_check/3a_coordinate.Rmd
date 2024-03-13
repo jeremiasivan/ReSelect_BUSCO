@@ -1,0 +1,140 @@
+---
+title: "Run Coordinate-based BUSCO Analysis on Reference Sequences and Mapped Reads"
+---
+
+## Extract BUSCO based on Reference Coordinates
+```{r check-busco-extract-reads}
+f_write_log(fn_log=fn_log, msg=c("", "------------ Mapped Reads ----------"))
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# incomplete BUSCOs
+ls_incomplete_busco <- c()
+
+# iterate over short reads
+for (prefix in ls_prefix) {
+    # create outdir
+    dir_busco_out <- paste0(dir_busco_read, prefix, "/")
+    if (!dir.exists(dir_busco_out)) {
+        dir.create(dir_busco_out, recursive=T)
+    }
+
+    # extract short read and reference sequence IDs
+    ref <- unlist(strsplit(prefix, split="--"))[2]
+
+    # check input files
+    file_fas <- paste0(dir_readmap, prefix, "/", prefix, ".fa")
+    if (!file.exists(file_fas)) {
+        log4r::warn(fn_logger, paste0("File not found: FASTA file for ", prefix, ". Skipped."))
+        next
+    }
+
+    # iterate over shared BUSCOs
+    output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+        require(Biostrings)
+        require(stringr)
+
+        # input files
+        file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
+        file_busco_gff_out <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".gff")
+        if (!file.exists(file_busco_gff_out)) {
+            log4r::warn(fn_logger, msg=paste0("File not found: ", busco, " GFF for ", ref, ". Skipped."))
+            return(NULL)
+        }
+
+        # output files
+        file_busco_cds <- paste0(dir_busco_out, busco, ".cds.fna")
+        file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
+
+        # check if file exists
+        if (file.exists(file_busco_concat) && file.size(file_busco_concat) != 0L && !params$redo) {
+            return(NULL)
+        }
+
+        # calculate read depth
+        read_coverage <- f_calculate_read_coverage(file_bam, file_busco_gff_out, params$exe_samtools)
+        if (is.null(read_coverage)) {
+            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with no CDS"))
+            return(busco)
+        } else if (read_coverage < min_busco_depth || read_coverage > max_busco_depth) {
+            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with read depth of", read_coverage))
+            return(busco)
+        }
+
+        # extract BUSCO
+        f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
+        return(NULL)
+    }
+
+    # update list of incomplete BUSCOs
+    ls_incomplete_busco <- c(ls_incomplete_busco, output)
+    ls_incomplete_busco <- unique(ls_incomplete_busco)
+
+    log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", prefix, "."))
+}
+
+stopCluster(nwcl)
+
+# exclude BUSCOs with incomplete taxa
+if (!include_incomplete) {
+    shared_busco <- shared_busco[!shared_busco %in% ls_incomplete_busco]
+    f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering incomplete genes: ", length(shared_busco), ".")))
+
+    # stop the knit if shared busco is zero
+    if (length(shared_busco) == 0) {
+        knitr::knit_exit()
+    }
+}
+```
+
+## Convert individual BUSCO alignments into MSA
+```{r check-busco-msa}
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over shared BUSCOs
+foreach (busco = shared_busco) %dopar% {
+    dir_output <- paste0(dir_busco_tree, busco, "/")
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
+    }
+
+    # output MSA file
+    fn_out <- paste0(dir_output, busco, ".fa")
+    fn_out_aligned <- paste0(dir_output, busco, "_aligned.fa")
+    if (all(file.exists(fn_out, fn_out_aligned)) && !params$redo) {
+        # check if file is not empty
+        if (file.size(fn_out_aligned) != 0L) {
+            return(NULL)
+        }
+    }
+
+    # extract BUSCO alignment from reference sequences
+    for (ref in ls_refseq) {
+        file_busco_ref <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".fna")
+        if (!file.exists(file_busco_ref)) {
+            next
+        }
+
+        f_fasta2msa(file_busco_ref, ref, fn_out)
+    }
+
+    # extract BUSCO alignment from short reads
+    for (read in ls_prefix) {
+        file_busco_read <- paste0(dir_busco_read, read, "/", busco, ".fna")
+        if (!file.exists(file_busco_read)) {
+            next
+        }
+
+        f_fasta2msa(file_busco_read, read, fn_out)
+    }
+
+    # align using MAFFT FFT-NS-2
+    f_mafft(fn_out, fn_out_aligned, "--retree 2", params$exe_mafft)
+}
+
+stopCluster(nwcl)
+```
