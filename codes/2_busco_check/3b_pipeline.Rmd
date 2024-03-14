@@ -44,7 +44,7 @@ if (length(ls_busco_read_run) > 0) {
 }
 ```
 
-```{r check-busco-read, include=is_busco_read, eval=is_busco_read}
+```{r check-busco-read-p, include=is_busco_read, eval=is_busco_read}
 f_write_log(fn_log=fn_log, msg=paste("Running BUSCO using", thread_busco, "threads"))
 
 # create doSNOW cluster
@@ -65,7 +65,7 @@ stopCluster(nwcl)
 ```
 
 ## Extract common BUSCOs between reference sequences and mapped reads
-```{r check-busco-common}
+```{r check-busco-common-p}
 # iterate over mapped reads
 for (prefix in ls_prefix) {
   # directory for BUSCO alignments
@@ -89,7 +89,7 @@ if (length(shared_busco) == 0) {
 ```
 
 ## Convert individual BUSCO alignments into MSA
-```{r check-busco-msa}
+```{r check-busco-msa-p}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
