@@ -159,11 +159,6 @@ if (length(shared_busco) == 0) {
     knitr::knit_exit()
 } else {
     f_write_log(fn_log=fn_log, msg=c("", paste0("Number of complete single-copy BUSCOs: ", length(shared_busco), ".")))
-
-    # stop the knit if shared busco is zero
-    if (length(shared_busco) == 0) {
-        knitr::knit_exit()
-    }
 }
 ```
 
