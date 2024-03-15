@@ -26,7 +26,7 @@ fn_cor_summary <- paste0(dir_check_summary, params$prefix, ".cor.sumtable")
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
 ```
 
-```{r check-summary-busco-update}
+```{r check-summary-busco-update, include=FALSE}
 # create a new vector to store the list of BUSCOs
 shared_busco_filtered <- shared_busco
 
@@ -225,6 +225,7 @@ print(ggplot(data.frame(ls_output), aes(x=ls_output, xmin=0, xmax=max(ls_output)
 dev.off()
 ```
 
+## Correlation analysis on BUSCO phylogenetic distances
 ```{r check-summary-correlation}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)

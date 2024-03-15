@@ -279,7 +279,7 @@ foreach (prefix = ls_convert_run) %dopar% {
 stopCluster(nwcl)
 ```
 
-## Variant Calling
+## Variant calling
 ```{r, include=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "---------- Variant Calling ---------"))
 

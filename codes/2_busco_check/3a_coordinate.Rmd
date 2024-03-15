@@ -2,7 +2,7 @@
 title: "Run Coordinate-based BUSCO Analysis on Reference Sequences and Mapped Reads"
 ---
 
-## Extract BUSCO based on Reference Coordinates
+## Extract BUSCO based on reference coordinates
 ```{r check-busco-extract-reads}
 f_write_log(fn_log=fn_log, msg=c("", "------------ Mapped Reads ----------"))
 

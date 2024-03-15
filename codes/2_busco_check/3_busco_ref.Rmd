@@ -24,8 +24,8 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
 }
 
 dir_busco_lineage <- paste0(dir_current, "/busco_lineage/")
+dir_busco_ref <- paste0(dir_current, "/busco_check/busco_refseq/")
 
-dir_busco_ref <- paste0(dir_busco, "refseq/")
 dir_busco_read <- paste0(dir_busco, "short_reads/")
 dir_busco_tree <- paste0(dir_busco, "trees/")
 
