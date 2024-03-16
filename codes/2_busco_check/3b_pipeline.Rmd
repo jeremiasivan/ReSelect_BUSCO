@@ -54,11 +54,11 @@ doSNOW::registerDoSNOW(nwcl)
 # iterate over mapped reads
 foreach (prefix = ls_busco_read_run) %dopar% {
     # input FASTA file
-    file_read <- paste0(dir_readmap, read, "/", read, ".fa")
+    file_read <- paste0(dir_readmap, prefix, "/", prefix, ".fa")
 
     # run BUSCO
-    f_run_busco(file_read, dir_lineage, read, dir_busco_read, params$busco_mode, thread_busco, params$exe_busco)
-    log4r::info(fn_logger, paste0("File created: BUSCO run for ", read, "."))
+    f_run_busco(file_read, dir_lineage, prefix, dir_busco_read, params$busco_mode, thread_busco, params$exe_busco)
+    log4r::info(fn_logger, paste0("File created: BUSCO run for ", prefix, "."))
 }
 
 stopCluster(nwcl)
@@ -69,7 +69,7 @@ stopCluster(nwcl)
 # iterate over mapped reads
 for (prefix in ls_prefix) {
   # directory for BUSCO alignments
-  dir_buscos <- paste0(dir_busco_read, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
+  dir_buscos <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
   
   # remove file extension .fna
   busco_ids <- list.files(dir_buscos, pattern = "*.fna$", full.names = F, recursive = F)
