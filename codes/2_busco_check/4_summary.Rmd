@@ -156,14 +156,10 @@ log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ```
 
 ## Calculate MNTD on BUSCO trees
-```{r check-summary-mntd, eval=FALSE}
-# run MNTD with reference sequence
-prefix <- paste0(dir_check_summary_mntd, params$prefix)
-f_run_mntd(shared_busco_filtered, ls_refseq, TRUE, dir_busco_tree, ls_species_name, prefix, params$thread)
-
+```{r check-summary-mntd}
 # run MNTD without reference sequence
 prefix <- paste0(dir_check_summary_mntd_noref, params$prefix)
-f_run_mntd(shared_busco_filtered, ls_refseq, FALSE, dir_busco_tree, ls_species_name, prefix, params$thread)
+f_run_mntd(shared_busco_filtered, ls_shortreads, dir_busco_tree, ls_species_name, prefix, params$thread)
 ```
 
 ## Calculate phylogenetic distance between mapped reads and reference from the same taxon

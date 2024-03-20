@@ -362,10 +362,8 @@ f_iqtree2 <- function(fn_input, exe_iqtree2) {
 }
 
 # run MNTD on BUSCOs
-f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_species_name, prefix, thread) {
+f_run_mntd <- function(ls_busco, ls_shortreads, dir_busco_tree, ls_species_name, prefix, thread) {
     # output files
-    fn_mntd_z <- paste0(prefix, ".mntd.z.sumtable")
-    fn_mntd_p <- paste0(prefix, ".mntd.p.sumtable")
     fn_mntd_summary <- paste0(prefix, ".mntd.sumtable")
 
     # create doSNOW cluster
@@ -375,11 +373,9 @@ f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_
     # iterate over BUSCOs
     ls_output <- foreach (busco = ls_busco, .combine='c') %dopar% {
         # initiate variables
-        df_presence <- data.frame(refs=character(), reads=character(), present=numeric())
+        df_presence <- data.frame(grouping=character(), taxon=character(), present=numeric())
 
         # output variables
-        mntd_z <- list(busco=busco)
-        mntd_p <- list(busco=busco)
         mntd_sum <- list(busco=busco)
 
         # check if treefile exists
@@ -390,14 +386,9 @@ f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_
         ls_tips <- tre$tip.label
 
         # iterate over reference sequences
-        for (ref in ls_refseq) {
-            # extract list of taxa with specific reference
-            ls_taxa <- ls_tips[stringr::str_detect(ls_tips, ref)]
-            
-            # remove reference sequence if variable is FALSE
-            if (!is_ref_included) {
-                ls_taxa <- ls_taxa[ls_taxa != ref]
-            }
+        for (read in ls_shortreads) {
+            # extract list of taxa with specific read
+            ls_taxa <- ls_tips[stringr::str_detect(ls_tips, read)]
 
             # check the number of taxa
             if (length(ls_taxa) < 3) {
@@ -406,7 +397,7 @@ f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_
             
             # add taxa to the presence/absence table
             for (taxon in ls_taxa) {
-                df_presence <- rbind(df_presence, list(refs=ref, reads=taxon, present=1))
+                df_presence <- rbind(df_presence, list(grouping=read, taxon=taxon, present=1))
             }
         }
 
@@ -415,9 +406,8 @@ f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_
             return(NULL)
         }
 
-        # check if there is only one reference sequence
-        uq_refs <- unique(df_presence$refs)
-        if (length(uq_refs) == 1) {
+        # check if there is only one grouping
+        if (length(unique(df_presence$grouping)) == 1) {
             return(NULL)
         }
 
@@ -429,34 +419,22 @@ f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_
 
         # iterate over reference sequences
         for (i in 1:nrow(mntd_result)) {
-            ref_name <- rownames(mntd_result)[i]
-            mntd_z[[ls_species_name[ref_name]]] <- mntd_result$mntd.obs.z[i]
-            mntd_p[[ls_species_name[ref_name]]] <- mntd_result$mntd.obs.p[i]
+            read_name <- rownames(mntd_result)[i]
 
             # update variables
             if (mntd_result$mntd.obs.z[i] > 0 && mntd_result$mntd.obs.p[i] > 0.95) {
-                mntd_sum[[ls_species_name[ref_name]]] <- "S"
+                mntd_sum[[ls_species_name[read_name]]] <- "S"
             } else if (mntd_result$mntd.obs.z[i] < 0 && mntd_result$mntd.obs.p[i] < 0.05) {
-                mntd_sum[[ls_species_name[ref_name]]] <- "C"
+                mntd_sum[[ls_species_name[read_name]]] <- "C"
             } else {
-                mntd_sum[[ls_species_name[ref_name]]] <- ""
+                mntd_sum[[ls_species_name[read_name]]] <- ""
             }
         }
 
-        return(list(mntd_z=mntd_z, mntd_p=mntd_p, mntd_sum=mntd_sum))
+        return(list(mntd_sum=mntd_sum))
     }
 
     stopCluster(nwcl)
-
-    # save MNTD Z score
-    ls_mntd_z_out <- ls_output[names(ls_output)=="mntd_z"]
-    df_mntd_z_output <- data.table::as.data.table(do.call(rbind, ls_mntd_z_out), fill=TRUE)
-    data.table::fwrite(df_mntd_z_output, file=fn_mntd_z, sep="\t", quote=F, row.names=F)
-
-    # save MNTD p-value
-    ls_mntd_p_out <- ls_output[names(ls_output)=="mntd_p"]
-    df_mntd_p_output <- data.table::as.data.table(do.call(rbind, ls_mntd_p_out), fill=TRUE)
-    data.table::fwrite(df_mntd_p_output, file=fn_mntd_p, sep="\t", quote=F, row.names=F)
 
     # save significant clusters and spreads
     ls_mntd_sum_out <- ls_output[names(ls_output)=="mntd_sum"]
