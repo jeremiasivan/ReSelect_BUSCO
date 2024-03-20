@@ -470,23 +470,24 @@ f_run_mntd <- function(ls_busco, ls_refseq, is_ref_included, dir_busco_tree, ls_
 # function: plot MNTD results
 f_mntd_visualization <- function(fn_mntd_summary, prefix) {
     # output files
-    fn_mntd_cluster_tiff <- paste0(prefix, ".mntd.cluster.tiff")
-    fn_mntd_spread_tiff <- paste0(prefix, ".mntd.spread.tiff")
+    fn_mntd_tiff <- paste0(prefix, ".mntd.tiff")
+    # fn_mntd_cluster_tiff <- paste0(prefix, ".mntd.cluster.tiff")
+    # fn_mntd_spread_tiff <- paste0(prefix, ".mntd.spread.tiff")
 
     # open file
     df_mntd <- data.table::fread(fn_mntd_summary)
 
     # generate plots
     df_mntd_melt <- reshape2::melt(df_mntd, id.vars="busco")
-    df_mntd_melt_cluster <- df_mntd_melt[df_mntd_melt$value == "C" | df_mntd_melt$value == "",]
-    df_mntd_melt_spread <- df_mntd_melt[df_mntd_melt$value == "S" | df_mntd_melt$value == "",]
+    # df_mntd_melt_cluster <- df_mntd_melt[df_mntd_melt$value == "C" | df_mntd_melt$value == "",]
+    # df_mntd_melt_spread <- df_mntd_melt[df_mntd_melt$value == "S" | df_mntd_melt$value == "",]
 
     # plot significant clusters
-    tiff(file=fn_mntd_cluster_tiff, units="px", width=2880, height=1800)
-    print(ggplot(df_mntd_melt_cluster, aes(x=variable, y=busco)) +
+    tiff(file=fn_mntd_tiff, units="px", width=2880, height=1800)
+    print(ggplot(df_mntd_melt, aes(x=variable, y=busco)) +
         geom_tile(aes(fill=value), color="white") +
-        ggtitle("BUSCOs with Reference-based Clusters") + ylab("BUSCO") +
-        scale_fill_manual(values=c("white","red")) +
+        ggtitle("BUSCOs with Significant Clusters and Spreads") + ylab("BUSCO") +
+        scale_fill_manual(values=c("white","red","blue")) +
         scale_x_discrete(guide = guide_axis(angle = 45)) +
         theme(plot.title = element_text(hjust = 0.5, size = 50),
             plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
@@ -499,19 +500,19 @@ f_mntd_visualization <- function(fn_mntd_summary, prefix) {
     dev.off()
 
     # save significnat spreads
-    tiff(file=fn_mntd_spread_tiff, units="px", width=2880, height=1800)
-    print(ggplot(df_mntd_melt_spread, aes(x=variable, y=busco)) +
-        geom_tile(aes(fill=value), color="white") +
-        ggtitle("BUSCOs with Reference-based Spreads") + ylab("BUSCO") +
-        scale_fill_manual(values=c("white","blue")) +
-        scale_x_discrete(guide = guide_axis(angle = 45)) +
-        theme(plot.title = element_text(hjust = 0.5, size = 50),
-            plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
-            axis.ticks.y = element_blank(),
-            axis.title.x = element_blank(),
-            axis.text.x = element_text(size=30),
-            axis.text.y = element_blank(),
-            axis.title.y = element_text(size=40),
-            legend.position = "none"))
-    dev.off()
+    # tiff(file=fn_mntd_spread_tiff, units="px", width=2880, height=1800)
+    # print(ggplot(df_mntd_melt_spread, aes(x=variable, y=busco)) +
+    #     geom_tile(aes(fill=value), color="white") +
+    #     ggtitle("BUSCOs with Reference-based Spreads") + ylab("BUSCO") +
+    #     scale_fill_manual(values=c("white","blue")) +
+    #     scale_x_discrete(guide = guide_axis(angle = 45)) +
+    #     theme(plot.title = element_text(hjust = 0.5, size = 50),
+    #         plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
+    #         axis.ticks.y = element_blank(),
+    #         axis.title.x = element_blank(),
+    #         axis.text.x = element_text(size=30),
+    #         axis.text.y = element_blank(),
+    #         axis.title.y = element_text(size=40),
+    #         legend.position = "none"))
+    # dev.off()
 }
