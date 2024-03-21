@@ -347,7 +347,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     }
 
     if (nrow(df_read_outlier) > 0) {
-        plot <- plot + geom_text_repel(data=df_read_outlier, aes(label=rep("READ", nrow(df_read_outlier))), size=12)
+        plot <- plot + geom_text_repel(data=df_read_outlier, aes(label=df_read_outlier$read), size=12)
     }
 
     # save the plot
