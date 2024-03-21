@@ -262,7 +262,7 @@ f_calculate_read_coverage <- function(fn_bam, fn_gff, exe_samtools) {
     }
 
     # return average coverage
-    return(round(mean(read_coverage),3))
+    return(read_coverage)
 }
 
 # function: extract all BUSCO alignments from GFF

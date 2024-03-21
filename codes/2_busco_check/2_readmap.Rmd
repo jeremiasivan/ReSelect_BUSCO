@@ -34,6 +34,8 @@ lapply(list(dir_check_shortreads,dir_readmap), function(x){if(!dir.exists(x)) di
 ```
 
 ```{r check-readmap-thread, include=FALSE}
+min_read_quality <- 25
+
 thread_bwamem2 <- ifelse(params$thread < 50, params$thread, 50)
 thread_adapterremoval <- ifelse(params$thread < 10, params$thread, 10)
 thread_samtools <- ifelse(params$thread < 10, params$thread, 10)
@@ -101,7 +103,7 @@ foreach (read = ls_shortread_qc) %dopar% {
     }
     
     # run BWA-MEM2
-    f_qc_short_reads(ls_fastq, params$file_adapters, prefix, 25, thread_adapterremoval, params$exe_adapterremoval)
+    f_qc_short_reads(ls_fastq, params$file_adapters, prefix, min_read_quality, thread_adapterremoval, params$exe_adapterremoval)
     log4r::info(fn_logger, paste0("File created: filtered FASTQ file for ", prefix, "."))
 }
 

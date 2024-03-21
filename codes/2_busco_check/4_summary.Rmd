@@ -13,10 +13,10 @@ library(ggplot2)
 
 # output directories
 dir_check_summary <- paste0(dir_busco, "summary/")
-dir_check_summary_mntd <- paste0(dir_check_summary, "mntd/")
-dir_check_summary_mntd_noref <- paste0(dir_check_summary, "mntd_noref/")
 dir_check_summary_correlation <- paste0(dir_check_summary, "correlation/")
-lapply(list(dir_check_summary_mntd,dir_check_summary_mntd_noref,dir_check_summary_correlation), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+if (!dir.exists(dir_check_summary_correlation)) {
+    dir.create(dir_check_summary_correlation, recursive=T)
+}
 
 # output files
 fn_ref_summary <- paste0(dir_check_summary, params$prefix, ".ref.sumtable")
@@ -158,7 +158,7 @@ log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ## Calculate MNTD on BUSCO trees
 ```{r check-summary-mntd}
 # run MNTD without reference sequence
-prefix <- paste0(dir_check_summary_mntd_noref, params$prefix)
+prefix <- paste0(dir_check_summary, params$prefix)
 f_run_mntd(shared_busco_filtered, ls_shortreads, dir_busco_tree, ls_species_name, prefix, params$thread)
 ```
 
