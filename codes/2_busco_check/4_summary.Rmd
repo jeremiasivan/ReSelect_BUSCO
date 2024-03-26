@@ -22,6 +22,7 @@ if (!dir.exists(dir_check_summary_correlation)) {
 fn_ref_summary <- paste0(dir_check_summary, params$prefix, ".ref.sumtable")
 fn_read_summary <- paste0(dir_check_summary, params$prefix, ".read.sumtable")
 fn_cor_summary <- paste0(dir_check_summary, params$prefix, ".cor.sumtable")
+fn_chr_summary <- paste0(dir_check_summary, params$prefix, ".chr.sumtable")
 
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
 ```
@@ -361,4 +362,48 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 # save the data.frame
 df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
 data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
+```
+
+```{r check-summary-chromosome}
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# read input file
+df_chromosome <- data.table::fread(params$file_refseq_chr)
+
+# iterate over BUSCO
+ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
+    # initiate variable
+    ref_out <- list(busco=busco)
+
+    # iterate over reference sequences
+    for (ref in ls_refseq) {
+        # BUSCO files
+        file_busco_fas <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
+
+        # extract header
+        busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
+        busco_location <- unlist(strsplit(fasta_header, split=">"))[2]
+        seq_name <- unlist(strsplit(no_header, split=":"))[1]
+
+        # extract chromosome
+        species_name <- ls_species_name[ref]
+        idx_row <- match(seq_name, df_chromosome[[species_name]])
+        if (length(idx) == 0) {
+            ref_out[[species_name]] <- "-"
+            next
+        }
+        
+        ref_out[[species_name]] <- df_chromosome$chr[idx]
+    }
+
+    return(list(ref_out))
+}
+
+stopCluster(nwcl)
+
+# save the data.frame
+df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
+data.table::fwrite(df_output, file=fn_chr_summary, sep="\t", quote=F, row.names=F)
 ```
