@@ -384,18 +384,18 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         # extract header
         busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
-        busco_location <- unlist(strsplit(fasta_header, split=">"))[2]
-        seq_name <- unlist(strsplit(no_header, split=":"))[1]
+        busco_location <- unlist(strsplit(busco_header, split=">"))[2]
+        seq_name <- unlist(strsplit(busco_location, split=":"))[1]
 
         # extract chromosome
         species_name <- ls_species_name[ref]
         idx_row <- match(seq_name, df_chromosome[[species_name]])
-        if (length(idx) == 0) {
+        if (length(idx_row) == 0) {
             ref_out[[species_name]] <- "-"
             next
         }
         
-        ref_out[[species_name]] <- df_chromosome$chr[idx]
+        ref_out[[species_name]] <- df_chromosome$chr[idx_row]
     }
 
     return(list(ref_out))
@@ -403,7 +403,14 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
 stopCluster(nwcl)
 
-# save the data.frame
+# create consensus column
 df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
+df_output <- t(as.data.frame(apply(df_output, 1, function(x) {
+    most_freq <- names(which.max(table(x)))
+    extract_diff <- ifelse(x == most_freq, "", x)
+    return(c(extract_diff, consensus=most_freq))
+})))
+
+# save the data.frame
 data.table::fwrite(df_output, file=fn_chr_summary, sep="\t", quote=F, row.names=F)
 ```
