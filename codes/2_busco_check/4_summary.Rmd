@@ -157,7 +157,7 @@ log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ```
 
 ## Calculate MNTD on BUSCO trees
-```{r check-summary-mntd}
+```{r check-summary-mntd, eval=FALSE}
 # run MNTD without reference sequence
 prefix <- paste0(dir_check_summary, params$prefix)
 f_run_mntd(shared_busco_filtered, ls_shortreads, dir_busco_tree, ls_species_name, prefix, params$thread)
@@ -289,7 +289,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         }
 
         # run linear model
-        lm_result <- robustbase::lmrob(read_dist~ref_dist, data=temp_df_dist)
+        lm_result <- lm(read_dist~ref_dist, data=temp_df_dist)
 
         # extract R2 and p-value
         rsquared <- tryCatch({
@@ -320,8 +320,8 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
     plot <- ggplot(df_dist, aes(x=ref_dist, y=read_dist, color=read)) +
         geom_point(shape=16, aes(size=20)) +
-        geom_smooth(method='robustbase::lmrob', formula= y~x, aes(linewidth=4)) +
         geom_text_repel(aes(label=ref), size=12) +
+        geom_smooth(method='lm', formula= y~x, aes(linewidth=4)) +
         facet_wrap(~read, ncol=1) +
         ggtitle(paste("Correlation of BUSCO", busco, "Phylogenetic Distances")) +
         xlab("Reference Distance") + ylab("Short Reads Distance") +
