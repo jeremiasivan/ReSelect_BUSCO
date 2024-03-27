@@ -405,11 +405,15 @@ stopCluster(nwcl)
 
 # create consensus column
 df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
-df_output <- t(as.data.frame(apply(df_output, 1, function(x) {
+
+df_output_transform <- apply(df_output, 1, function(x) {
     most_freq <- names(which.max(table(x)))
     extract_diff <- ifelse(x == most_freq, "", x)
-    return(c(extract_diff, consensus=most_freq))
-})))
+    c(extract_diff, consensus=most_freq)
+})
+
+df_output_transform <- t(df_output_transform)
+df_output_transform <- data.table::data.table(df_output_transform)
 
 # save the data.frame
 data.table::fwrite(df_output, file=fn_chr_summary, sep="\t", quote=F, row.names=F)
