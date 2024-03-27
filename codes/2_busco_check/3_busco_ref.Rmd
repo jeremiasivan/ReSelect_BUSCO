@@ -268,7 +268,7 @@ if (length(shared_busco) == 0) {
 ```
 
 ## Extract BUSCOs for mapped reads
-```{r, warning=FALSE}
+```{r}
 # run BUSCO extraction for mapped reads
 if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
     knitr::knit_child(paste0(params$codedir,"/2_busco_check/3a_coordinate.Rmd"))
