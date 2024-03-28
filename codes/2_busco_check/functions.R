@@ -477,7 +477,7 @@ f_mntd_visualization <- function(fn_mntd_summary, prefix) {
             legend.position = "none"))
     dev.off()
 
-    # save significnat spreads
+    # save significant spreads
     # tiff(file=fn_mntd_spread_tiff, units="px", width=2880, height=1800)
     # print(ggplot(df_mntd_melt_spread, aes(x=variable, y=busco)) +
     #     geom_tile(aes(fill=value), color="white") +
@@ -493,4 +493,23 @@ f_mntd_visualization <- function(fn_mntd_summary, prefix) {
     #         axis.title.y = element_text(size=40),
     #         legend.position = "none"))
     # dev.off()
+}
+
+# function: extract R2 and p-value
+f_extract_summary_lm <- function(lm_result) {
+    # extract R2
+    rsquared <- tryCatch({
+        round(summary(lm_result)$r.squared, 3)
+    }, error = function(err) {
+        return(NULL)
+    })
+
+    # extract p-value
+    pvalue <- tryCatch({
+        round(summary(lm_result)$coefficients[2,4], 3)
+    }, error = function(err) {
+        return(NULL)
+    })
+
+    return(list(rsquared=rsquared, pvalue=pvalue))
 }

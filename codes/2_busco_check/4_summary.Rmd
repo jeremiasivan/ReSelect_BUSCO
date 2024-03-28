@@ -236,6 +236,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     # output variables
     df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
     read_out <- list(busco=busco)
+    refs_out <- list(busco=busco)
 
     # check if treefile exists
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
@@ -290,19 +291,45 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         # run linear model
         lm_result <- lm(read_dist~ref_dist, data=temp_df_dist)
+        lm_stats <- f_extract_summary_lm(lm_result)
 
-        # extract R2 and p-value
-        rsquared <- tryCatch({
-            round(summary(lm_result)$r.squared, 3)
-        }, error = function(err) {
-            return("-")
-        })
+        # set up variables
+        is_problematic <- FALSE
+        if (all(!is.null(lm_stats)) && lm_stats$pvalue < 0.05) {
+            is_problematic <- TRUE
+        }
 
-        pvalue <- tryCatch({
-            round(summary(lm_result)$coefficients[2,4], 3)
-        }, error = function(err) {
-            return("-")
-        })
+        # check the presence of outliers
+        temp_read_out <- boxplot.stats(temp_df_dist$read_dist)$out
+
+        if (length(temp_read_out) != 0) {
+            # create another data.frame to store BUSCO without outliers
+            temp_df_out <-  temp_df_dist[temp_df_dist$read_dist %in% temp_read_out,]
+            temp_df_no_out <- temp_df_dist[!temp_df_dist$read_dist %in% temp_read_out,]
+
+            # run linear model without outliers
+            lm_result_no_out <- lm(read_dist~ref_dist, data=temp_df_no_out)
+            lm_stats_no_out <- f_extract_summary_lm(lm_result_no_out)
+
+            # check if values are NULL
+            if (all(!is.null(lm_stats)) && all(!is.null(lm_stats_no_out))) {
+                if (lm_stats_no_out$pvalue >= 0.05 && is_problematic) {
+                    for (ref in temp_df_out$ref) {
+                        ref_out[[ref]] <- is_problematic
+                    }
+                } else {
+                    for (ref in ls_refseq) {
+                        ref_out[[ls_species_name[ref]]] <- is_problematic
+                    }
+                }
+            }
+
+        } else {
+            # iterate over reference sequence
+            for (ref in ls_refseq) {
+                ref_out[[ls_species_name[ref]]] <- is_problematic
+            }
+        }
 
         read_out[[read_species_name]] <- paste0(rsquared, " (", pvalue, ")")
 
@@ -331,7 +358,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     if (nrow(df_read_outlier) > 0){
         plot <- plot + 
             geom_text_repel(data=df_read_outlier, aes(label=df_read_outlier$ref), size=12) +
-            geom_smooth(data=df_read_no_outlier, aes(x=ref_dist, y=read_dist, linewidth=4), method='lm', formula=y~x, color="black")
+            geom_smooth(data=df_read_no_outlier, aes(x=ref_dist, y=read_dist, color=read, alpha=0.5, linewidth=4), method='lm', formula=y~x, color="black")
     }
 
     plot <- plot +
@@ -354,12 +381,20 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     print(plot)
     dev.off()
 
-    return(list(read_out))
+    return(list(read_out=read_out, ref_out=ref_out))
 }
 
+# convert list into dataframe
+ls_ref_out <- ls_output[names(ls_output)=="ref_out"]
+ls_read_out <- ls_output[names(ls_output)=="read_out"]
+
+# save the dataframes as TSV
+df_ref_output <- data.table::as.data.table(do.call(rbind, ls_ref_out), fill=TRUE)
+data.table::fwrite(df_ref_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
+
 # save the data.frame
-df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
-data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
+# df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
+# data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
 ```
 
 ```{r check-summary-chromosome}
