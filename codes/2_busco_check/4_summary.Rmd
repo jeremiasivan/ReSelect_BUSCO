@@ -236,7 +236,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     # output variables
     df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
     read_out <- list(busco=busco)
-    refs_out <- list(busco=busco)
+    ref_out <- list(busco=busco)
 
     # check if treefile exists
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
@@ -313,7 +313,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
             # check if values are NULL
             if (all(!is.null(lm_stats)) && all(!is.null(lm_stats_no_out))) {
-                if (lm_stats_no_out$pvalue >= 0.05 && is_problematic) {
+                if (!is.na(lm_stats_no_out$pvalue) && lm_stats_no_out$pvalue >= 0.05 && is_problematic) {
                     for (ref in temp_df_out$ref) {
                         ref_out[[ref]] <- is_problematic
                     }
@@ -331,7 +331,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
             }
         }
 
-        read_out[[read_species_name]] <- paste0(rsquared, " (", pvalue, ")")
+        read_out[[read_species_name]] <- paste0(lm_stats$rsquared, " (", lm_stats$pvalue, ")")
 
         # update data.table
         df_dist <- rbind(df_dist, temp_df_dist)
