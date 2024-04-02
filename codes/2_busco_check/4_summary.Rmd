@@ -317,6 +317,14 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
                     for (ref in temp_df_out$ref) {
                         ref_out[[ref]] <- is_problematic
                     }
+
+                    # extract reference outliers
+                    ls_refseq_outs <- unique(temp_df_dist$ref)
+                    ls_refseq_outs <- ls_refseq_outs[!ls_refseq_outs %in% temp_df_out$ref]
+                    for (ref in ls_refseq_outs) {
+                        ref_out[[ref]] <- !is_problematic
+                    }
+
                 } else {
                     for (ref in ls_refseq) {
                         ref_out[[ls_species_name[ref]]] <- is_problematic
@@ -358,7 +366,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     if (nrow(df_read_outlier) > 0){
         plot <- plot + 
             geom_text_repel(data=df_read_outlier, aes(label=df_read_outlier$ref), size=12) +
-            geom_smooth(data=df_read_no_outlier, aes(x=ref_dist, y=read_dist, color=read, alpha=0.5, linewidth=4), method='lm', formula=y~x, color="black")
+            stat_smooth(data=df_read_no_outlier, geom='line', aes(x=ref_dist, y=read_dist, color=read, linewidth=4), method='lm', formula=y~x, alpha=0.5)
     }
 
     plot <- plot +
