@@ -19,10 +19,11 @@ if (!dir.exists(dir_check_summary_correlation)) {
 }
 
 # output files
-fn_ref_summary <- paste0(dir_check_summary, params$prefix, ".ref.sumtable")
-fn_read_summary <- paste0(dir_check_summary, params$prefix, ".read.sumtable")
-fn_cor_summary <- paste0(dir_check_summary, params$prefix, ".cor.sumtable")
-fn_chr_summary <- paste0(dir_check_summary, params$prefix, ".chr.sumtable")
+fn_prefix <- paste0(dir_check_summary, params$prefix)
+fn_ref_summary <- paste0(fn_prefix, ".ref.sumtable")
+fn_read_summary <- paste0(fn_prefix, ".read.sumtable")
+fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
+fn_chr_summary <- paste0(fn_prefix, ".chr.sumtable")
 
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
 ```
@@ -236,7 +237,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     # output variables
     df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
     read_out <- list(busco=busco)
-    ref_out <- list(busco=busco)
+    ref_out <- list()
 
     # check if treefile exists
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
@@ -250,6 +251,8 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
     # iterate over short reads
     for (read in ls_shortreads) {
+        ref_out[[read]] <- list(busco=busco)
+
         # temporary data.table
         temp_df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
 
@@ -315,31 +318,31 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
             if (all(!is.null(lm_stats)) && all(!is.null(lm_stats_no_out))) {
                 if (is.na(lm_stats_no_out$pvalue)) {
                     for (ref in temp_df_out$ref) {
-                        ref_out[[ref]] <- "?"
+                        ref_out[[read]][[ref]] <- "?"
                     }
 
                     # extract reference outliers
                     ls_refseq_outs <- unique(temp_df_dist$ref)
                     ls_refseq_outs <- ls_refseq_outs[!ls_refseq_outs %in% temp_df_out$ref]
                     for (ref in ls_refseq_outs) {
-                        ref_out[[ref]] <- is_problematic
+                        ref_out[[read]][[ref]] <- is_problematic
                     }
 
-                } else if (!is.na(lm_stats_no_out$pvalue) && lm_stats_no_out$pvalue >= 0.05 && is_problematic) {
+                } else if ((lm_stats_no_out$pvalue >= 0.05 && is_problematic) || (lm_stats_no_out$pvalue <= 0.05 && !is_problematic)) {
                     for (ref in temp_df_out$ref) {
-                        ref_out[[ref]] <- is_problematic
+                        ref_out[[read]][[ref]] <- is_problematic
                     }
 
                     # extract reference outliers
                     ls_refseq_outs <- unique(temp_df_dist$ref)
                     ls_refseq_outs <- ls_refseq_outs[!ls_refseq_outs %in% temp_df_out$ref]
                     for (ref in ls_refseq_outs) {
-                        ref_out[[ref]] <- !is_problematic
+                        ref_out[[read]][[ref]] <- !is_problematic
                     }
 
                 } else {
                     for (ref in ls_refseq) {
-                        ref_out[[ls_species_name[ref]]] <- is_problematic
+                        ref_out[[read]][[ls_species_name[ref]]] <- is_problematic
                     }
                 }
             }
@@ -347,7 +350,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         } else {
             # iterate over reference sequence
             for (ref in ls_refseq) {
-                ref_out[[ls_species_name[ref]]] <- is_problematic
+                ref_out[[read]][[ls_species_name[ref]]] <- is_problematic
             }
         }
 
@@ -409,12 +412,22 @@ ls_ref_out <- ls_output[names(ls_output)=="ref_out"]
 ls_read_out <- ls_output[names(ls_output)=="read_out"]
 
 # save the dataframes as TSV
-df_ref_output <- data.table::as.data.table(do.call(rbind, ls_ref_out), fill=TRUE)
-data.table::fwrite(df_ref_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
+for (read in unique(names(ls_ref_out))) {
+    # output file
+    fn_temp_out <- paste0(fn_prefix, ".", read, ".chr.sumtable")
+
+    # extract read-specific entries
+    ls_temp_out <- lapply(ls_ref_out, function(x) {x[[read]]})
+    df_temp_out <- data.table::as.data.table(do.call(rbind, ls_temp_out), fill=TRUE)
+
+    # save file
+    data.table::fwrite(df_temp_out, file=fn_temp_out, sep="\t", quote=F, row.names=F)
+}
+
 
 # save the data.frame
-# df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
-# data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
+df_output <- data.table::as.data.table(do.call(rbind, ls_output), fill=TRUE)
+data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
 ```
 
 ```{r check-summary-chromosome}
