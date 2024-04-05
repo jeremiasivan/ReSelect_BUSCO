@@ -11,6 +11,14 @@ f_write_log(fn_log=fn_log,
 # load ggplot2 library
 library(ggplot2)
 
+# set up color scheme for plotting
+ls_colour_scheme <- RColorBrewer::brewer.pal(ifelse(length(ls_shortreads)>=3, length(ls_shortreads), 3), "Set1")
+
+ls_colour_scheme_read <- list()
+for (i in 1:length(ls_shortreads)) {
+    ls_colour_scheme_read[[ls_shortreads[i]]] <- ls_colour_scheme[i]
+}
+
 # output directories
 dir_check_summary <- paste0(dir_busco, "summary/")
 dir_check_summary_correlation <- paste0(dir_check_summary, "correlation_figs/")
@@ -361,7 +369,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
 
-        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist)) +
+        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist, color=ls_colour_scheme_read[[read]])) +
             geom_point(shape=16, aes(size=20)) +
             geom_smooth(method='lm', formula= y~x, aes(linewidth=4))
 
@@ -369,7 +377,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         if (length(temp_read_out) != 0){
             plot <- plot + 
                 geom_text_repel(data=temp_df_out, aes(label=ref), size=12) +
-                stat_smooth(data=temp_df_no_out, geom='line', aes(x=ref_dist, y=read_dist, linewidth=4), method='lm', formula=y~x, alpha=0.5)
+                stat_smooth(data=temp_df_no_out, geom='line', aes(x=ref_dist, y=read_dist, color=ls_colour_scheme_read[[read]], linewidth=4), method='lm', formula=y~x, alpha=0.5)
         }
 
         plot <- plot +
@@ -388,7 +396,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
             )
 
         # save the plot
-        tiff(file=fn_busco_tiff, units="px", width=1600, height=2100)
+        tiff(file=fn_busco_tiff, units="px", width=1600, height=700)
         print(plot)
         dev.off()
     }
