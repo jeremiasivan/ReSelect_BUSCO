@@ -369,7 +369,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
 
-        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist, color=ls_colour_scheme_read[[read]])) +
+        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist)) +
             geom_point(shape=16, aes(size=20)) +
             geom_smooth(method='lm', formula= y~x, aes(linewidth=4))
 
@@ -377,7 +377,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         if (length(temp_read_out) != 0){
             plot <- plot + 
                 geom_text_repel(data=temp_df_out, aes(label=ref), size=12) +
-                stat_smooth(data=temp_df_no_out, geom='line', aes(x=ref_dist, y=read_dist, color=ls_colour_scheme_read[[read]], linewidth=4), method='lm', formula=y~x, alpha=0.5)
+                stat_smooth(data=temp_df_no_out, geom='line', aes(x=ref_dist, y=read_dist, linewidth=4), method='lm', formula=y~x, alpha=0.5)
         }
 
         plot <- plot +
