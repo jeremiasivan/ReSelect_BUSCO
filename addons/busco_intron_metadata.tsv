@@ -1,0 +1,5 @@
+name    type    fasta_dir
+GCF_016545825.1    ref    /data/jeremias/eucs/030324/refseq/GCF_016545825.1/ncbi_dataset/data/GCF_016545825.1/GCF_016545825.1_ASM1654582v1_genomic.fna
+SRR17459856--GCF_016545825.1    read    /data/jeremias/eucs/030324/busco_check/readmap/SRR17459856--GCF_016545825.1/SRR17459856--GCF_016545825.1.fa
+SRR25119786--GCF_016545825.1    read    /data/jeremias/eucs/030324/busco_check/readmap/SRR25119786--GCF_016545825.1/SRR25119786--GCF_016545825.1.fa
+SRR25119759--GCF_016545825.1    read    /data/jeremias/eucs/030324/busco_check/readmap/SRR25119759--GCF_016545825.1/SRR25119759--GCF_016545825.1.fa
