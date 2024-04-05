@@ -318,7 +318,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
                 # outliers
                 for (ref in temp_df_out$ref) {
-                    ref_out[[read]][[ref]] <- paste(is_problematic, "(O)")
+                    ref_out[[read]][[ref]] <- paste(is_problematic, "(OUT)")
                 }
 
             } else {
@@ -329,7 +329,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
                 # check if values are NULL
                 if (all(!is.null(lm_stats)) && all(!is.null(lm_stats_no_out))) {
                     for (ref in temp_df_out$ref) {
-                        ref_out[[read]][[ref]] <- paste(is_problematic, "(0)")
+                        ref_out[[read]][[ref]] <- paste(is_problematic, "(OUT)")
                     }
 
                     # outliers
