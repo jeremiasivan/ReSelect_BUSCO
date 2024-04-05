@@ -313,7 +313,19 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
             # check if values are NULL
             if (all(!is.null(lm_stats)) && all(!is.null(lm_stats_no_out))) {
-                if (!is.na(lm_stats_no_out$pvalue) && lm_stats_no_out$pvalue >= 0.05 && is_problematic) {
+                if (is.na(lm_stats_no_out$pvalue)) {
+                    for (ref in temp_df_out$ref) {
+                        ref_out[[ref]] <- "?"
+                    }
+
+                    # extract reference outliers
+                    ls_refseq_outs <- unique(temp_df_dist$ref)
+                    ls_refseq_outs <- ls_refseq_outs[!ls_refseq_outs %in% temp_df_out$ref]
+                    for (ref in ls_refseq_outs) {
+                        ref_out[[ref]] <- is_problematic
+                    }
+
+                } else if (!is.na(lm_stats_no_out$pvalue) && lm_stats_no_out$pvalue >= 0.05 && is_problematic) {
                     for (ref in temp_df_out$ref) {
                         ref_out[[ref]] <- is_problematic
                     }
