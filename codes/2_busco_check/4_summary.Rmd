@@ -412,16 +412,22 @@ ls_ref_out <- ls_output[names(ls_output)=="ref_out"]
 ls_read_out <- ls_output[names(ls_output)=="read_out"]
 
 # save the dataframes as TSV
-for (read in unique(names(ls_ref_out))) {
+for (read in ls_shortreads) {
     # output file
+    fn_temp_rdata <- paste0(fn_prefix, ".RData")
     fn_temp_out <- paste0(fn_prefix, ".", read, ".chr.sumtable")
 
     # extract read-specific entries
-    ls_temp_out <- lapply(ls_ref_out, function(x) {x[[read]]})
+    ls_temp_out <- lapply(ls_ref_out, function(x) { x[[read]] })
     df_temp_out <- data.table::as.data.table(do.call(rbind, ls_temp_out), fill=TRUE)
+
+    # save RData
+    save(df_temp_out, fn_temp_rdata)
+    load(fn_temp_rdata)
 
     # save file
     data.table::fwrite(df_temp_out, file=fn_temp_out, sep="\t", quote=F, row.names=F)
+    unlink(fn_temp_rdata)
 }
 
 
