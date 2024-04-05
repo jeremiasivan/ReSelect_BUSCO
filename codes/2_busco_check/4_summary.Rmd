@@ -307,42 +307,40 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         if (length(temp_read_out) != 0) {
             # create another data.frame to store BUSCO without outliers
-            temp_df_out <-  temp_df_dist[temp_df_dist$read_dist %in% temp_read_out,]
+            temp_df_out <- temp_df_dist[temp_df_dist$read_dist %in% temp_read_out,]
             temp_df_no_out <- temp_df_dist[!temp_df_dist$read_dist %in% temp_read_out,]
 
-            # run linear model without outliers
-            lm_result_no_out <- lm(read_dist~ref_dist, data=temp_df_no_out)
-            lm_stats_no_out <- f_extract_summary_lm(lm_result_no_out)
+            # check if all values are the same
+            if (length(unique(temp_df_no_out$read_dist)) == 1) {
+                for (ref in temp_df_no_out$ref) {
+                    ref_out[[read]][[ref]] <- "?"
+                }
 
-            # check if values are NULL
-            if (all(!is.null(lm_stats)) && all(!is.null(lm_stats_no_out))) {
-                if (is.na(lm_stats_no_out$pvalue)) {
+                # outliers
+                for (ref in temp_df_out$ref) {
+                    ref_out[[read]][[ref]] <- paste(is_problematic, "(O)")
+                }
+
+            } else {
+                # run linear model without outliers
+                lm_result_no_out <- lm(read_dist~ref_dist, data=temp_df_no_out)
+                lm_stats_no_out <- f_extract_summary_lm(lm_result_no_out)
+
+                # check if values are NULL
+                if (all(!is.null(lm_stats)) && all(!is.null(lm_stats_no_out))) {
                     for (ref in temp_df_out$ref) {
-                        ref_out[[read]][[ref]] <- "?"
+                        ref_out[[read]][[ref]] <- paste(is_problematic, "(0)")
                     }
 
-                    # extract reference outliers
-                    ls_refseq_outs <- unique(temp_df_dist$ref)
-                    ls_refseq_outs <- ls_refseq_outs[!ls_refseq_outs %in% temp_df_out$ref]
-                    for (ref in ls_refseq_outs) {
-                        ref_out[[read]][[ref]] <- is_problematic
-                    }
-
-                } else if ((lm_stats_no_out$pvalue >= 0.05 && is_problematic) || (lm_stats_no_out$pvalue <= 0.05 && !is_problematic)) {
-                    for (ref in temp_df_out$ref) {
-                        ref_out[[read]][[ref]] <- is_problematic
-                    }
-
-                    # extract reference outliers
-                    ls_refseq_outs <- unique(temp_df_dist$ref)
-                    ls_refseq_outs <- ls_refseq_outs[!ls_refseq_outs %in% temp_df_out$ref]
-                    for (ref in ls_refseq_outs) {
-                        ref_out[[read]][[ref]] <- !is_problematic
-                    }
-
-                } else {
-                    for (ref in ls_refseq) {
-                        ref_out[[read]][[ls_species_name[ref]]] <- is_problematic
+                    # outliers
+                    if ((lm_stats_no_out$pvalue >= 0.05 && is_problematic) || (lm_stats_no_out$pvalue <= 0.05 && !is_problematic)) {
+                        for (ref in temp_df_no_out$ref) {
+                            ref_out[[read]][[ref]] <- !is_problematic
+                        }
+                    } else {
+                        for (ref in temp_df_no_out$ref) {
+                            ref_out[[read]][[ref]] <- is_problematic
+                        }
                     }
                 }
             }
@@ -414,7 +412,7 @@ ls_read_out <- ls_output[names(ls_output)=="read_out"]
 # save the dataframes as TSV
 for (read in ls_shortreads) {
     # output file
-    fn_temp_out <- paste0(fn_prefix, ".", read, ".chr.sumtable")
+    fn_temp_out <- paste0(fn_prefix, ".", read, ".cor.sumtable")
 
     # extract read-specific entries
     ls_temp_out <- lapply(ls_ref_out, function(x) { x[[read]] })
