@@ -13,9 +13,12 @@ library(ggplot2)
 
 # output directories
 dir_check_summary <- paste0(dir_busco, "summary/")
-dir_check_summary_correlation <- paste0(dir_check_summary, "correlation/")
-if (!dir.exists(dir_check_summary_correlation)) {
-    dir.create(dir_check_summary_correlation, recursive=T)
+dir_check_summary_correlation <- paste0(dir_check_summary, "correlation_figs/")
+for (read in ls_shortreads) {
+    dir_check_summary_correlation_read <- paste0(dir_check_summary_correlation, read)
+    if (!dir.exists(dir_check_summary_correlation_read)) {
+        dir.create(dir_check_summary_correlation_read, recursive=T)
+    }
 }
 
 # output files
@@ -235,7 +238,6 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     library(ggrepel)
 
     # output variables
-    df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
     read_out <- list(busco=busco)
     ref_out <- list()
 
@@ -251,6 +253,8 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
     # iterate over short reads
     for (read in ls_shortreads) {
+        # initiate variables
+        dir_temp_fig <- paste0(dir_check_summary_correlation, read, "/")
         ref_out[[read]] <- list(busco=busco)
 
         # temporary data.table
@@ -329,7 +333,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
                 # check if values are NULL
                 if (all(!is.null(lm_stats)) && all(!is.null(lm_stats_no_out))) {
                     for (ref in temp_df_out$ref) {
-                        ref_out[[read]][[ref]] <- paste(is_problematic, "(OUT)")
+                        ref_out[[read]][[ref]] <- paste(is_problematic, "(O)")
                     }
 
                     # outliers
@@ -354,53 +358,40 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         read_out[[read_species_name]] <- paste0(lm_stats$rsquared, " (", lm_stats$pvalue, ")")
 
-        # update data.table
-        df_dist <- rbind(df_dist, temp_df_dist)
+        # visualisation
+        fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
+
+        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist)) +
+            geom_point(shape=16, aes(size=20)) +
+            geom_smooth(method='lm', formula= y~x, aes(linewidth=4))
+
+        # add outliers label
+        if (length(temp_read_out) != 0){
+            plot <- plot + 
+                geom_text_repel(data=temp_df_out, aes(label=ref), size=12) +
+                stat_smooth(data=temp_df_no_out, geom='line', aes(x=ref_dist, y=read_dist, linewidth=4), method='lm', formula=y~x, alpha=0.5)
+        }
+
+        plot <- plot +
+            facet_wrap(~read, ncol=1) +
+            ggtitle(paste("Correlation of BUSCO", busco, "Phylogenetic Distances")) +
+            xlab("Reference Distance") + ylab("Short Reads Distance") +
+            theme(
+                plot.title = element_text(hjust = 0.5, size = 50),
+                plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
+                axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
+                axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
+                axis.text.y=element_text(size=30),
+                axis.text.x=element_text(size=30),
+                strip.text = element_text(size = 30),
+                legend.position = "none"
+            )
+
+        # save the plot
+        tiff(file=fn_busco_tiff, units="px", width=1600, height=2100)
+        print(plot)
+        dev.off()
     }
-
-    # check if data.frame is empty
-    if (nrow(df_dist) == 0) {
-        return(NULL)
-    }
-
-    # identify outliers based on IQR criterion
-    value_read_out <- boxplot.stats(df_dist$read_dist)$out
-    df_read_outlier <- df_dist[df_dist$read_dist %in% value_read_out,]
-    df_read_no_outlier <- df_dist[!df_dist$read_dist %in% value_read_out,]
-
-    # generate plot
-    fn_busco_tiff <- paste0(dir_check_summary_correlation, busco, ".tiff")
-
-    plot <- ggplot(df_dist, aes(x=ref_dist, y=read_dist, color=read)) +
-        geom_point(shape=16, aes(size=20)) +
-        geom_smooth(method='lm', formula= y~x, aes(linewidth=4))
-
-    # add outliers label
-    if (nrow(df_read_outlier) > 0){
-        plot <- plot + 
-            geom_text_repel(data=df_read_outlier, aes(label=df_read_outlier$ref), size=12) +
-            stat_smooth(data=df_read_no_outlier, geom='line', aes(x=ref_dist, y=read_dist, color=read, linewidth=4), method='lm', formula=y~x, alpha=0.5)
-    }
-
-    plot <- plot +
-        facet_wrap(~read, ncol=1) +
-        ggtitle(paste("Correlation of BUSCO", busco, "Phylogenetic Distances")) +
-        xlab("Reference Distance") + ylab("Short Reads Distance") +
-        theme(
-            plot.title = element_text(hjust = 0.5, size = 50),
-            plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
-            axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
-            axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
-            axis.text.y=element_text(size=30),
-            axis.text.x=element_text(size=30),
-            strip.text = element_text(size = 30),
-            legend.position = "none"
-        )
-
-    # save the plot
-    tiff(file=fn_busco_tiff, units="px", width=1600, height=2100)
-    print(plot)
-    dev.off()
 
     return(list(read_out=read_out, ref_out=ref_out))
 }
