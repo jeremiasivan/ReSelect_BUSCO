@@ -367,7 +367,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
 
-        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist)) +
+        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist, color=read)) +
             geom_point(shape=16, aes(size=20)) +
             geom_smooth(method='lm', formula= y~x, aes(linewidth=4)) +
             scale_colour_manual(values=ls_colour_scheme_read[[read]])
