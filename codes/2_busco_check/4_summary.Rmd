@@ -369,7 +369,8 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist)) +
             geom_point(shape=16, aes(size=20)) +
-            geom_smooth(method='lm', formula= y~x, aes(linewidth=4))
+            geom_smooth(method='lm', formula= y~x, aes(linewidth=4)) +
+            scale_colour_manual(values=ls_colour_scheme_read[[read]])
 
         # add outliers label
         if (length(temp_read_out) != 0){
@@ -379,7 +380,6 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         }
 
         plot <- plot +
-            scale_colour_manual(values=ls_colour_scheme_read[[read]]) +
             ggtitle(paste("Correlation of BUSCO", busco, "Phylogenetic Distances")) +
             xlab("Reference Distance") + ylab("Short Reads Distance") +
             theme(
