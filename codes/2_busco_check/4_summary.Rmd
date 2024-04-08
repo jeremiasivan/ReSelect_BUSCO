@@ -323,7 +323,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
             # check if all values are the same
             if (length(unique(temp_df_no_out$read_dist)) == 1) {
                 for (ref in temp_df_no_out$ref) {
-                    ref_out[[read]][[ref]] <- "?"
+                    ref_out[[read]][[ref]] <- FALSE
                 }
 
                 # outliers
