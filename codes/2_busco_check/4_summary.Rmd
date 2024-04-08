@@ -298,8 +298,6 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         # remove NA values
         temp_df_dist <- na.omit(temp_df_dist)
-
-        # check if table is empty
         if (nrow(temp_df_dist) == 0){
             next
         }
@@ -381,7 +379,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         }
 
         plot <- plot +
-            facet_wrap(~read, ncol=1) +
+            scale_colour_manual(values=ls_colour_scheme_read[[read]]) +
             ggtitle(paste("Correlation of BUSCO", busco, "Phylogenetic Distances")) +
             xlab("Reference Distance") + ylab("Short Reads Distance") +
             theme(
