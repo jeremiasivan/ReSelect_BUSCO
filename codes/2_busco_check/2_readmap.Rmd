@@ -281,6 +281,24 @@ foreach (prefix = ls_convert_run) %dopar% {
 stopCluster(nwcl)
 ```
 
+```{r check-readmap-coverage, include=FALSE}
+# iterate over mapped reads
+for (prefix in ls_prefix) {
+    file_bam <- paste0(dir_output, prefix, ".bam")
+
+    # extract genome size (source: https://www.biostars.org/p/5165/#102019)
+    genome_size <- system(paste(params$exe_samtools, "view -H", file_bam, "|",
+                                "grep -P '^@SQ' | cut -f 3 -d ':' | awk '{sum+=$1} END {print sum}'"), intern=T)
+    
+    # calculate coverage (source: https://www.biostars.org/p/5165/#67920)
+    avg_coverage <- system(paste(params$exe_samtools, "depth", file_bam, "|",
+                                "awk '{sum+=$3} END { print", paste0("sum/",genome_size), "}'"))
+
+    f_write_log(fn_log=fn_log, msg=paste("BAM Coverage for", prefix, "=", avg_coverage))
+}
+
+```
+
 ## Variant calling
 ```{r, include=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "---------- Variant Calling ---------"))
