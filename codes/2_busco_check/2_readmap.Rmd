@@ -287,7 +287,7 @@ nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over mapped reads
-ls_coverage <- foreach (prefix = ls_prefix, .combine='list') %dopar% {
+ls_coverage <- foreach (prefix = ls_prefix, .combine='c') %dopar% {
     file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
 
     # extract genome size (source: https://www.biostars.org/p/5165/#102019)
@@ -298,7 +298,7 @@ ls_coverage <- foreach (prefix = ls_prefix, .combine='list') %dopar% {
     avg_coverage <- system(paste(params$exe_samtools, "depth", file_bam, "|",
                                 "awk '{sum+=$3} END { print", paste0("sum/",genome_size), "}'"), intern=T)
 
-    return(list(name=prefix, cov=avg_coverage))
+    return(list(list(name=prefix, cov=avg_coverage)))
 }
 
 stopCluster(nwcl)
