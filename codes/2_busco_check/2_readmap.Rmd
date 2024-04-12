@@ -282,25 +282,16 @@ stopCluster(nwcl)
 ```
 
 ```{r check-readmap-coverage, include=FALSE}
-# create doSNOW cluster
-nwcl <- makeCluster(params$thread)
-doSNOW::registerDoSNOW(nwcl)
-
 # iterate over mapped reads
-ls_coverage <- foreach (prefix = ls_prefix, .combine='c') %dopar% {
+for (prefix in ls_prefix) {
     file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
     
     # calculate coverage (source: https://www.biostars.org/p/5165/#67920)
     avg_coverage <- system(paste(params$exe_samtools, "depth -a", file_bam, "|",
                                 "awk '{sum+=$3} END {print sum/NR}'"), intern=T)
 
-    return(paste("BAM Coverage for", prefix, "=", avg_coverage))
-}
-
-stopCluster(nwcl)
-
-# store the results in log file
-for (cov in ls_coverage) {
+    # store the results in log file
+    msg <- paste("BAM Coverage for", prefix, "=", avg_coverage)
     f_write_log(fn_log=fn_log, msg=cov)
 }
 ```
