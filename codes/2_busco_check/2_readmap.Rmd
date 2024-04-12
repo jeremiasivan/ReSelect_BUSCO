@@ -294,14 +294,14 @@ ls_coverage <- foreach (prefix = ls_prefix, .combine='c') %dopar% {
     avg_coverage <- system(paste(params$exe_samtools, "depth -a", file_bam, "|",
                                 "awk '{sum+=$3} END {print sum/NR}'"), intern=T)
 
-    return(list(list(name=prefix, cov=avg_coverage)))
+    return(paste("BAM Coverage for", prefix, "=", avg_coverage))
 }
 
 stopCluster(nwcl)
 
 # store the results in log file
-for (i in ls_coverage) {
-    f_write_log(fn_log=fn_log, msg=paste("BAM Coverage for", i$name, "=", i$cov))
+for (cov in ls_coverage) {
+    f_write_log(fn_log=fn_log, msg=cov)
 }
 ```
 
