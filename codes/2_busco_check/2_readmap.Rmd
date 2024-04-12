@@ -289,14 +289,10 @@ doSNOW::registerDoSNOW(nwcl)
 # iterate over mapped reads
 ls_coverage <- foreach (prefix = ls_prefix, .combine='c') %dopar% {
     file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
-
-    # extract genome size (source: https://www.biostars.org/p/5165/#102019)
-    genome_size <- system(paste(params$exe_samtools, "view -H", file_bam, "|",
-                                "grep -P '^@SQ' | cut -f 3 -d ':' | awk '{sum+=$1} END {print sum}'"), intern=T)
     
     # calculate coverage (source: https://www.biostars.org/p/5165/#67920)
-    avg_coverage <- system(paste(params$exe_samtools, "depth", file_bam, "|",
-                                "awk '{sum+=$3} END { print", paste0("sum/",genome_size), "}'"), intern=T)
+    avg_coverage <- system(paste(params$exe_samtools, "depth -a", file_bam, "|",
+                                "awk '{sum+=$3} END {print sum/NR}'"), intern=T)
 
     return(list(list(name=prefix, cov=avg_coverage)))
 }
