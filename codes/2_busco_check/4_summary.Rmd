@@ -31,10 +31,10 @@ for (read in ls_shortreads) {
 
 # output files
 fn_prefix <- paste0(dir_check_summary, params$prefix)
-fn_ref_summary <- paste0(fn_prefix, ".ref.sumtable")
-fn_read_summary <- paste0(fn_prefix, ".read.sumtable")
+# fn_ref_summary <- paste0(fn_prefix, ".ref.sumtable")
+# fn_read_summary <- paste0(fn_prefix, ".read.sumtable")
 fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
-fn_chr_summary <- paste0(fn_prefix, ".chr.sumtable")
+# fn_chr_summary <- paste0(fn_prefix, ".chr.sumtable")
 
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
 ```
@@ -74,7 +74,7 @@ for (busco in shared_busco_filtered) {
 ```
 
 ## Check reference bias on BUSCO trees
-```{r check-summary-tree}
+```{r check-summary-tree, eval=FALSE}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -169,7 +169,7 @@ log4r::info(fn_logger, "File created: summary for BUSCO trees.")
 ```
 
 ## Calculate MNTD on BUSCO trees
-```{r check-summary-mntd}
+```{r check-summary-mntd, eval=FALSE}
 # run MNTD without reference sequence
 prefix <- paste0(dir_check_summary, params$prefix)
 f_run_mntd(shared_busco_filtered, ls_shortreads, dir_busco_tree, ls_species_name, prefix, params$thread)
@@ -259,8 +259,12 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     # calculate phylogenetic distance
     distance_tre <- ape::cophenetic.phylo(tre)
 
+    # update list of reference and mapped reads
+    ls_shortreads_available <- ls_shortreads[ls_shortreads %in% ls_tips]
+    ls_refseq_available <- ls_refseq[ls_refseq %in% ls_tips]
+
     # iterate over short reads
-    for (read in ls_shortreads) {
+    for (read in ls_shortreads_available) {
         # initiate variables
         dir_temp_fig <- paste0(dir_check_summary_correlation, read, "/")
         ref_out[[read]] <- list(busco=busco)
@@ -273,7 +277,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         read_ref_id <- df_refs$id[df_refs$species==read_species_name]
 
         # iterate over reference sequence
-        for (ref in ls_refseq) {
+        for (ref in ls_refseq_available) {
             # extract species name
             ref_species_name <- ls_species_name[ref]
 
@@ -357,7 +361,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         } else {
             # iterate over reference sequence
-            for (ref in ls_refseq) {
+            for (ref in ls_refseq_available) {
                 ref_out[[read]][[ls_species_name[ref]]] <- is_problematic
             }
         }
@@ -407,7 +411,7 @@ ls_ref_out <- ls_output[names(ls_output)=="ref_out"]
 ls_read_out <- ls_output[names(ls_output)=="read_out"]
 
 # save the dataframes as TSV
-for (read in ls_shortreads) {
+for (read in ls_shortreads_available) {
     # output file
     fn_temp_out <- paste0(fn_prefix, ".", read, ".cor.sumtable")
 
@@ -424,7 +428,7 @@ df_output <- data.table::as.data.table(do.call(rbind, ls_read_out), fill=TRUE)
 data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
 ```
 
-```{r check-summary-chromosome}
+```{r check-summary-chromosome, eval=FALSE}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
