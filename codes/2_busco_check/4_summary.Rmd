@@ -411,7 +411,7 @@ ls_ref_out <- ls_output[names(ls_output)=="ref_out"]
 ls_read_out <- ls_output[names(ls_output)=="read_out"]
 
 # save the dataframes as TSV
-for (read in ls_shortreads_available) {
+for (read in ls_shortreads) {
     # output file
     fn_temp_out <- paste0(fn_prefix, ".", read, ".cor.sumtable")
 

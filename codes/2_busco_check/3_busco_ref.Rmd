@@ -38,7 +38,7 @@ min_busco_depth <- 20
 max_busco_depth <- 60
 
 min_ref_busco_identity <- 99
-include_incomplete <- FALSE
+include_incomplete <- TRUE
 ```
 
 ```{r busco-check-species-map, include=FALSE}

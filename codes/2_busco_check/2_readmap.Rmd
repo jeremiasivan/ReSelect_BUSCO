@@ -281,7 +281,7 @@ foreach (prefix = ls_convert_run) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r check-readmap-coverage, include=FALSE}
+```{r check-readmap-coverage, eval=FALSE}
 # iterate over mapped reads
 for (prefix in ls_prefix) {
     file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
