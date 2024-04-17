@@ -71,6 +71,12 @@ for (busco in shared_busco_filtered) {
         log4r::info(fn_logger, paste0("Error: incomplete references for ", busco, " tree. Removed from analysis."))
     }
 }
+
+# check if list is of length zero
+if (length(shared_busco_filtered) == 0) {
+    log4r::error(fn_logger, "Error: list of BUSCO is of length zero. Exited.")
+    knitr::knit_exit()
+}
 ```
 
 ## Check reference bias on BUSCO trees
@@ -260,11 +266,12 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     distance_tre <- ape::cophenetic.phylo(tre)
 
     # update list of reference and mapped reads
-    ls_shortreads_available <- ls_shortreads[ls_shortreads %in% ls_tips]
+    ls_shortreads_available <- sapply(ls_tips, function(x) { ls_shortreads[grep(x, ls_shortreads)] })
+    ls_shortreads_available <- Filter(function(x) length(x) > 0, ls_shortreads_available)
     ls_refseq_available <- ls_refseq[ls_refseq %in% ls_tips]
 
     # iterate over short reads
-    for (read in ls_shortreads_available) {
+    for (read in names(ls_shortreads_available)) {
         # initiate variables
         dir_temp_fig <- paste0(dir_check_summary_correlation, read, "/")
         ref_out[[read]] <- list(busco=busco)
