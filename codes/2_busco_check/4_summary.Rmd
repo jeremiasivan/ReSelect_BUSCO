@@ -12,12 +12,12 @@ f_write_log(fn_log=fn_log,
 library(ggplot2)
 
 # set up color scheme for plotting
-ls_colour_scheme <- RColorBrewer::brewer.pal(ifelse(length(ls_shortreads)>=3, length(ls_shortreads), 3), "Set1")
+# ls_colour_scheme <- RColorBrewer::brewer.pal(ifelse(length(ls_shortreads)>=3, length(ls_shortreads), 3), "Set1")
 
-ls_colour_scheme_read <- list()
-for (i in 1:length(ls_shortreads)) {
-    ls_colour_scheme_read[[ls_shortreads[i]]] <- ls_colour_scheme[i]
-}
+# ls_colour_scheme_read <- list()
+# for (i in 1:length(ls_shortreads)) {
+#     ls_colour_scheme_read[[ls_shortreads[i]]] <- ls_colour_scheme[i]
+# }
 
 # output directories
 dir_check_summary <- paste0(dir_busco, "summary/")
@@ -31,9 +31,10 @@ for (read in ls_shortreads) {
 
 # output files
 fn_prefix <- paste0(dir_check_summary, params$prefix)
+fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
+
 # fn_ref_summary <- paste0(fn_prefix, ".ref.sumtable")
 # fn_read_summary <- paste0(fn_prefix, ".read.sumtable")
-fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
 # fn_chr_summary <- paste0(fn_prefix, ".chr.sumtable")
 
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
@@ -249,21 +250,21 @@ doSNOW::registerDoSNOW(nwcl)
 # iterate over BUSCOs
 ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     library(ggplot2)
-    library(ggrepel)
+    # library(ggrepel)
 
     # output variables
     read_out <- list(busco=busco)
-    ref_out <- list()
 
-    # check if treefile exists
+    # input treefiles
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
+    fn_treeshrink_tree <- paste0(dir_busco_tree, busco, "/treeshrink/", busco, ".treeshrink.treefile")
 
-    # read tree
-    tre <- ape::read.tree(fn_tree)
-    ls_tips <- tre$tip.label
+    # read trees
+    tre_original <- ape::read.tree(fn_tree)
+    tre_original_tips <- tre_original$tip.label
 
-    # calculate phylogenetic distance
-    distance_tre <- ape::cophenetic.phylo(tre)
+    tre_treeshrink <- ape::read.tree(fn_treeshrink_tree)
+    tre_treeshrink_tips <- tre_treeshrink$tip.label
 
     # update list of mapped reads
     ls_prefix_available <- ls_prefix[ls_prefix %in% ls_tips]
@@ -271,21 +272,28 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         strsplit(x, split="--")[[1]][1]
     })
 
+    # calculate phylogenetic distance
+    tre_original_dist <- ape::cophenetic.phylo(tre_original)
+
     # iterate over short reads
     for (read in ls_shortreads_available) {
         # initiate variables
         dir_temp_fig <- paste0(dir_check_summary_correlation, read, "/")
-        ref_out[[read]] <- list(busco=busco)
 
         # temporary data.table
-        temp_df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric())
+        temp_df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric(), grouping=character(), shape=character())
 
         # extract taxa list
         read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
         read_ref_id <- df_refs$id[df_refs$species==read_species_name]
+        read_grouping <- df_reads$grouping[df_reads$id == read]
 
         # iterate over reference sequence
-        for (ref in ls_refseq_available) {
+        for (ref in ls_refseq) {
+            # check if prefix if filtered out by TreeShrink
+            prefix <- paste0(read,"--",ref)
+            prefix_shape <- ifelse(prefix %in% tre_treeshrink_tips, "IN", "OUT")
+
             # extract species name
             ref_species_name <- ls_species_name[ref]
 
@@ -299,99 +307,39 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
             }
 
             # calculate distance for short reads
-            read_dist <- distance_tre[rownames(distance_tre)==paste0(read,"--",ref), colnames(distance_tre)==read_ref_id]
+            read_dist <- distance_tre[rownames(distance_tre)==prefix, colnames(distance_tre)==read_ref_id]
 
             # update data.frame
             temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read_species_name,
                                                                        ref=ref_species_name,
                                                                        ref_dist=ref_dist,
-                                                                       read_dist=read_dist))
+                                                                       read_dist=read_dist,
+                                                                       grouping=read_grouping,
+                                                                       shape=prefix_shape))
         }
 
         # remove NA values
-        temp_df_dist <- na.omit(temp_df_dist)
-        if (nrow(temp_df_dist) == 0){
-            next
-        }
+        # temp_df_dist <- na.omit(temp_df_dist)
+        # if (nrow(temp_df_dist) == 0){
+        #     next
+        # }
 
-        # run linear model
-        lm_result <- lm(read_dist~ref_dist, data=temp_df_dist)
-        lm_stats <- f_extract_summary_lm(lm_result)
+        # subset data.frame
+        temp_df_dist_filtered <- temp_df_dist[temp_df_dist$shape == "IN",]
+        temp_df_dist_filtered_noout <- temp_df_dist_filtered[temp_df_dist_filtered$grouping != "Out",]
 
-        # set up variables
-        is_problematic <- FALSE
-        if (all(!is.null(lm_stats)) && lm_stats$pvalue < 0.05) {
-            is_problematic <- TRUE
-        }
-
-        # check the presence of outliers
-        temp_read_out <- boxplot.stats(temp_df_dist$read_dist)$out
-
-        if (length(temp_read_out) != 0) {
-            # create another data.frame to store BUSCO without outliers
-            temp_df_out <- temp_df_dist[temp_df_dist$read_dist %in% temp_read_out,]
-            temp_df_no_out <- temp_df_dist[!temp_df_dist$read_dist %in% temp_read_out,]
-
-            # check if all values are the same
-            if (length(unique(temp_df_no_out$read_dist)) == 1) {
-                for (ref in temp_df_no_out$ref) {
-                    ref_out[[read]][[ref]] <- FALSE
-                }
-
-                # outliers
-                for (ref in temp_df_out$ref) {
-                    ref_out[[read]][[ref]] <- paste(is_problematic, "(OUT)")
-                }
-
-            } else {
-                # run linear model without outliers
-                lm_result_no_out <- lm(read_dist~ref_dist, data=temp_df_no_out)
-                lm_stats_no_out <- f_extract_summary_lm(lm_result_no_out)
-
-                # check if values are NULL
-                if (all(!is.null(lm_stats)) && all(!is.null(lm_stats_no_out))) {
-                    for (ref in temp_df_out$ref) {
-                        ref_out[[read]][[ref]] <- paste(is_problematic, "(O)")
-                    }
-
-                    # outliers
-                    if ((lm_stats_no_out$pvalue >= 0.05 && is_problematic) || (lm_stats_no_out$pvalue <= 0.05 && !is_problematic)) {
-                        for (ref in temp_df_no_out$ref) {
-                            ref_out[[read]][[ref]] <- !is_problematic
-                        }
-                    } else {
-                        for (ref in temp_df_no_out$ref) {
-                            ref_out[[read]][[ref]] <- is_problematic
-                        }
-                    }
-                }
-            }
-
-        } else {
-            # iterate over reference sequence
-            for (ref in ls_refseq_available) {
-                ref_out[[read]][[ls_species_name[ref]]] <- is_problematic
-            }
-        }
-
-        read_out[[read_species_name]] <- paste0(lm_stats$rsquared, " (", lm_stats$pvalue, ")")
+        # run linear models
+        lm_filtered_noout <- lm(read_dist~ref_dist, data=temp_df_dist_filtered_noout)
+        read_out[[read_species_name]] <- paste0(coef(lm_filtered_noout)["read_dist"])
 
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
 
-        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist, color=read)) +
-            geom_point(shape=16, aes(size=20)) +
-            geom_smooth(method='lm', formula= y~x, aes(linewidth=4)) +
-            scale_colour_manual(values=ls_colour_scheme_read[[read]])
-
-        # add outliers label
-        if (length(temp_read_out) != 0){
-            plot <- plot + 
-                geom_text_repel(data=temp_df_out, aes(label=ref), size=12) +
-                stat_smooth(data=temp_df_no_out, geom='line', aes(x=ref_dist, y=read_dist, linewidth=4), method='lm', formula=y~x, alpha=0.5)
-        }
-
-        plot <- plot +
+        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist, color=grouping)) +
+            geom_point(aes(size=20, shape=shape)) +
+            geom_abline(slope=1, intercept=0, linetype=3) + 
+            stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=4, linetype=2), method='lm', formula=y~x, alpha=0.5)  + 
+            stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=4, linetype=1), method='lm', formula=y~x) +
             ggtitle(paste("Correlation of BUSCO", busco, "Phylogenetic Distances")) +
             xlab("Reference Distance") + ylab("Short Reads Distance") +
             theme(
@@ -401,8 +349,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
                 axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
                 axis.text.y=element_text(size=30),
                 axis.text.x=element_text(size=30),
-                strip.text = element_text(size = 30),
-                legend.position = "none"
+                strip.text = element_text(size = 30)
             )
 
         # save the plot
@@ -411,25 +358,11 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         dev.off()
     }
 
-    return(list(read_out=read_out, ref_out=ref_out))
+    return(list(read_out=read_out))
 }
 
 # convert list into dataframe
-ls_ref_out <- ls_output[names(ls_output)=="ref_out"]
 ls_read_out <- ls_output[names(ls_output)=="read_out"]
-
-# save the dataframes as TSV
-for (read in ls_shortreads) {
-    # output file
-    fn_temp_out <- paste0(fn_prefix, ".", read, ".cor.sumtable")
-
-    # extract read-specific entries
-    ls_temp_out <- lapply(ls_ref_out, function(x) { x[[read]] })
-    df_temp_out <- data.table::as.data.table(do.call(rbind, ls_temp_out), fill=TRUE)
-
-    # save file
-    data.table::fwrite(df_temp_out, file=fn_temp_out, sep="\t", quote=F, row.names=F)
-}
 
 # save the data.frame
 df_output <- data.table::as.data.table(do.call(rbind, ls_read_out), fill=TRUE)

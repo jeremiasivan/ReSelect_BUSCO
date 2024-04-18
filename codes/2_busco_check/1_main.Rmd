@@ -24,6 +24,7 @@ params:
   exe_samtools: ""
   exe_bcftools: ""
   exe_qualimap: ""
+  exe_treeshrink: ""
 
   exe_gffread: ""
 
