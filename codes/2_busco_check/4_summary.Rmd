@@ -267,13 +267,13 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     tre_treeshrink_tips <- tre_treeshrink$tip.label
 
     # update list of mapped reads
-    ls_prefix_available <- ls_prefix[ls_prefix %in% ls_tips]
+    ls_prefix_available <- ls_prefix[ls_prefix %in% tre_original_tips]
     ls_shortreads_available <- sapply(ls_prefix_available, function(x) {
         strsplit(x, split="--")[[1]][1]
     })
 
     # calculate phylogenetic distance
-    tre_original_dist <- ape::cophenetic.phylo(tre_original)
+    distance_tre <- ape::cophenetic.phylo(tre_original)
 
     # iterate over short reads
     for (read in ls_shortreads_available) {
@@ -326,11 +326,11 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         # subset data.frame
         temp_df_dist_filtered <- temp_df_dist[temp_df_dist$shape == "IN",]
-        temp_df_dist_filtered_noout <- temp_df_dist_filtered[temp_df_dist_filtered$grouping != "Out",]
+        temp_df_dist_filtered_noout <- temp_df_dist_filtered[temp_df_dist_filtered$grouping != "Outgroup",]
 
         # run linear models
         lm_filtered_noout <- lm(read_dist~ref_dist, data=temp_df_dist_filtered_noout)
-        read_out[[read_species_name]] <- paste0(coef(lm_filtered_noout)["read_dist"])
+        read_out[[read_species_name]] <- coef(lm_filtered_noout)["read_dist"]
 
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
