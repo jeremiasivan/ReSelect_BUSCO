@@ -23,6 +23,7 @@ params:
   exe_bwamem2: ""
   exe_samtools: ""
   exe_bcftools: ""
+  exe_qualimap: ""
 
   exe_gffread: ""
 

@@ -300,14 +300,46 @@ foreach (busco = shared_busco) %dopar% {
     # change the ID into species name
     fn_treefile_species <- paste0(dir_output, busco, "_aligned.fa.treefile.species")
     if (!file.exists(fn_treefile_species) || params$redo) {
-        tre <- readLines(fn_treefile)
-        for (id in names(ls_species_name)) {
-            tre <- gsub(id, ls_species_name[id], tre)
-        }
-        writeLines(tre, con=fn_treefile_species)
+        f_tips_to_species(fn_treefile, fn_treefile_species, ls_species_name)
     }
 }
 
 log4r::info(fn_logger, "File created/modified: BUSCO trees.")
+stopCluster(nwcl)
+```
+
+```{r check-busco-treeshrink}
+f_write_log(fn_log=fn_log, msg=c("", "------------ TreeShrink ------------"))
+              
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over shared BUSCOs
+foreach (busco = shared_busco) %dopar% {
+    dir_output <- paste0(dir_busco_tree, busco, "/treeshrink/")
+
+    # input file
+    fn_treefile <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
+    if (!file.exists(fn_treefile)) {
+        return(NULL)
+    }
+
+    # output file
+    prefix <- paste0(busco, ".treeshrink")
+
+    fn_treeshrink_tree <- paste0(dir_output, prefix, ".treefile")
+    if (!file.exists(fn_treeshrink_tree) || params$redo) {
+        # run TreeShrink
+        f_treeshrink(fn_treefile, prefix, dir_output, params$exe_treeshrink)
+    }
+
+    # change the ID into species name
+    fn_treefile_species <- paste0(dir_output, prefix, ".treefile.species")
+    if (!file.exists(fn_treefile_species) || params$redo) {
+        f_tips_to_species(fn_treeshrink_tree, fn_treefile_species, ls_species_name)
+    }
+}
+
 stopCluster(nwcl)
 ```

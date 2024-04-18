@@ -19,6 +19,8 @@ exe_adapterremoval <- "AdapterRemoval"
 exe_bwamem2 <- "bwa-mem2"
 exe_samtools <- "samtools"
 exe_bcftools <- "bcftools"
+exe_qualimap <- "qualimap"
+exe_treeshrink <- "treeshrink"
 
 exe_gffread <- "gffread"
 
@@ -50,6 +52,7 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, prefix, ".check.html"),
                   params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools,
+                              exe_qualimap=exe_qualimap, exe_treeshrink=exe_treeshrink,
                               exe_gffread=exe_gffread, exe_busco=exe_busco, exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft,
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters, file_refseq_chr=file_refseq_chr,
                               busco_lineage=busco_lineage, busco_mode=busco_mode, type=type),
