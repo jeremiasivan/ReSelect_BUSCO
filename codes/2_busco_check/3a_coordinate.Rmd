@@ -36,6 +36,12 @@ for (prefix in ls_prefix) {
         require(Biostrings)
         require(stringr)
 
+        # output directory
+        dir_out_qualimap <- paste0(dir_busco_out, "/qualimap/", busco, "/")
+        if (!dir.exists(dir_out_qualimap)) {
+            dir.create(dir_out_qualimap, recursive=T)
+        }
+
         # input files
         file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
         file_busco_gff_out <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".gff")
@@ -54,7 +60,7 @@ for (prefix in ls_prefix) {
         }
 
         # calculate read depth
-        read_coverage <- f_calculate_read_coverage(file_bam, file_busco_gff_out, params$exe_samtools)
+        read_coverage <- f_calculate_read_coverage(file_bam, file_busco_gff_out, params$exe_qualimap)
         if (is.null(read_coverage)) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with no CDS"))
             return(busco)
