@@ -286,7 +286,6 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         # extract taxa list
         read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
         read_ref_id <- df_refs$id[df_refs$species==read_species_name]
-        read_grouping <- df_reads$grouping[df_reads$id == read]
 
         # iterate over reference sequence
         for (ref in ls_refseq) {
@@ -296,6 +295,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
             # extract species name
             ref_species_name <- ls_species_name[ref]
+            ref_grouping <- df_refs$grouping[df_refs$id==ref]
 
             # calculate distance for reference
             ref_dist <- NULL
@@ -314,7 +314,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
                                                                        ref=ref_species_name,
                                                                        ref_dist=ref_dist,
                                                                        read_dist=read_dist,
-                                                                       grouping=read_grouping,
+                                                                       grouping=ref_grouping,
                                                                        shape=prefix_shape))
         }
 
@@ -337,23 +337,27 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist, color=grouping)) +
             geom_point(aes(size=20, shape=shape)) +
-            geom_abline(slope=1, intercept=0, linetype=3) + 
-            stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=4, linetype=2), method='lm', formula=y~x, alpha=0.5)  + 
-            stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=4, linetype=1), method='lm', formula=y~x) +
-            ggtitle(paste("Correlation of BUSCO", busco, "Phylogenetic Distances")) +
-            xlab("Reference Distance") + ylab("Short Reads Distance") +
+            geom_abline(slope=1, intercept=0, linetype=3, aes(linewidth=3)) + 
+            stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, alpha=0.5)  + 
+            stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=1, method='lm', formula=y~x) +
+            ggtitle(paste("Scatter Plot of BUSCO", busco, "Phylogenetic Distances")) +
+            xlab("Reference Distance") + ylab("Mapped Reads Distance") +
+            guides(color=guide_legend(title="Subgenera"), shape=guide_legend(title="Filtered"), size="none", linewidth="none") +
             theme(
-                plot.title = element_text(hjust = 0.5, size = 50),
-                plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
+                plot.title=element_text(hjust = 0.5, size = 50),
+                plot.margin=margin(1.25, 1.25, 1.25, 1.25, "cm"),
                 axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
                 axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
                 axis.text.y=element_text(size=30),
                 axis.text.x=element_text(size=30),
-                strip.text = element_text(size = 30)
+                legend.title=element_text(size=30),
+                legend.text=element_text(size=30),
+                legend.key.size=unit(2,"cm"),
+                strip.text=element_text(size = 30)
             )
 
         # save the plot
-        tiff(file=fn_busco_tiff, units="px", width=1600, height=700)
+        tiff(file=fn_busco_tiff, units="px", width=1400, height=700)
         print(plot)
         dev.off()
     }

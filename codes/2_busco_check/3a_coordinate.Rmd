@@ -58,8 +58,8 @@ for (prefix in ls_prefix) {
         if (is.null(read_coverage)) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with no CDS"))
             return(busco)
-        } else if (any(read_coverage < min_busco_depth) || any(read_coverage > max_busco_depth)) {
-            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with average read depth of", mean(read_coverage, 3)))
+        } else if (read_coverage < min_busco_depth || read_coverage > max_busco_depth) {
+            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with average CDS read depth of", read_coverage))
             return(busco)
         }
 

@@ -281,9 +281,13 @@ foreach (prefix = ls_convert_run) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r check-readmap-coverage}
+```{r check-readmap-coverage, eval=FALSE}
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
 # iterate over mapped reads
-for (prefix in ls_prefix) {
+foreach (prefix = ls_prefix, .combine='c') %dopar% {
     # create outdir
     dir_qualimap_output <- paste0(dir_readmap, prefix, "/qualimap/")
     if (!dir.exists(dir_qualimap_output)) {
@@ -293,13 +297,13 @@ for (prefix in ls_prefix) {
     # check if output file exists
     file_qualimap_html <- paste0(dir_qualimap_output, "qualimapReport.html")
     if (file.exists(file_qualimap_html) && !params$redo) {
-        next
+        return(NULL)
     }
 
     # input file
     file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
     if (!file.exists(file_bam)) {
-        next
+        return(NULL)
     }
     
     # run QualiMap
@@ -308,6 +312,8 @@ for (prefix in ls_prefix) {
                           "-outdir", dir_qualimap_output)
     system(cmd_coverage)
 }
+
+stopCluster(nwcl)
 ```
 
 ## Variant calling

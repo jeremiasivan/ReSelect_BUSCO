@@ -134,18 +134,15 @@ f_extract_coordinates <- function(fasta_header, busco, prefix) {
 # function: generate GFF file
 f_create_gff <- function(coordinates, busco, fn_out) {
     df_gff <- data.table::data.table(
-        seqname=rep(coordinates$seqname, 4),
-        source=rep("Metaeuk", 4),
-        feature=c("gene", "mRNA", "exon", "CDS"),
-        start=rep(coordinates$start, 4),
-        end=rep(coordinates$stop, 4),
-        score=rep(".", 4),
-        strand=rep(coordinates$strand, 4),
-        frame=rep(".", 4),
-        attribute=c(paste0("ID=",busco),
-                    paste0("ID=",busco,"_mRNA;Parent=",busco),
-                    paste0("ID=",busco,"_exon_0;Parent=",busco,"_mRNA"),
-                    paste0("ID=",busco,"_CDS_0;Parent=",busco,"_exon_0"))
+        seqname=coordinates$seqname,
+        source="Metaeuk",
+        feature="CDS",
+        start=coordinates$start,
+        end=coordinates$stop,
+        score=".",
+        strand=coordinates$strand,
+        frame=".",
+        attribute=paste0("ID=",busco,"_CDS_0")
     )
 
     # save the new GFF file
@@ -205,7 +202,7 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
 
         # save the new GFF file
         data.table::fwrite(df_gff_cds, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
-        return(list(warnmsg=paste0("Warn: ", busco, " GFF file for ", prefix, " is CDS-only.")))
+        return(list(warnmsg=paste0("Warn: ", busco, " GFF file for ", prefix, " is based on CDS coordinates.")))
     }
 
     # extract all gene indices
@@ -227,42 +224,27 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     df_gff_subset <- f_check_cds_target_id(df_gff_subset)
 
     # save the new GFF file
-    data.table::fwrite(df_gff_subset, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
+    df_gff_subset_cds <- df_gff_subset[df_gff_subset$feature=="CDS",]
+    data.table::fwrite(df_gff_subset_cds, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
 }
 
 # function: check read depth
-f_calculate_read_coverage <- function(fn_bam, fn_gff, exe_samtools) {
-    # open GFF file
-    df_gff <- data.table::fread(fn_gff)
-    data.table::setnames(df_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+f_calculate_read_coverage <- function(fn_bam, fn_gff, dir_qualimap_output, exe_qualimap) {
+    # run QualiMap
+    cmd_coverage <- paste(exe_qualimap, "bamqc",
+                          "-bam", fn_bam,
+                          "-gff", fn_gff,
+                          "-outdir", dir_qualimap_output)
+    system(cmd_coverage)
 
-    # extract CDS
-    df_gff_cds <- df_gff[df_gff$feature=="CDS",]
-    if (nrow(df_gff_cds) == 0) {
-        return(NULL)
-    }
-
-    # initiate variable
-    read_coverage <- c()
-
-    # iterate over CDS
-    for (i in 1:nrow(df_gff_cds)) {
-        # calculate the read depth
-        cmd_coverage <- paste(exe_samtools, "coverage",
-                              "-r", paste0(df_gff_cds$seqname[i], ":", df_gff_cds$start[i], "-", df_gff_cds$end[i]),
-                              fn_bam)
-        stdout_coverage <- system(cmd_coverage, intern=T)
-        
-        # convert result to data.frame
-        df_coverage <- read.table(text=stdout_coverage, sep="\t")
-        colnames(df_coverage) <- c("rname", "startpos", "endpos", "numreads", "covbases", "coverage", "meandepth", "meanbaseq", "meanmapq")
-
-        # update the vector
-        read_coverage <- c(read_coverage, as.numeric(df_coverage$meandepth[1]))
-    }
+    # retrieve average coverage
+    output_file <- paste0(dir_qualimap_output, "/genome_results.txt")
+    ln_coverage <- system(paste("grep 'mean coverageData'", output_file), intern=T)
+    ls_coverage <- strsplit(ln_coverage, split=" = ")[[1]][2]
+    read_coverage <- gsub("X", "", ls_coverage)
 
     # return average coverage
-    return(read_coverage)
+    return(as.numeric(read_coverage))
 }
 
 # function: extract all BUSCO alignments from GFF
