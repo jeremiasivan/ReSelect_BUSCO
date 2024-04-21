@@ -60,7 +60,7 @@ for (prefix in ls_prefix) {
         }
 
         # calculate read depth
-        read_coverage <- f_calculate_read_coverage(file_bam, file_busco_gff_out, params$exe_qualimap)
+        read_coverage <- f_calculate_read_coverage(file_bam, file_busco_gff_out, dir_out_qualimap, params$exe_qualimap)
         if (is.null(read_coverage)) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with no CDS"))
             return(busco)
