@@ -32,16 +32,9 @@ This pipeline requires several software and R packages to run. All software have
 | Biostrings   | <a href="https://www.bioconductor.org/packages//2.7/bioc/html/Biostrings.html">Link</a> | <a href="https://anaconda.org/bioconda/bioconductor-biostrings">Link</a> |
 | data.table   | <a href="https://cran.r-project.org/package=data.table">Link</a>                        | <a href="https://anaconda.org/conda-forge/r-data.table">Link</a>         |
 | doSNOW       | <a href="https://cran.r-project.org/package=doSNOW">Link</a>                            | <a href="https://anaconda.org/conda-forge/r-dosnow">Link</a>             |
-| ggplot2      | <a href="https://cran.r-project.org/package=ggplot2">Link</a>                           | <a href="https://anaconda.org/conda-forge/r-ggplot2">Link</a>            |
-| ggrepel      | <a href="https://cran.r-project.org/package=ggrepel">Link</a>                           | <a href="https://anaconda.org/conda-forge/r-ggrepel">Link</a>            |
-| labdsv       | <a href="https://cran.r-project.org/package=labdsv">Link</a>                            | <a href="https://anaconda.org/conda-forge/r-labdsv">Link</a>             |
-| dplyr        | <a href="https://cran.r-project.org/package=dplyr">Link</a>                             | <a href="https://anaconda.org/conda-forge/r-dplyr">Link</a>              |
 | log4r        | <a href="https://cran.r-project.org/package=log4r">Link</a>                             | <a href="https://anaconda.org/conda-forge/r-log4r">Link</a>              |
-| picante      | <a href="https://cran.r-project.org/package=picante">Link</a>                           | <a href="https://anaconda.org/conda-forge/r-picante">Link</a>            |
-| RColorBrewer | <a href="https://cran.r-project.org/package=RColorBrewer">Link</a>                      | <a href="https://anaconda.org/conda-forge/r-rcolorbrewer">Link</a>       |
-| reshape2     | <a href="https://cran.r-project.org/package=reshape2">Link</a>                          | <a href="https://anaconda.org/conda-forge/r-reshape2">Link</a>           |
 | rmarkdown    | <a href="https://cran.r-project.org/package=rmarkdown">Link</a>                         | <a href="https://anaconda.org/conda-forge/r-rmarkdown">Link</a>          |
-| stringr      | <a href="https://cran.r-project.org/package=stringr">Link</a>                           | <a href="https://anaconda.org/conda-forge/r-stringr">Link</a>            |
+| tidyverse    | <a href="https://cran.r-project.org/package=tidyverse">Link</a>                         | <a href="https://anaconda.org/conda-forge/r-tidyverse">Link</a>          |
 
 ## <a id="genpipe">General Pipeline</a>
 1. **Clone the Git repository** <br>
@@ -80,4 +73,4 @@ This pipeline requires several software and R packages to run. All software have
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `start`, but I have never tried it before. 
 
 ---
-*Last update: 08 April 2024 by Jeremias Ivan*
+*Last update: 22 April 2024 by Jeremias Ivan*

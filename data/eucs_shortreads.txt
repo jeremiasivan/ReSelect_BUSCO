@@ -26,7 +26,7 @@ SRR25119784    E.cloeziana    FALSE
 SRR25119756    E.coolabah    FALSE
 SRR25119757    E.decipiens    FALSE
 SRR25119771    E.grandis    FALSE
-SRR25119764    E.sp.    FALSE
+SRR25119764    E.ANBG9806169    FALSE
 SRR25119786    E.virginea    TRUE
 SRR25119785    E.camaldulensis    FALSE
 SRR25119759    E.erythrocorys    TRUE

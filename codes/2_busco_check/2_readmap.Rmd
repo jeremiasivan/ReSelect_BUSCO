@@ -281,7 +281,7 @@ foreach (prefix = ls_convert_run) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r check-readmap-coverage, eval=FALSE}
+```{r check-readmap-coverage}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)

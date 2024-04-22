@@ -3,7 +3,7 @@ GCA_004368105.3    E.melliodora    Symphyomyrtus
 GCA_014182365.1    E.tenuipes    Cuboidea
 GCA_014182375.1    E.virginea    Symphyomyrtus
 GCA_014182385.1    E.viminalis    Symphyomyrtus
-GCA_014182395.1    E.sp    None
+GCA_014182395.1    E.ANBG9806169    None
 GCA_014182405.1    E.sideroxylon    Symphyomyrtus
 GCA_014182515.1    E.microcorys    Alveolata
 GCA_014182545.1    E.globulus    Symphyomyrtus
