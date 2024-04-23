@@ -16,6 +16,7 @@ This pipeline requires several software and R packages to run. All software have
 | Bcftools         | <a href="https://github.com/samtools/bcftools">Link</a>               |
 | BUSCO            | <a href="https://busco.ezlab.org">Link</a>                            |
 | BWA-MEM2         | <a href="https://github.com/bwa-mem2/bwa-mem2">Link</a>               |
+| Gff2Bed (BEDOPS) | <a href="https://bedops.readthedocs.io/en/latest/index.html">Link</a> |
 | GffRead          | <a href="https://github.com/gpertea/gffread">Link</a>                 |
 | IQ-TREE 2        | <a href="http://www.iqtree.org">Link</a>                              |
 | MAFFT            | <a href="https://mafft.cbrc.jp/alignment/software/">Link</a>          |
@@ -73,4 +74,4 @@ This pipeline requires several software and R packages to run. All software have
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `start`, but I have never tried it before. 
 
 ---
-*Last update: 22 April 2024 by Jeremias Ivan*
+*Last update: 24 April 2024 by Jeremias Ivan*

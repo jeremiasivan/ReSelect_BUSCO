@@ -229,22 +229,20 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
 }
 
 # function: check read depth
-f_calculate_read_coverage <- function(fn_bam, fn_gff, dir_qualimap_output, exe_qualimap) {
-    # run QualiMap
-    cmd_coverage <- paste(exe_qualimap, "bamqc",
-                          "-bam", fn_bam,
-                          "-gff", fn_gff,
-                          "-outdir", dir_qualimap_output)
-    system(cmd_coverage)
+f_calculate_read_coverage <- function(fn_bam, fn_gff, fn_bed, exe_gff2bed, exe_samtools) {
+    # run bedops gff2bed
+    cmd_gff2bed <- paste(exe_gff2bed, "<", fn_gff, ">", fn_bed)
+    system(cmd_gff2bed)
 
     # retrieve average coverage
-    output_file <- paste0(dir_qualimap_output, "/genome_results.txt")
-    ln_coverage <- system(paste("grep 'mean coverageData'", output_file), intern=T)
-    ls_coverage <- strsplit(ln_coverage, split=" = ")[[1]][2]
-    read_coverage <- gsub("X", "", ls_coverage)
+    cmd_coverage <- paste(exe_samtools, "depth",
+                          "-b", fn_bed,
+                          fn_bam)
+    ls_output <- system(cmd_coverage, intern=T)
+    ls_coverage <- <- sapply(ls_output, function(x){ strsplit(x, split="\t")[[1]][3] })
 
     # return average coverage
-    return(as.numeric(read_coverage))
+    return(round(mean(as.numeric(ls_coverage)),3))
 }
 
 # function: extract all BUSCO alignments from GFF

@@ -27,6 +27,7 @@ params:
   exe_treeshrink: ""
 
   exe_gffread: ""
+  exe_gff2bed: ""
 
   exe_busco: ""
   exe_iqtree2: ""
