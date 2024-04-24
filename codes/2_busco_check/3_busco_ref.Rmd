@@ -199,6 +199,7 @@ for (ref in ls_refseq) {
         # output files
         file_busco_cds <- paste0(dir_busco_out, busco, ".cds.fna")
         file_busco_gff_out <- paste0(dir_busco_out, busco, ".gff")
+        file_busco_bed_out <- paste0(dir_busco_out, busco, ".bed")
         file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
 
         # check if file exists
@@ -228,6 +229,10 @@ for (ref in ls_refseq) {
                 }
             }
         }
+
+        # run bedops gff2bed
+        cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff_out, ">", file_busco_bed_out)
+        system(cmd_gff2bed)
         
         # extract BUSCO
         f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)

@@ -39,13 +39,13 @@ for (prefix in ls_prefix) {
         # input files
         file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
         file_busco_gff_out <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".gff")
-        if (!file.exists(file_busco_gff_out)) {
-            log4r::warn(fn_logger, msg=paste0("File not found: ", busco, " GFF for ", ref, ". Skipped."))
+        file_busco_bed_out <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".bed")
+        if (!all(file.exists(file_busco_gff_out, file_busco_bed_out))) {
+            log4r::warn(fn_logger, msg=paste0("File not found: ", busco, " GFF or BED for ", ref, ". Skipped."))
             return(NULL)
         }
 
         # output files
-        file_busco_bed <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".bed")
         file_busco_cds <- paste0(dir_busco_out, busco, ".cds.fna")
         file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
 
@@ -55,7 +55,7 @@ for (prefix in ls_prefix) {
         }
 
         # calculate read depth
-        read_coverage <- f_calculate_read_coverage(file_bam, file_busco_gff_out, file_busco_bed, params$exe_gff2bed, params$exe_samtools)
+        read_coverage <- f_calculate_read_coverage(file_bam, file_busco_bed_out, params$exe_samtools)
         if (is.null(read_coverage)) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with no CDS"))
             return(busco)

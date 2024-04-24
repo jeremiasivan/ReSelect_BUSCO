@@ -228,18 +228,14 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     data.table::fwrite(df_gff_subset_cds, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
 }
 
-# function: check read depth
-f_calculate_read_coverage <- function(fn_bam, fn_gff, fn_bed, exe_gff2bed, exe_samtools) {
-    # run bedops gff2bed
-    cmd_gff2bed <- paste(exe_gff2bed, "<", fn_gff, ">", fn_bed)
-    system(cmd_gff2bed)
-
+# function: check coverage
+f_calculate_read_coverage <- function(fn_bam, fn_bed, exe_samtools) {
     # retrieve average coverage
     cmd_coverage <- paste(exe_samtools, "depth",
                           "-b", fn_bed,
                           fn_bam)
     ls_output <- system(cmd_coverage, intern=T)
-    ls_coverage <- <- sapply(ls_output, function(x){ strsplit(x, split="\t")[[1]][3] })
+    ls_coverage <- sapply(ls_output, function(x){ strsplit(x, split="\t")[[1]][3] })
 
     # return average coverage
     return(round(mean(as.numeric(ls_coverage)),3))
