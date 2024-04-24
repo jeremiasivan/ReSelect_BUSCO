@@ -36,12 +36,6 @@ for (prefix in ls_prefix) {
         require(Biostrings)
         require(stringr)
 
-        # output directory
-        dir_out_qualimap <- paste0(dir_busco_out, "/qualimap/", busco, "/")
-        if (!dir.exists(dir_out_qualimap)) {
-            dir.create(dir_out_qualimap, recursive=T)
-        }
-
         # input files
         file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
         file_busco_gff_out <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".gff")
