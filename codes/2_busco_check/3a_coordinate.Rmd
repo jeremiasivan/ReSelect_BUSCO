@@ -21,6 +21,13 @@ for (prefix in ls_prefix) {
         dir.create(dir_busco_out, recursive=T)
     }
 
+    # output of prefix-specific BUSCO list
+    ls_busco_excluded <- NULL
+    fn_busco_excluded <- paste0(dir_busco_out, "excluded_busco.txt")
+    if (file.exists(fn_busco_excluded)) {
+        ls_busco_excluded <- readLines(fn_busco_excluded)
+    }
+
     # extract short read and reference sequence IDs
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
@@ -35,6 +42,11 @@ for (prefix in ls_prefix) {
     output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         require(Biostrings)
         require(stringr)
+
+        # check if BUSCO is excluded
+        if (busco %in% ls_busco_excluded) {
+            return(busco)
+        }
 
         # input files
         file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
@@ -58,9 +70,11 @@ for (prefix in ls_prefix) {
         read_coverage <- f_calculate_read_coverage(file_bam, file_busco_bed_out, params$exe_samtools)
         if (is.null(read_coverage) || is.na(read_coverage)) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with invalid coverage"))
+            f_write_log(fn_busco_excluded, busco)
             return(busco)
         } else if (read_coverage < min_busco_depth || read_coverage > max_busco_depth) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with average CDS read depth of", read_coverage))
+            f_write_log(fn_busco_excluded, busco)
             return(busco)
         }
 
