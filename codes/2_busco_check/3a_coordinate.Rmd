@@ -56,8 +56,8 @@ for (prefix in ls_prefix) {
 
         # calculate read depth
         read_coverage <- f_calculate_read_coverage(file_bam, file_busco_bed_out, params$exe_samtools)
-        if (is.null(read_coverage)) {
-            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with no CDS"))
+        if (is.null(read_coverage) || is.na(read_coverage)) {
+            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with invalid coverage"))
             return(busco)
         } else if (read_coverage < min_busco_depth || read_coverage > max_busco_depth) {
             log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with average CDS read depth of", read_coverage))
