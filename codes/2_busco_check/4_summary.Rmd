@@ -329,6 +329,16 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         #     next
         # }
 
+        # return NULL if table is of zero row
+        if (nrow(temp_df_dist) == 0) {
+            return (NULL)
+        }
+
+        # check if all values are NULL
+        if (all(is.na(temp_df_dist$ref_dist)) || all(is.na(temp_df_dist$read_dist))) {
+            return (NULL)
+        }
+
         # subset data.frame
         temp_df_dist_filtered <- temp_df_dist[temp_df_dist$shape == "IN",]
         temp_df_dist_filtered_noout <- temp_df_dist_filtered[temp_df_dist_filtered$grouping != "Outgroup",]
@@ -346,11 +356,17 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         # check if filtered table has more than one entry
         if (nrow(temp_df_dist_filtered) > 0) {
-            plot <- plot + stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, alpha=0.5)
+            # check if all values are NULL
+            if (!all(is.na(temp_df_dist_filtered$ref_dist)) && !all(is.na(temp_df_dist_filtered$read_dist))) {
+                plot <- plot + stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, alpha=0.5)
+            }
         }
 
         if (nrow(temp_df_dist_filtered_noout) > 0) {
-            plot <- plot + stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=1, method='lm', formula=y~x)
+            # check if all values are NULL
+            if (!all(is.na(temp_df_dist_filtered_noout$ref_dist)) && !all(is.na(temp_df_dist_filtered_noout$read_dist))) {
+                plot <- plot + stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=1, method='lm', formula=y~x)
+            }
         }
 
         # update plot
