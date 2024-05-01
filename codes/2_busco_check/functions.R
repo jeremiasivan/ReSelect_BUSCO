@@ -1,5 +1,11 @@
 # functions for codes/2_busco_check
 
+# function: check if vector is all NULL or NAs
+f_all_null_or_na <- function(vector) {
+    all_null_or_na <- all(is.null(vector) | is.na(vector))
+    return (all_null_or_na)
+}
+
 # function: quality control for short reads
 f_qc_short_reads <- function(fastq, fn_adapters, prefix, min_quality, thread, exe_adapterremoval) {
     cmd_qc <- paste(exe_adapterremoval, "--file1", fastq[1])
