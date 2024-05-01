@@ -2,9 +2,6 @@
 title: "Summarise BUSCO Trees"
 ---
 
-# For distance matrix, make all possible pairs with NA instead -> more predictable
-# p-value
-
 ```{r check-summary-setup, include=FALSE}
 f_write_log(fn_log=fn_log,
             msg=c("", "####################################",
