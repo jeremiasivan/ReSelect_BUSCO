@@ -16,7 +16,8 @@ dir_refseq <- paste0(dir_current, "/refseq/")
 dir_shortreads <- paste0(dir_current, "/short_reads/")
 
 # list of reference sequences
-ls_refseq <- list.dirs(dir_refseq, recursive=F, full.names=F)
+df_refs <- data.table::fread(params$file_refseq)
+ls_refseq <- df_refs$id
 
 # list of short reads
 df_reads <- data.table::fread(params$file_shortreads)
@@ -282,27 +283,37 @@ stopCluster(nwcl)
 ```
 
 ```{r check-readmap-coverage}
+# set up variable
+ls_coverage_run <- c()
+
+# iterate over prefix
+if (params$redo) {
+    ls_coverage_run <- ls_prefix
+} else {
+    for (prefix in ls_prefix) {
+        # check if file exists
+        file_qualimap_html <- paste0(dir_readmap, prefix, "/qualimap/qualimapReport.html")
+        if (!file.exists(file_qualimap_html)) {
+            ls_coverage_run <- c(ls_coverage_run, prefix)
+        }
+    }
+}
+
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over mapped reads
-foreach (prefix = ls_prefix) %dopar% {
-    # create outdir
+foreach (prefix = ls_coverage_run) %dopar% {
+    # input parameters
     dir_qualimap_output <- paste0(dir_readmap, prefix, "/qualimap/")
+    file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
 
-    # check if output file exists
-    file_qualimap_html <- paste0(dir_qualimap_output, "qualimapReport.html")
-    if (!file.exists(file_qualimap_html) || params$redo) {
-        # input file
-        file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
-
-        # run QualiMap
-        cmd_coverage <- paste(params$exe_qualimap, "bamqc",
-                            "-bam", file_bam,
-                            "-outdir", dir_qualimap_output)
-        system(cmd_coverage)
-    }
+    # run QualiMap
+    cmd_coverage <- paste(params$exe_qualimap, "bamqc",
+                          "-bam", file_bam,
+                          "-outdir", dir_qualimap_output)
+    system(cmd_coverage)
 }
 
 stopCluster(nwcl)

@@ -35,18 +35,15 @@ lapply(list(dir_busco_lineage,dir_busco_ref,dir_busco_read,dir_busco_tree), func
 ```{r check-busco-params, include=FALSE}
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
 min_busco_depth <- 20
-max_busco_depth <- 60
+max_busco_depth <- 80
 
 min_ref_busco_identity <- 99
-include_incomplete <- TRUE
+include_incomplete <- TRUE #now only works for coordinate-based extraction
 ```
 
 ```{r busco-check-species-map, include=FALSE}
 # create a map for ID and species name
 ls_species_name <- c()
-
-# read input file
-df_refs <- data.table::fread(params$file_refseq)
 
 # iterate over reference sequences
 for (ref in 1:nrow(df_refs)) {
@@ -203,7 +200,7 @@ for (ref in ls_refseq) {
         file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
 
         # check if file exists
-        if (file.exists(file_busco_concat) && file.size(file_busco_concat) != 0L && !params$redo) {
+        if (all(file.exists(file_busco_gff_out, file_busco_bed_out, file_busco_concat)) && file.size(file_busco_concat) != 0L && !params$redo) {
             return(NULL)
         }
 
@@ -240,7 +237,7 @@ for (ref in ls_refseq) {
         # sanity check if FASTA is the same
         output <- f_compare_fasta(file_busco_fas, file_busco_concat)
         if (!is.null(output$errmsg)) {
-            log4r::warn(fn_logger, paste0("Warn: ", busco, " FASTA files for ", ref, ". Headers are non-identical."))
+            log4r::warn(fn_logger, paste0("Warn: ", busco, " FASTA files for ", ref, ": ", output$errmsg, "."))
             return(busco)
         } else {
             if (!output$is_identical){

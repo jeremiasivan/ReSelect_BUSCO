@@ -16,7 +16,6 @@ params:
   file_refseq: ""
   file_shortreads: ""
   file_adapters: ""
-  file_refseq_chr: ""
   
   # executables
   exe_adapterremoval: ""

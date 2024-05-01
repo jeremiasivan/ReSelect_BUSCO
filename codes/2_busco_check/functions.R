@@ -182,7 +182,7 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
     df_gff <- data.table::fread(fn_input, header=FALSE, select=1:9)
     data.table::setnames(df_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
 
-    # convert attribute to match with gffread namingconvention
+    # convert attribute to match with gffread naming convention
     df_gff$attribute <- gsub("TCS_ID", "ID", df_gff$attribute)
 
     # extract relevant GFF entry
@@ -197,7 +197,7 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
         # extract all CDS based on the coordinates
         df_gff_cds <- df_gff[df_gff$feature=="CDS" & df_gff$start>=coordinates$start & df_gff$end<=coordinates$stop]
         if (nrow(df_gff_cds) == 0) {
-            return(list(errmsg=paste0("Error: ", busco, " gene extraction for ", prefix, ". Skipped.")))
+            return(list(errmsg=paste("Error:", busco, "for", prefix, "has invalid CDS coordinates. Skipped.")))
         }
 
         # remove entry with length == 1
@@ -208,7 +208,7 @@ f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
 
         # save the new GFF file
         data.table::fwrite(df_gff_cds, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
-        return(list(warnmsg=paste0("Warn: ", busco, " GFF file for ", prefix, " is based on CDS coordinates.")))
+        return(list(warnmsg=paste("Warn:", busco, "GFF file for", prefix, "is based on CDS coordinates.")))
     }
 
     # extract all gene indices

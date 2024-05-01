@@ -2,6 +2,9 @@
 title: "Summarise BUSCO Trees"
 ---
 
+# For distance matrix, make all possible pairs with NA instead -> more predictable
+# p-value
+
 ```{r check-summary-setup, include=FALSE}
 f_write_log(fn_log=fn_log,
             msg=c("", "####################################",
@@ -10,14 +13,6 @@ f_write_log(fn_log=fn_log,
 
 # load ggplot2 library
 library(ggplot2)
-
-# set up color scheme for plotting
-# ls_colour_scheme <- RColorBrewer::brewer.pal(ifelse(length(ls_shortreads)>=3, length(ls_shortreads), 3), "Set1")
-
-# ls_colour_scheme_read <- list()
-# for (i in 1:length(ls_shortreads)) {
-#     ls_colour_scheme_read[[ls_shortreads[i]]] <- ls_colour_scheme[i]
-# }
 
 # output directories
 dir_check_summary <- paste0(dir_busco, "summary/")
@@ -32,10 +27,6 @@ for (read in ls_shortreads) {
 # output files
 fn_prefix <- paste0(dir_check_summary, params$prefix)
 fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
-
-# fn_ref_summary <- paste0(fn_prefix, ".ref.sumtable")
-# fn_read_summary <- paste0(fn_prefix, ".read.sumtable")
-# fn_chr_summary <- paste0(fn_prefix, ".chr.sumtable")
 
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
 ```
@@ -54,23 +45,6 @@ for (busco in shared_busco_filtered) {
         log4r::info(fn_logger, paste0("File not found: BUSCO tree for ", busco, ". Removed from analysis."))
         next
     }
-
-    # read tree
-    tre <- ape::read.tree(fn_tree)
-    ls_tips <- tre$tip.label
-
-    # extract reference tips
-    output <- tryCatch({
-        ape::keep.tip(tre, ls_refseq)
-    }, error = function(err) {
-        return(err)
-    })
-
-    # remove BUSCO if reference sequences are incomplete
-    if (all(class(output) != "phylo")) {
-        shared_busco_filtered <- shared_busco_filtered[shared_busco_filtered != busco]
-        log4r::info(fn_logger, paste0("Error: incomplete references for ", busco, " tree. Removed from analysis."))
-    }
 }
 
 # check if list is of length zero
@@ -80,110 +54,7 @@ if (length(shared_busco_filtered) == 0) {
 }
 ```
 
-## Check reference bias on BUSCO trees
-```{r check-summary-tree, eval=FALSE}
-# create doSNOW cluster
-nwcl <- makeCluster(params$thread)
-doSNOW::registerDoSNOW(nwcl)
-
-ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
-    # initiate variable
-    ref_out <- list(busco=busco)
-    read_out <- list(busco=busco)
-
-    # check if treefile exists
-    fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
-
-    # read tree
-    tre <- ape::read.tree(fn_tree)
-    ls_tips <- tre$tip.label
-
-    # extract reference topology
-    topology_ref <- ape::keep.tip(tre, ls_refseq)
-    topology_ref$edge.length <- NULL
-
-    # iterate over reference sequences
-    for (ref in ls_refseq) {
-        # extract list of taxa with specific reference
-        ls_taxa <- ls_tips[stringr::str_detect(ls_tips, ref)]
-        if (length(ls_taxa) <= 1) {
-            ref_out[[ls_species_name[ref]]] <- "INVALID"
-            next
-        } else if (length(ls_shortreads)+1 > length(ls_taxa)) {
-            ref_out[[ls_species_name[ref]]] <- "INCOMPLETE"
-            next
-        }
-
-        # check if reference-based clade is monophyletic
-        is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
-        if (is_monophyletic) {
-            ref_out[[ls_species_name[ref]]] <- "REFBIAS"
-            next
-        }
-
-        ref_out[[ls_species_name[ref]]] <- ""
-    }
-
-    # iterate over short reads
-    for (read in ls_shortreads) {
-        # extract list of taxa with specific reference
-        ls_taxa <- ls_tips[stringr::str_detect(ls_tips, read)]
-        if (length(ls_taxa) <= 1) {
-            read_out[[ls_species_name[read]]] <- "INVALID"
-            next
-        } else if (length(ls_refseq) > length(ls_taxa)) {
-            read_out[[ls_species_name[read]]] <- "INCOMPLETE"
-            next
-        }
-
-        # check if reference-based clade is monophyletic
-        is_monophyletic <- ape::is.monophyletic(tre, tips = ls_taxa)
-        if (is_monophyletic) {
-            read_out[[ls_species_name[read]]] <- "PERFECT"
-            next
-        }
-
-        # check for topology-based reference bias
-        topology_read <- ape::keep.tip(tre, ls_taxa)
-        topology_read$edge.length <- NULL
-        topology_read$tip.label <- gsub(".*--", "", topology_read$tip.label)
-
-        if (ape::all.equal.phylo(topology_ref, topology_read)) {
-            read_out[[ls_species_name[read]]] <- "TOPBIAS"
-            next
-        }
-
-        read_out[[ls_species_name[read]]] <- ""
-    }
-
-    return(list(ref_out=ref_out, read_out=read_out))
-}
-
-stopCluster(nwcl)
-
-# convert list into dataframe
-ls_ref_out <- ls_output[names(ls_output)=="ref_out"]
-ls_read_out <- ls_output[names(ls_output)=="read_out"]
-
-# save the dataframes as TSV
-df_ref_output <- data.table::as.data.table(do.call(rbind, ls_ref_out), fill=TRUE)
-data.table::fwrite(df_ref_output, file=fn_ref_summary, sep="\t", quote=F, row.names=F)
-
-df_read_output <- data.table::as.data.table(do.call(rbind, ls_read_out), fill=TRUE)
-data.table::fwrite(df_read_output, file=fn_read_summary, sep="\t", quote=F, row.names=F)
-
-log4r::info(fn_logger, "File created: summary for BUSCO trees.")
-```
-
-## Calculate MNTD on BUSCO trees
-```{r check-summary-mntd, eval=FALSE}
-# run MNTD without reference sequence
-prefix <- paste0(dir_check_summary, params$prefix)
-f_run_mntd(shared_busco_filtered, ls_shortreads, dir_busco_tree, ls_species_name, prefix, params$thread)
-```
-
-## Calculate phylogenetic distance between mapped reads and reference from the same taxon
-```{r check-summary-individual}
+```{check-summary-species-map, include=FALSE}
 # extract representative species
 df_reads_ref <- data.table::data.table(species=character(), reads=character(), ref=character())
 
@@ -197,7 +68,10 @@ for (i in 1:nrow(df_reads_subset)) {
     # update data.frame
     df_reads_ref <- rbind(df_reads_ref, data.table::data.table(species=species_name, reads=df_reads_subset$id[i], ref=ref_id))
 }
+```
 
+## Calculate phylogenetic distance between mapped reads and reference from the same taxon
+```{r check-summary-individual}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -250,7 +124,6 @@ doSNOW::registerDoSNOW(nwcl)
 # iterate over BUSCOs
 ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
     library(ggplot2)
-    # library(ggrepel)
 
     # output variables
     read_out <- list(busco=busco)
@@ -272,11 +145,6 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
         strsplit(x, split="--")[[1]][1]
     })
 
-    # check if BUSCO is reference-only
-    if (length(ls_shortreads_available) == 0) {
-        return(NULL)
-    }
-
     # calculate phylogenetic distance
     distance_tre <- ape::cophenetic.phylo(tre_original)
 
@@ -290,7 +158,7 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
 
         # extract taxa list
         read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
-        read_ref_id <- df_refs$id[df_refs$species==read_species_name]
+        read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
 
         # iterate over reference sequence
         for (ref in ls_refseq) {
@@ -298,54 +166,38 @@ ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
             prefix <- paste0(read,"--",ref)
             prefix_shape <- ifelse(prefix %in% tre_treeshrink_tips, "IN", "OUT")
 
-            # extract species name
-            ref_species_name <- ls_species_name[ref]
-            ref_grouping <- df_refs$grouping[df_refs$id==ref]
-
             # calculate distance for reference
-            ref_dist <- NULL
-            if (read_species_name == ref_species_name) {
-                ref_dist <- 0
-            } else {
-                idx_ref <- match(read_species_name, df_refs$species)
-                ref_dist <- distance_tre[rownames(distance_tre)==df_refs$id[idx_ref], colnames(distance_tre)==ref]
+            ref_dist <- 0
+            if (read_ref_id != ref) {
+                ref_dist <- distance_tre[rownames(distance_tre)==read_ref_id, colnames(distance_tre)==ref]
             }
 
             # calculate distance for short reads
-            read_dist <- distance_tre[rownames(distance_tre)==prefix, colnames(distance_tre)==read_ref_id]
+            read_dist <- distance_tre[rownames(distance_tre)==read_ref_id, colnames(distance_tre)==prefix]
 
             # update data.frame
             temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read_species_name,
-                                                                       ref=ref_species_name,
+                                                                       ref=df_refs$species[df_refs$id==ref],
                                                                        ref_dist=ref_dist,
                                                                        read_dist=read_dist,
-                                                                       grouping=ref_grouping,
+                                                                       grouping=df_refs$grouping[df_refs$id==ref],
                                                                        shape=prefix_shape))
-        }
-
-        # remove NA values
-        # temp_df_dist <- na.omit(temp_df_dist)
-        # if (nrow(temp_df_dist) == 0){
-        #     next
-        # }
-
-        # return NULL if table is of zero row
-        if (nrow(temp_df_dist) == 0) {
-            return (NULL)
         }
 
         # check if all values are NULL or NAs
         if (f_all_null_or_na(temp_df_dist$ref_dist) || f_all_null_or_na(temp_df_dist$read_dist)) {
-            return (NULL)
+            return(NULL)
         }
+
+        # run linear model
+        lm_filtered_noout <- lm(read_dist~ref_dist, data=temp_df_dist)
+        lm_statistics <- f_extract_summary_lm(lm_filtered_noout)
+
+        read_out[[read_species_name]] <- lm_statistics$pvalue
 
         # subset data.frame
         temp_df_dist_filtered <- temp_df_dist[temp_df_dist$shape == "IN",]
         temp_df_dist_filtered_noout <- temp_df_dist_filtered[temp_df_dist_filtered$grouping != "Outgroup",]
-
-        # run linear models
-        lm_filtered_noout <- lm(read_dist~ref_dist, data=temp_df_dist_filtered_noout)
-        read_out[[read_species_name]] <- coef(lm_filtered_noout)["read_dist"]
 
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
@@ -401,62 +253,4 @@ ls_read_out <- ls_output[names(ls_output)=="read_out"]
 # save the data.frame
 df_output <- data.table::as.data.table(do.call(rbind, ls_read_out), fill=TRUE)
 data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
-```
-
-```{r check-summary-chromosome, eval=FALSE}
-# create doSNOW cluster
-nwcl <- makeCluster(params$thread)
-doSNOW::registerDoSNOW(nwcl)
-
-# read input file
-df_chromosome <- data.table::fread(params$file_refseq_chr)
-
-# iterate over BUSCO
-ls_output <- foreach (busco = shared_busco_filtered, .combine='c') %dopar% {
-    # initiate variable
-    ref_out <- list(busco=busco)
-
-    # iterate over reference sequences
-    for (ref in ls_refseq) {
-        # BUSCO files
-        file_busco_fas <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
-
-        # extract header
-        busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
-        busco_location <- unlist(strsplit(busco_header, split=">"))[2]
-        seq_name <- unlist(strsplit(busco_location, split=":"))[1]
-
-        # extract chromosome
-        species_name <- ls_species_name[ref]
-        idx_row <- match(seq_name, df_chromosome[[species_name]])
-        if (length(idx_row) == 0) {
-            ref_out[[species_name]] <- "-"
-            next
-        }
-        
-        ref_out[[species_name]] <- df_chromosome$chr[idx_row]
-    }
-
-    return(list(ref_out))
-}
-
-stopCluster(nwcl)
-
-# create consensus column
-df_output <- data.table::as.data.table(do.call(rbind, ls_output))
-data.table::fwrite(df_output, file=fn_chr_summary, sep="\t", quote=F, row.names=F)
-
-# open the file (because it does not work otherwise)
-df_output <- data.table::fread(fn_chr_summary)
-df_output_transform <- apply(df_output, 1, function(x) {
-    most_freq <- names(which.max(table(x)))
-    extract_diff <- ifelse(x == most_freq, "", x)
-    c(extract_diff, consensus=most_freq)
-})
-
-df_output_transform <- t(df_output_transform)
-df_output_transform <- data.table::data.table(df_output_transform)
-
-# save the data.frame
-data.table::fwrite(df_output_transform, file=fn_chr_summary, sep="\t", quote=F, row.names=F)
 ```

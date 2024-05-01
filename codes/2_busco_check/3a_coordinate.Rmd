@@ -38,15 +38,16 @@ for (prefix in ls_prefix) {
         next
     }
 
+    # remove BUSCOs with low coverage
+    ls_run_extract_busco <- shared_busco
+    if (length(ls_busco_excluded) > 0 && !params$redo) {
+        ls_run_extract_busco <- ls_run_extract_busco[!ls_run_extract_busco %in% ls_busco_excluded]
+    }
+
     # iterate over shared BUSCOs
-    output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    output <- foreach (busco = ls_run_extract_busco, .combine='c') %dopar% {
         require(Biostrings)
         require(stringr)
-
-        # check if BUSCO is excluded
-        if (busco %in% ls_busco_excluded) {
-            return(busco)
-        }
 
         # input files
         file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
@@ -68,19 +69,21 @@ for (prefix in ls_prefix) {
 
         # calculate read depth
         read_coverage <- f_calculate_read_coverage(file_bam, file_busco_bed_out, params$exe_samtools)
-        if (is.null(read_coverage) || is.na(read_coverage)) {
-            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with invalid coverage"))
-            f_write_log(fn_busco_excluded, busco)
-            return(busco)
-        } else if (read_coverage < min_busco_depth || read_coverage > max_busco_depth) {
-            log4r::warn(fn_logger, msg=paste("BUSCO excluded:", busco, "for", prefix, "with average CDS read depth of", read_coverage))
-            f_write_log(fn_busco_excluded, busco)
-            return(busco)
+        if (read_coverage >= min_busco_depth && read_coverage <= max_busco_depth) {
+            f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
+            return(NULL)
         }
 
-        # extract BUSCO
-        f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
-        return(NULL)
+        # return problematic BUSCOs
+        if (is.null(read_coverage) || is.na(read_coverage)) {
+            log4r::warn(fn_logger, msg=paste("Warn:", busco, "for", prefix, "has invalid coverage"))
+        } else if (read_coverage < min_busco_depth || read_coverage > max_busco_depth) {
+            log4r::warn(fn_logger, msg=paste("Warn:", busco, "for", prefix, "has average CDS read depth of", read_coverage))
+        }
+
+        # write log file
+        f_write_log(fn_busco_excluded, busco)
+        return(busco)
     }
 
     # update list of incomplete BUSCOs
@@ -111,7 +114,7 @@ nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over shared BUSCOs
-foreach (busco = shared_busco) %dopar% {
+output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     dir_output <- paste0(dir_busco_tree, busco, "/")
     if (!dir.exists(dir_output)) {
         dir.create(dir_output, recursive=T)
@@ -138,9 +141,11 @@ foreach (busco = shared_busco) %dopar% {
     }
 
     # extract BUSCO alignment from short reads
+    count_unavailable_prefix <- 0
     for (read in ls_prefix) {
         file_busco_read <- paste0(dir_busco_read, read, "/", busco, ".fna")
         if (!file.exists(file_busco_read)) {
+            count_unavailable_prefix <- count_unavailable_prefix + 1
             next
         }
 
@@ -149,7 +154,21 @@ foreach (busco = shared_busco) %dopar% {
 
     # align using MAFFT FFT-NS-2
     f_mafft(fn_out, fn_out_aligned, "--retree 2", params$exe_mafft)
+
+    # return BUSCOs with zero mapped reads
+    if (count_unavailable_prefix == length(ls_prefix)) {
+        return(busco)
+    }
 }
 
 stopCluster(nwcl)
+
+# update the number of shared BUSCOs
+shared_busco <- shared_busco[!shared_busco %in% output]
+f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering genes with zero mapped reads: ", length(shared_busco), ".")))
+
+# stop the knit if shared busco is zero
+if (length(shared_busco) == 0) {
+    knitr::knit_exit()
+}
 ```
