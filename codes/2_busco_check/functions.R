@@ -546,3 +546,15 @@ f_check_closest_ref <- function(dist_matrix, species_read, ls_species_ref) {
     # return the closest reference
     return (closest_ref)
 }
+
+# function: calculate normalised RF distance between two trees
+f_calculate_nRF <- function(fn_tree_one, fn_tree_two) {
+    # open the two treefiles
+    tree_one <- ape::read.tree(fn_tree_one)
+    tree_two <- ape::read.tree(fn_tree_two)
+
+    # calculate nRF
+    nrf_dist <- phangorn::RF.dist(tree_one, tree_two, normalize=TRUE, check.labels=TRUE, rooted=FALSE)
+
+    return(nrf_dist)
+}

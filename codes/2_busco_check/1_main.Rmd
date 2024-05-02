@@ -55,6 +55,7 @@ library(doSNOW)
 # install.packages("Biostrings")
 # install.packages("data.table")
 # install.packages("log4r")
+# install.packages("phangorn")
 # install.packages("tidyverse")
 
 # store initial system time

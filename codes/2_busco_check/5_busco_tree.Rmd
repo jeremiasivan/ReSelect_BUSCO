@@ -2,6 +2,8 @@
 title: "Calculate nRF on BUSCO Trees"
 ---
 
+# Note: add filters to differentiate problematic BUSCOs
+
 ```{r check-busco-tree-setup, include=FALSE}
 f_write_log(fn_log=fn_log,
             msg=c("", "####################################",
@@ -119,8 +121,8 @@ for (i in 1:length(ls_refseq)) {
     foreach (busco = ls_uq_busco) %dopar% {
         # output directories
         dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
-        dir_check_busco_tree_read <- paste0(dir_check_busco_tree, read, "/")
-        dir_check_busco_tree_refs <- paste0(dir_check_busco_tree, refs, "/")
+        dir_check_busco_tree_read <- paste0(dir_check_busco_tree, "read/")
+        dir_check_busco_tree_refs <- paste0(dir_check_busco_tree, "refs/")
         lapply(list(dir_check_busco_tree_read,dir_check_busco_tree_refs), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
         # output files
@@ -209,4 +211,55 @@ for (i in 1:length(ls_refseq)) {
 }
 
 stopCluster(nwcl)
+```
+
+```{r check-busco-tree-distance}
+# output data.table
+df_output <- data.table::data.table(n_ref=numeric(), busco=character(), is_problematic=logical(), dist=numeric())
+
+# create doSNOW cluster
+nwcl <- makeCluster(nthread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over number of reference sequences
+for (i in 1:length(ls_refseq)) {
+    # output directory
+    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
+
+    # list BUSCOs
+    ls_uq_busco <- list.dirs(dir_check_tree_category, recursive=F, full.names=F)
+
+    # iterate over BUSCOs
+    df_output_subset <- foreach (busco = ls_uq_busco, .combine='rbind') %dopar% {
+        # input files
+        dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
+        fn_tree_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.treefile")
+        fn_tree_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.fna.treefile")
+
+        # check if file exists
+        if (!all(file.exists(fn_tree_one, fn_tree_two))) {
+            return(NULL)
+        }
+
+        # calculate nRF
+        nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
+        return(data.table::data.table(n_ref=i, busco=busco, is_problematic=FALSE, dist=nrf_dist))
+    }
+
+    # update data.table
+    df_output <- rbind(df_output, df_output_subset)
+}
+
+stopCluster(nwcl)
+
+# visualisation
+fn_busco_tiff <- paste0(dir_check_tree, "summary.tiff")
+
+plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist, group=is_problematic)) +
+    geom_boxplot()
+
+# save the plot
+tiff(file=fn_busco_tiff, units="px")
+print(plot)
+dev.off()
 ```
