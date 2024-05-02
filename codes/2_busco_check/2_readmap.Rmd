@@ -26,7 +26,7 @@ ls_shortreads <- df_reads$id[df_reads$is_check]
 # list of prefix
 ls_prefix <- outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--"))
 
-# coutput directories
+# output directories
 dir_check_shortreads <- paste0(dir_current, "/busco_check/short_reads/")
 dir_readmap <- paste0(dir_current, "/busco_check/readmap/")
 

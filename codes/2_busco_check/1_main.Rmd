@@ -36,6 +36,10 @@ params:
   busco_lineage: ""
   busco_mode: "genome"
   type: "coordinate"
+
+  # BUSCO tree
+  file_genome_treefile: ""
+  n_busco_sampling: 100
 ---
 
 ## Load required libraries and functions

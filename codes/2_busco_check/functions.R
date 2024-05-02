@@ -518,3 +518,31 @@ f_extract_summary_lm <- function(lm_result) {
 
     return(list(rsquared=rsquared, pvalue=pvalue))
 }
+
+# function: check the closest reference given reads
+f_check_closest_ref <- function(dist_matrix, species_read, ls_species_ref) {
+    # initiate variables
+    closest_ref <- ls_species_ref[1]
+    closest_ref_dist <- dist_matrix[rownames(dist_matrix) == species_read, colnames(dist_matrix) == ls_species_ref[1]]
+
+    # return the closest reference if there is only one reference
+    len_ls_species_ref <- length(ls_species_ref)
+    if (len_ls_species_ref == 1) {
+        return (closest_ref)
+    }
+
+    # iterate over reference sequence
+    for (ref in ls_species_ref[2:len_ls_species_ref]) {
+        # check the phylogenetic distance
+        ref_dist <- dist_matrix[rownames(dist_matrix) == species_read, colnames(dist_matrix) == ref]
+
+        # update the closest reference is distance is smaller
+        if (ref_dist < closest_ref_dist) {
+            closest_ref <- ref
+            closest_ref_dist <- ref_dist
+        }
+    }
+
+    # return the closest reference
+    return (closest_ref)
+}

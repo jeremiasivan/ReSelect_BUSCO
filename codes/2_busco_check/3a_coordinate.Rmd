@@ -95,6 +95,9 @@ for (prefix in ls_prefix) {
 
 stopCluster(nwcl)
 
+# update complete BUSCO list
+shared_busco_complete <- shared_busco_complete[!shared_busco_complete %in% ls_incomplete_busco]
+
 # exclude BUSCOs with incomplete taxa
 if (!include_incomplete) {
     shared_busco <- shared_busco[!shared_busco %in% ls_incomplete_busco]

@@ -261,6 +261,7 @@ stopCluster(nwcl)
 
 # exclude non-identical BUSCOs from further analyses
 shared_busco <- shared_busco[!shared_busco %in% ls_nonidentical_busco]
+shared_busco_complete <- shared_busco
 f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering non-identical genes: ", length(shared_busco), ".")))
 
 # stop the knit if shared busco is zero
