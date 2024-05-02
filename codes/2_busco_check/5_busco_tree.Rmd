@@ -2,7 +2,7 @@
 title: "Calculate nRF on BUSCO Trees"
 ---
 
-```{r check-run-setup, include=FALSE}
+```{r check-busco-tree-setup, include=FALSE}
 f_write_log(fn_log=fn_log,
             msg=c("", "####################################",
                       "####      Check BUSCO Trees     ####",
@@ -29,9 +29,12 @@ if (!file.exists(params$file_genome_treefile)) {
     log4r::error(fn_logger, "Genome treefile is not found. Exited.")
     knitr::knit_exit()
 }
+
+# set seed for reproducibility
+set.seed(143)
 ```
 
-```{r check-run-metadata}
+```{r check-busco-tree-metadata}
 # read genome treefile
 genome_tree <- ape::read.tree(params$file_genome_treefile)
 genome_dist <- ape::cophenetic.phylo(genome_tree)
@@ -86,6 +89,123 @@ for (i in 1:length(ls_refseq)) {
 
     # save data.table
     data.table::fwrite(ls_output, file=fn_metadata, sep="\t", quote=F, row.names=F)
+}
+
+stopCluster(nwcl)
+```
+
+```{r check-busco-tree-alignment}
+# create doSNOW cluster
+nwcl <- makeCluster(nthread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over number of reference sequences
+for (i in 1:length(ls_refseq)) {
+    # output directory
+    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
+
+    # check if input file exists
+    fn_metadata <- paste0(dir_check_tree_category, "metadata.tsv")
+    if (!file.exists(fn_metadata)) {
+        log4r::warn(fn_logger, paste("File not found: metadata for", i, "references. Skipped."))
+        next
+    }
+
+    # extract unique BUSCOs
+    df_metadata <- data.table::fread(fn_metadata)
+    ls_uq_busco <- unique(df_metadata$busco)
+
+    # iterate over BUSCOs
+    foreach (busco = ls_uq_busco) %dopar% {
+        # output directories
+        dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
+        dir_check_busco_tree_read <- paste0(dir_check_busco_tree, read, "/")
+        dir_check_busco_tree_refs <- paste0(dir_check_busco_tree, refs, "/")
+        lapply(list(dir_check_busco_tree_read,dir_check_busco_tree_refs), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+
+        # output files
+        fn_out_read <- paste0(dir_check_busco_tree_read, busco, ".fna")
+        fn_out_refs <- paste0(dir_check_busco_tree_refs, busco, ".fna")
+        fn_out_read_aligned <- paste0(dir_check_busco_tree_read, busco, "_aligned.fna")
+        fn_out_refs_aligned <- paste0(dir_check_busco_tree_refs, busco, "_aligned.fna")
+
+        # subset the metadata data.table
+        df_metadata_subset <- df_metadata[df_metadata$busco == busco,]
+
+        # check if output files exist for mapped reads
+        if (!all(file.exists(fn_out_read, fn_out_read_aligned) || params$redo)) {
+            # iterate over rows
+            for (j in 1:nrow(df_metadata_subset)) {
+                prefix <- paste0(df_metadata_subset$read[j], "--", df_metadata_subset$ref[j])
+
+                # input FASTA file
+                fn_fasta_read <- ""
+                if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
+                    fn_fasta_read <- paste0(dir_busco_read, prefix, "/", busco, ".fna")
+                } else if (params$type == "pipeline") {
+                    fn_fasta_read <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
+                }
+
+                # MSA
+                f_fasta2msa(fn_fasta_read, prefix, fn_out_read)
+            }
+
+            # align using MAFFT FFT-NS-2
+            f_mafft(fn_out_read, fn_out_read_aligned, "--retree 2", params$exe_mafft)
+        }
+
+        # check if output files exist for reference sequences
+        if (!all(file.exists(fn_out_refs, fn_out_refs_aligned) || params$redo)) {
+            # iterate over rows
+            for (j in 1:nrow(df_metadata_subset)) {
+                # extract reference ID based on short-reads
+                read_species_name <- df_reads_ref$species[df_reads_ref$reads==df_metadata_subset$read[j]]
+                read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
+
+                # input FASTA file
+                fn_fasta_refs <- paste0(dir_busco_ref, read_ref_id, "/fasta/", busco, ".fna")
+
+                # MSA
+                f_fasta2msa(fn_fasta_refs, read_ref_id, fn_out_refs)
+            }
+
+            # align using MAFFT FFT-NS-2
+            f_mafft(fn_out_refs, fn_out_refs_aligned, "--retree 2", params$exe_mafft)
+        }
+    }
+}
+
+stopCluster(nwcl)
+```
+
+```{r check-busco-tree-build}
+# create doSNOW cluster
+nwcl <- makeCluster(nthread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over number of reference sequences
+for (i in 1:length(ls_refseq)) {
+    # output directory
+    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
+
+    # list BUSCOs
+    ls_uq_busco <- list.dirs(dir_check_tree_category, recursive=F, full.names=F)
+
+    # iterate over BUSCOs
+    foreach (busco = ls_uq_busco) %dopar% {
+        # iterate over mapped reads and reference sequences
+        lapply(list("read","refs"), function(type) {
+            dir_output <- paste0(dir_check_tree_category, busco, "/", type, "/")
+
+            # output IQ-Tree2 files
+            fn_fasta <- paste0(dir_output, busco, "_aligned.fa")
+            fn_treefile <- paste0(dir_output, busco, "_aligned.fa.treefile")
+            if (!file.exists(fn_treefile) || params$redo) {
+                # run IQ-Tree2
+                f_iqtree2(fn_fasta, params$exe_iqtree2)
+            }
+        })
+    }
 }
 
 stopCluster(nwcl)
