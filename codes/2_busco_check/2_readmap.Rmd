@@ -94,18 +94,23 @@ foreach (read = ls_shortread_qc) %dopar% {
 
     # extract FASTQ files
     dir_reads <- paste0(dir_shortreads, read, "/fastq/")
-    ls_fastq <- list.files(dir_reads, pattern="*.fastq$", recursive=F, full.names=T)
+    fn_fastq_one <- paste0(dir_reads, read, "_1.fastq")
+    fn_fastq_two <- paste0(dir_reads, read, "_2.fastq")
     
-    # check the number of FASTQ files
-    len_ls_fastq <- length(ls_fastq)
-    if (len_ls_fastq != 1 && len_ls_fastq != 2) {
-        log4r::warn(fn_logger, paste0("Warn: invalid number of FASTQ file for ", prefix, " (", len_ls_fastq, "). Skipped."))
+    # check the forward FASTQ file
+    if (!file.exists(fn_fastq_one)) {
+        log4r::warn(fn_logger, paste0("File not found: FASTQ file for ", read, ". Skipped."))
         return(NULL)
     }
+
+    # check the reverse FASTQ file
+    if (!file.exists(fn_fastq_two)) {
+        fn_fastq_two <- NULL
+    }
     
-    # run BWA-MEM2
-    f_qc_short_reads(ls_fastq, params$file_adapters, prefix, min_read_quality, thread_adapterremoval, params$exe_adapterremoval)
-    log4r::info(fn_logger, paste0("File created: filtered FASTQ file for ", prefix, "."))
+    # run AdapterRemoval
+    f_qc_short_reads(fn_fastq_one, fn_fastq_two, params$file_adapters, prefix, min_read_quality, thread_adapterremoval, params$exe_adapterremoval)
+    log4r::info(fn_logger, paste0("File created: filtered FASTQ file for ", read, "."))
 }
 
 stopCluster(nwcl)
@@ -197,19 +202,19 @@ foreach (prefix = ls_readmap_run) %dopar% {
     file_ref <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
     # extract FASTQ file
-    file_fastq <- paste0(dir_check_shortreads, read, ".pair1.truncated")
-    if (!file.exists(file_fastq)) {
+    file_fastq_one <- paste0(dir_check_shortreads, read, ".pair1.truncated")
+    if (!file.exists(file_fastq_one)) {
         log4r::warn(fn_logger, paste0("File not found: filtered FASTQ file for ", read, ". Skipped."))
         return(NULL)
     }
 
-    file_fastq_second <- paste0(dir_check_shortreads, read, ".pair2.truncated")
-    if (file.exists(file_fastq_second)) {
-        file_fastq <- c(file_fastq, file_fastq_second)
+    file_fastq_two <- paste0(dir_check_shortreads, read, ".pair2.truncated")
+    if (!file.exists(file_fastq_two)) {
+        file_fastq_two <- NULL
     }
     
     # run BWA-MEM2
-    f_read_mapping(file_ref, file_fastq, thread_bwamem2, params$exe_bwamem2, file_sam)
+    f_read_mapping(file_ref, file_fastq_one, file_fastq_two, thread_bwamem2, params$exe_bwamem2, file_sam)
     log4r::info(fn_logger, paste0("File created: SAM file for ", prefix, "."))
 }
 
