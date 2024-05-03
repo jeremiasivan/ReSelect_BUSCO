@@ -7,12 +7,12 @@ f_all_null_or_na <- function(vector) {
 }
 
 # function: quality control for short reads
-f_qc_short_reads <- function(fastq, fn_adapters, prefix, min_quality, thread, exe_adapterremoval) {
-    cmd_qc <- paste(exe_adapterremoval, "--file1", fastq[1])
+f_qc_short_reads <- function(fastq_one, fastq_two, fn_adapters, prefix, min_quality, thread, exe_adapterremoval) {
+    cmd_qc <- paste(exe_adapterremoval, "--file1", fastq_one)
     
-    # check the number of fastq files
-    if (length(fastq) == 2) {
-        cmd_qc <- paste(cmd_qc, "--file2", fastq[2])
+    # check the reverse fastq file
+    if (!is.null(fastq_two)) {
+        cmd_qc <- paste(cmd_qc, "--file2", fastq_two)
     }
 
     # update the adapters
@@ -29,7 +29,7 @@ f_qc_short_reads <- function(fastq, fn_adapters, prefix, min_quality, thread, ex
 }
 
 # function: read map fastq to reference sequence using BWA-MEM2
-f_read_mapping <- function(refseq, fastq, thread, exe_bwamem2, file_sam) {
+f_read_mapping <- function(refseq, fastq_one, fastq_two, thread, exe_bwamem2, file_sam) {
     # index reference file
     cmd_index <- paste(exe_bwamem2, "index", refseq)
     system(cmd_index)
@@ -37,11 +37,10 @@ f_read_mapping <- function(refseq, fastq, thread, exe_bwamem2, file_sam) {
     # read-map
     cmd_readmap <- paste(exe_bwamem2, "mem -t", thread, refseq)
 
-    len_fastq <- length(fastq)
-    if (len_fastq == 1) {
-        cmd_readmap <- paste(cmd_readmap, fastq[1], ">", file_sam)
-    } else if (len_fastq == 2) {
-        cmd_readmap <- paste(cmd_readmap, fastq[1], fastq[2], ">", file_sam)
+    if (is.null(fastq_two)) {
+        cmd_readmap <- paste(cmd_readmap, fastq_one, ">", file_sam)
+    } else {
+        cmd_readmap <- paste(cmd_readmap, fastq_one, fastq_two, ">", file_sam)
     }
     system(cmd_readmap)
 }
