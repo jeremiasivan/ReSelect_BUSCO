@@ -37,9 +37,13 @@ params:
   busco_mode: "genome"
   type: "coordinate"
 
+  min_busco_depth: 10
+  max_busco_depth: 60
+  include_incomplete: TRUE # now only works for coordinate-based extraction
+
   # BUSCO tree
+  min_taxa: 3
   file_genome_treefile: ""
-  n_busco_sampling: 100
 ---
 
 ## Load required libraries and functions
@@ -92,6 +96,9 @@ knitr::opts_knit$set(root.dir = currentdir)
 ```
 
 ```{r child = paste0(params$codedir,"/2_busco_check/4_summary.Rmd")}
+```
+
+```{r child = paste0(params$codedir,"/2_busco_check/5_busco_tree.Rmd")}
 ```
 
 ```{r, include=FALSE}

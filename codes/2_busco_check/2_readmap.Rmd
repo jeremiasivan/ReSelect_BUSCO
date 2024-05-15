@@ -22,6 +22,10 @@ ls_refseq <- df_refs$id
 # list of short reads
 df_reads <- data.table::fread(params$file_shortreads)
 ls_shortreads <- df_reads$id[df_reads$is_check]
+if (length(ls_shortreads) < params$min_taxa) {
+    log4r::error(fn_logger, "Number of representative species is lower than minimum number of taxa. Exited.")
+    knitr::knit_exit()
+}
 
 # list of prefix
 ls_prefix <- outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--"))

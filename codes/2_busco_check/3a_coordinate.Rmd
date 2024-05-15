@@ -69,15 +69,12 @@ for (prefix in ls_prefix) {
 
         # calculate read depth
         read_coverage <- f_calculate_read_coverage(file_bam, file_busco_bed_out, params$exe_samtools)
-        if (read_coverage >= min_busco_depth && read_coverage <= max_busco_depth) {
-            f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
-            return(NULL)
-        }
-
-        # return problematic BUSCOs
         if (is.null(read_coverage) || is.na(read_coverage)) {
             log4r::warn(fn_logger, msg=paste("Warn:", busco, "for", prefix, "has invalid coverage"))
-        } else if (read_coverage < min_busco_depth || read_coverage > max_busco_depth) {
+        } else if (read_coverage >= params$min_busco_depth && read_coverage <= params$max_busco_depth) {
+            f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
+            return(NULL)
+        } else if (read_coverage < params$min_busco_depth || read_coverage > params$max_busco_depth) {
             log4r::warn(fn_logger, msg=paste("Warn:", busco, "for", prefix, "has average CDS read depth of", read_coverage))
         }
 
@@ -99,7 +96,7 @@ stopCluster(nwcl)
 shared_busco_complete <- shared_busco_complete[!shared_busco_complete %in% ls_incomplete_busco]
 
 # exclude BUSCOs with incomplete taxa
-if (!include_incomplete) {
+if (!params$include_incomplete) {
     shared_busco <- shared_busco[!shared_busco %in% ls_incomplete_busco]
     f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering incomplete genes: ", length(shared_busco), ".")))
 

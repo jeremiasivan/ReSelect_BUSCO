@@ -34,11 +34,8 @@ lapply(list(dir_busco_lineage,dir_busco_ref,dir_busco_read,dir_busco_tree), func
 
 ```{r check-busco-params, include=FALSE}
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
-min_busco_depth <- 20
-max_busco_depth <- 80
 
 min_ref_busco_identity <- 99
-include_incomplete <- TRUE #now only works for coordinate-based extraction
 ```
 
 ```{r busco-check-species-map, include=FALSE}
