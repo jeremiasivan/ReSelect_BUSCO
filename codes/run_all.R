@@ -31,6 +31,12 @@ exe_treeshrink <- "treeshrink"
 busco_lineage <- "eudicots_odb10"
 busco_mode <- "genome"
 type <- "coordinate"
+
+min_busco_depth <- 10
+max_busco_depth <- 60
+include_incomplete <- TRUE # now only works for coordinate-based extraction
+
+file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
 #################################
 
 # set up outdir
@@ -55,7 +61,9 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                               exe_gffread=exe_gffread, exe_gff2bed=exe_gff2bed,
                               exe_busco=exe_busco, exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink,
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters,
-                              busco_lineage=busco_lineage, busco_mode=busco_mode, type=type),
+                              busco_lineage=busco_lineage, busco_mode=busco_mode, type=type,
+                              min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, include_incomplete=include_incomplete,
+                              file_genome_treefile=file_genome_treefile),
                   quiet=TRUE)
 
 #################################

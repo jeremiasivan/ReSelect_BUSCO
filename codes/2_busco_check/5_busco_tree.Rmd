@@ -16,15 +16,10 @@ if (!dir.exists(dir_check_tree)) {
     dir.create(dir_check_tree, recursive=T)
 }
 
-# check number of BUSCO sampling
-n_busco_sampling <- params$n_busco_sampling
-if (n_busco_sampling <= 0) {
-    log4r::error(fn_logger, "Number of BUSCO sampling is <= 0. Exited.")
+if (length(shared_busco_complete) == 0) {
+    log4r::error(fn_logger, "Zero complete BUSCO. Exited.")
     knitr::knit_exit()
-} else if (n_busco_sampling > length(shared_busco_complete)) {
-    n_busco_sampling <- length(shared_busco_complete)
-    f_write_log(fn_log=fn_log, msg=paste("Number of BUSCO sampling is set to be", n_busco_sampling))
-}
+} 
 
 # check input genome treefile
 if (!file.exists(params$file_genome_treefile)) {
@@ -42,7 +37,7 @@ genome_tree <- ape::read.tree(params$file_genome_treefile)
 genome_dist <- ape::cophenetic.phylo(genome_tree)
 
 # set number of threads
-nthread <- ifelse(params$thread > n_busco_sampling, n_busco_sampling, params$thread)
+nthread <- ifelse(params$thread > length(shared_busco_complete), length(shared_busco_complete), params$thread)
 
 # create doSNOW cluster
 nwcl <- makeCluster(nthread)
@@ -62,11 +57,8 @@ for (i in 1:length(ls_refseq)) {
         next
     }
 
-    # extract random BUSCOs
-    ls_sampled_busco <- sample(shared_busco_complete, n_busco_sampling, replace = FALSE)
-
     # iterate over BUSCOs
-    ls_output <- foreach(busco = ls_sampled_busco, .combine='rbind') %dopar% {
+    ls_output <- foreach(busco = shared_busco_complete, .combine='rbind') %dopar% {
         # create data.table to store metadata
         df_temp <- data.table::data.table(busco=character(), read=character(), ref=character())
 
