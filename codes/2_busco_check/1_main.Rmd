@@ -42,7 +42,7 @@ params:
   include_incomplete: TRUE # now only works for coordinate-based extraction
 
   # BUSCO tree
-  # min_taxa: 3
+  min_taxa: 3
   file_genome_treefile: ""
 ---
 

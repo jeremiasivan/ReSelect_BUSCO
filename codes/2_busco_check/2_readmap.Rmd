@@ -39,6 +39,7 @@ lapply(list(dir_check_shortreads,dir_readmap), function(x){if(!dir.exists(x)) di
 ```
 
 ```{r check-readmap-thread, include=FALSE}
+qualimap_nthread <- 5 # consideration: free memory
 min_read_quality <- 25
 
 thread_bwamem2 <- ifelse(params$thread < 50, params$thread, 50)
@@ -157,8 +158,8 @@ if (params$redo) {
 } else {
     for (prefix in ls_prefix) {
         # check if file exists
-        file_sam <- paste0(dir_readmap, prefix, "/", prefix, ".sam")
-        if (file.exists(file_sam)) {
+        file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
+        if (file.exists(file_bam)) {
             ls_readmap_done <- c(ls_readmap_done, paste("-", prefix))
             next
         }
@@ -197,6 +198,7 @@ foreach (prefix = ls_readmap_run) %dopar% {
 
     # output file
     file_sam <- paste0(dir_output, prefix, ".sam")
+    file_bam <- paste0(dir_output, prefix, ".bam")
 
     # extract reference and short reads
     read <- unlist(strsplit(prefix, split="--"))[1]
@@ -219,72 +221,12 @@ foreach (prefix = ls_readmap_run) %dopar% {
     
     # run BWA-MEM2
     f_read_mapping(file_ref, file_fastq_one, file_fastq_two, thread_bwamem2, params$exe_bwamem2, file_sam)
-    log4r::info(fn_logger, paste0("File created: SAM file for ", prefix, "."))
-}
 
-stopCluster(nwcl)
-```
+    # convert SAM to BAM
+    f_sam_to_bam(prefix, dir_output, thread_bwamem2, params$exe_samtools)
 
-## Convert SAM to BAM
-```{r, include=FALSE}
-f_write_log(fn_log=fn_log, msg=c("", "---------- File Conversion ---------"))
-
-# set up variables
-is_convert <- FALSE
-
-ls_convert_done <- c()
-ls_convert_run <- c()
-
-# iterate over prefix
-if (params$redo) {
-    ls_convert_run <- ls_prefix
-} else {
-    for (prefix in ls_prefix) {
-        # check if file exists
-        file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
-        if (file.exists(file_bam)) {
-            ls_convert_done <- c(ls_convert_done, paste("-", prefix))
-            next
-        }
-
-        # add prefix to to-do-list
-        ls_convert_run <- c(ls_convert_run, prefix)
-    }
-}
-
-# output log file for available BAM files
-if (length(ls_convert_done) > 0) {
-    ls_convert_done <- c(paste0("Available BAM files (", length(ls_convert_done), "/", length(ls_prefix), ")"), ls_convert_done, "")
-    f_write_log(fn_log=fn_log, msg=ls_convert_done)
-}
-
-# update variable for the next analysis
-if (length(ls_convert_run) > 0) {
-    is_convert <- TRUE
-}
-```
-
-```{r check-readmap-conversion, include=is_convert, eval=is_convert}
-f_write_log(fn_log=fn_log, msg=paste("Running Samtools using", thread_samtools, "threads"))
-
-# create doSNOW cluster
-nwcl <- makeCluster(floor(params$thread/thread_samtools))
-doSNOW::registerDoSNOW(nwcl)
-
-# iterate over reference sequences
-foreach (prefix = ls_convert_run) %dopar% {
-    # output directory
-    dir_output <- paste0(dir_readmap, prefix, "/")
-
-    # check if input file exists
-    file_sam <- paste0(dir_output, prefix, ".sam")
-    if (!file.exists(file_sam)) {
-        log4r::warn(fn_logger, paste0("File not found: SAM file for ", prefix, ". Skipped."))
-        return(NULL)
-    }
-
-    # convert SAM
-    f_sam_to_bam(prefix, dir_output, thread_samtools, params$exe_samtools)
+    # delete SAM file
+    unlink(file_sam)
     log4r::info(fn_logger, paste0("File created: BAM file for ", prefix, "."))
 }
 
@@ -309,7 +251,7 @@ if (params$redo) {
 }
 
 # create doSNOW cluster
-nwcl <- makeCluster(params$thread)
+nwcl <- makeCluster(qualimap_nthread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over mapped reads
