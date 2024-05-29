@@ -36,6 +36,7 @@ min_busco_depth <- 10
 max_busco_depth <- 60
 include_incomplete <- TRUE # now only works for coordinate-based extraction
 
+min_taxa <- 3
 file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
 #################################
 
@@ -63,7 +64,7 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters,
                               busco_lineage=busco_lineage, busco_mode=busco_mode, type=type,
                               min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, include_incomplete=include_incomplete,
-                              file_genome_treefile=file_genome_treefile),
+                              min_taxa=min_taxa, file_genome_treefile=file_genome_treefile),
                   quiet=TRUE)
 
 #################################

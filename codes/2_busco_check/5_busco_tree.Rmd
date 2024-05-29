@@ -16,11 +16,6 @@ if (!dir.exists(dir_check_tree)) {
     dir.create(dir_check_tree, recursive=T)
 }
 
-if (length(shared_busco_complete) == 0) {
-    log4r::error(fn_logger, "Zero complete BUSCO. Exited.")
-    knitr::knit_exit()
-} 
-
 # check input genome treefile
 if (!file.exists(params$file_genome_treefile)) {
     log4r::error(fn_logger, "Genome treefile is not found. Exited.")
@@ -37,7 +32,7 @@ genome_tree <- ape::read.tree(params$file_genome_treefile)
 genome_dist <- ape::cophenetic.phylo(genome_tree)
 
 # set number of threads
-nthread <- ifelse(params$thread > length(shared_busco_complete), length(shared_busco_complete), params$thread)
+nthread <- ifelse(params$thread > length(shared_busco), length(shared_busco), params$thread)
 
 # create doSNOW cluster
 nwcl <- makeCluster(nthread)
@@ -58,7 +53,7 @@ for (i in 1:length(ls_refseq)) {
     }
 
     # iterate over BUSCOs
-    ls_output <- foreach(busco = shared_busco_complete, .combine='rbind') %dopar% {
+    ls_output <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
         # create data.table to store metadata
         df_temp <- data.table::data.table(busco=character(), read=character(), ref=character())
 

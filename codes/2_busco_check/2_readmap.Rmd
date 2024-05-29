@@ -39,10 +39,10 @@ lapply(list(dir_check_shortreads,dir_readmap), function(x){if(!dir.exists(x)) di
 ```
 
 ```{r check-readmap-thread, include=FALSE}
-qualimap_nthread <- 5 # consideration: free memory
 min_read_quality <- 25
 
 thread_bwamem2 <- ifelse(params$thread < 50, params$thread, 50)
+thread_qualimap <- ifelse(params$thread < 50, params$thread, 50)
 thread_adapterremoval <- ifelse(params$thread < 10, params$thread, 10)
 thread_samtools <- ifelse(params$thread < 10, params$thread, 10)
 ```
@@ -251,7 +251,7 @@ if (params$redo) {
 }
 
 # create doSNOW cluster
-nwcl <- makeCluster(qualimap_nthread)
+nwcl <- makeCluster(floor(params$thread/thread_qualimap))
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over mapped reads
@@ -263,7 +263,8 @@ foreach (prefix = ls_coverage_run) %dopar% {
     # run QualiMap
     cmd_coverage <- paste(params$exe_qualimap, "bamqc",
                           "-bam", file_bam,
-                          "-outdir", dir_qualimap_output)
+                          "-outdir", dir_qualimap_output,
+                          "-nt", thread_qualimap)
     system(cmd_coverage)
 }
 

@@ -6,12 +6,12 @@ title: "Run Coordinate-based BUSCO Analysis on Reference Sequences and Mapped Re
 ```{r check-busco-extract-reads}
 f_write_log(fn_log=fn_log, msg=c("", "------------ Mapped Reads ----------"))
 
+# output data.table
+df_chr_busco <- data.table::data.table(ref=character(), read=character(), busco=character(), is_error=logical())
+
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
-
-# incomplete BUSCOs
-ls_incomplete_busco <- c()
 
 # iterate over short reads
 for (prefix in ls_prefix) {
@@ -21,14 +21,8 @@ for (prefix in ls_prefix) {
         dir.create(dir_busco_out, recursive=T)
     }
 
-    # output of prefix-specific BUSCO list
-    ls_busco_excluded <- NULL
-    fn_busco_excluded <- paste0(dir_busco_out, "excluded_busco.txt")
-    if (file.exists(fn_busco_excluded)) {
-        ls_busco_excluded <- readLines(fn_busco_excluded)
-    }
-
     # extract short read and reference sequence IDs
+    read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
     # check input files
@@ -38,14 +32,8 @@ for (prefix in ls_prefix) {
         next
     }
 
-    # remove BUSCOs with low coverage
-    ls_run_extract_busco <- shared_busco
-    if (length(ls_busco_excluded) > 0 && !params$redo) {
-        ls_run_extract_busco <- ls_run_extract_busco[!ls_run_extract_busco %in% ls_busco_excluded]
-    }
-
     # iterate over shared BUSCOs
-    output <- foreach (busco = ls_run_extract_busco, .combine='c') %dopar% {
+    df_output_temp <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
         require(Biostrings)
         require(stringr)
 
@@ -55,7 +43,7 @@ for (prefix in ls_prefix) {
         file_busco_bed_out <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".bed")
         if (!all(file.exists(file_busco_gff_out, file_busco_bed_out))) {
             log4r::warn(fn_logger, msg=paste0("File not found: ", busco, " GFF or BED for ", ref, ". Skipped."))
-            return(NULL)
+            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE))
         }
 
         # output files
@@ -64,7 +52,7 @@ for (prefix in ls_prefix) {
 
         # check if file exists
         if (file.exists(file_busco_concat) && file.size(file_busco_concat) != 0L && !params$redo) {
-            return(NULL)
+            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=FALSE))
         }
 
         # calculate read depth
@@ -73,37 +61,48 @@ for (prefix in ls_prefix) {
             log4r::warn(fn_logger, msg=paste("Warn:", busco, "for", prefix, "has invalid coverage"))
         } else if (read_coverage >= params$min_busco_depth && read_coverage <= params$max_busco_depth) {
             f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
-            return(NULL)
+            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=FALSE))
         } else if (read_coverage < params$min_busco_depth || read_coverage > params$max_busco_depth) {
             log4r::warn(fn_logger, msg=paste("Warn:", busco, "for", prefix, "has average CDS read depth of", read_coverage))
         }
 
         # write log file
         f_write_log(fn_busco_excluded, busco)
-        return(busco)
+        return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE))
     }
 
-    # update list of incomplete BUSCOs
-    ls_incomplete_busco <- c(ls_incomplete_busco, output)
-    ls_incomplete_busco <- unique(ls_incomplete_busco)
+    # update data.table
+    df_chr_busco <- rbind(df_chr_busco, df_output_temp)
 
     log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", prefix, "."))
 }
 
 stopCluster(nwcl)
 
-# update complete BUSCO list
-shared_busco_complete <- shared_busco_complete[!shared_busco_complete %in% ls_incomplete_busco]
+# save the output file
+if (is.null(df_mapped_reads_busco) || params$redo) {
+    data.table::fwrite(df_chr_busco, file=fn_mapped_reads_busco, sep="\t", quote=F)
 
-# exclude BUSCOs with incomplete taxa
-if (!params$include_incomplete) {
-    shared_busco <- shared_busco[!shared_busco %in% ls_incomplete_busco]
-    f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering incomplete genes: ", length(shared_busco), ".")))
-
-    # stop the knit if shared busco is zero
-    if (length(shared_busco) == 0) {
-        knitr::knit_exit()
+    if (!params$include_incomplete) {
+        ls_problematic_busco <- unique(df_chr_busco$busco[df_chr_busco$is_error])
+        shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
+    } else {
+        # count the number of errors per BUSCO
+        df_mapped_reads_busco_count <- df_chr_busco %>%
+            group_by(busco,read) %>%
+            summarise(n_ref=sum(ifelse(!error, 1, 0))) %>%
+            group_by(busco) %>%
+            summarise(n_read=sum(ifelse(n_ref>0, 1, 0)))
+        
+        # update the BUSCO list
+        ls_problematic_busco <- unique(df_mapped_reads_busco_count$busco[df_mapped_reads_busco_count$n_read < params$min_taxa])
+        shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
     }
+}
+
+# stop the knit if shared busco is zero
+if (length(shared_busco) == 0) {
+    knitr::knit_exit()
 }
 ```
 
