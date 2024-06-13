@@ -67,7 +67,6 @@ for (prefix in ls_prefix) {
         }
 
         # write log file
-        f_write_log(fn_busco_excluded, busco)
         return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE))
     }
 

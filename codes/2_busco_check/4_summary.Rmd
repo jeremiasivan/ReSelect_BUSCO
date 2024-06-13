@@ -51,7 +51,7 @@ if (length(shared_busco_filtered) == 0) {
 }
 ```
 
-```{check-summary-species-map, include=FALSE}
+```{r check-summary-species-map, include=FALSE}
 # extract representative species
 df_reads_ref <- data.table::data.table(species=character(), reads=character(), ref=character())
 
