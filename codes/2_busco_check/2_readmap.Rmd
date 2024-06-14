@@ -233,7 +233,7 @@ foreach (prefix = ls_readmap_run) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r check-readmap-coverage}
+```{r check-readmap-coverage, eval=FALSE}
 # set up variable
 ls_coverage_run <- c()
 

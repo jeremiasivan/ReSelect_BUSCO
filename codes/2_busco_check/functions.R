@@ -365,6 +365,19 @@ f_tips_to_species <- function(fn_treefile, fn_treefile_species, ls_species_name)
     writeLines(tre, con=fn_treefile_species)
 }
 
+# function: change tips from species name to accesion ID
+f_tips_to_id <- function(fn_treefile, ls_species_name) {
+    # read input file
+    tre <- readLines(fn_treefile)
+
+    # iterate over tips
+    for (id in names(ls_species_name)) {
+        tre <- gsub(id, ls_species_name[id], tre)
+    }
+
+    return(tre)
+}
+
 # run MNTD on BUSCOs
 f_run_mntd <- function(ls_busco, ls_shortreads, dir_busco_tree, ls_species_name, prefix, thread) {
     # output files
