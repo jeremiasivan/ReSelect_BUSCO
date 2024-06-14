@@ -30,6 +30,7 @@ set.seed(143)
 # read genome treefile
 genome_tree_id <- f_ref_tips_to_id(params$file_genome_treefile, df_refs)
 genome_tree <- ape::read.tree(text=genome_tree_id)
+genome_tree$edge.length <- ifelse(is.na(genome_tree$edge.length), 0, genome_tree$edge.length)
 genome_dist <- ape::cophenetic.phylo(genome_tree)
 
 # set number of threads
