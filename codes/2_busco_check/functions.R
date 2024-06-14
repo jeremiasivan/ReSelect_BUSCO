@@ -366,13 +366,13 @@ f_tips_to_species <- function(fn_treefile, fn_treefile_species, ls_species_name)
 }
 
 # function: change tips from species name to accesion ID
-f_tips_to_id <- function(fn_treefile, ls_species_name) {
+f_ref_tips_to_id <- function(fn_treefile, df_refs) {
     # read input file
     tre <- readLines(fn_treefile)
 
     # iterate over tips
-    for (id in names(ls_species_name)) {
-        tre <- gsub(id, ls_species_name[id], tre)
+    for (i in 1:nrow(df_refs)) {
+        tre <- gsub(df_refs$species[i], df_refs$id[i], tre)
     }
 
     return(tre)

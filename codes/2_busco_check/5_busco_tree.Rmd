@@ -28,7 +28,7 @@ set.seed(143)
 
 ```{r check-busco-tree-metadata}
 # read genome treefile
-genome_tree_id <- f_tips_to_id(params$file_genome_treefile, ls_species_name)
+genome_tree_id <- f_ref_tips_to_id(params$file_genome_treefile, df_refs)
 genome_tree <- ape::read.tree(text=genome_tree_id)
 genome_dist <- ape::cophenetic.phylo(genome_tree)
 
