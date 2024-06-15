@@ -189,8 +189,8 @@ for (i in 1:length(ls_refseq)) {
             dir_output <- paste0(dir_check_tree_category, busco, "/", type, "/")
 
             # output IQ-Tree2 files
-            fn_fasta <- paste0(dir_output, busco, "_aligned.fa")
-            fn_treefile <- paste0(dir_output, busco, "_aligned.fa.treefile")
+            fn_fasta <- paste0(dir_output, busco, "_aligned.fna")
+            fn_treefile <- paste0(dir_output, busco, "_aligned.fna.treefile")
             if (!file.exists(fn_treefile) || params$redo) {
                 # run IQ-Tree2
                 f_iqtree2(fn_fasta, params$exe_iqtree2)
