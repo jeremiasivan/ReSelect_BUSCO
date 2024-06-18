@@ -99,6 +99,9 @@ if (is.null(df_mapped_reads_busco) || params$redo) {
     }
 }
 
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO after filtering low-coverage genes:", length(shared_busco)))
+
 # stop the knit if shared busco is zero
 if (length(shared_busco) == 0) {
     knitr::knit_exit()
@@ -163,6 +166,9 @@ stopCluster(nwcl)
 
 # update the number of shared BUSCOs
 shared_busco <- shared_busco[!shared_busco %in% output]
+
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO after filtering reference-only genes:", length(shared_busco)))
 f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering genes with zero mapped reads: ", length(shared_busco), ".")))
 
 # stop the knit if shared busco is zero

@@ -2,8 +2,7 @@
 title: "Calculate nRF on BUSCO Trees"
 ---
 
-# Note: add filters to differentiate problematic BUSCOs
-
+## Check correlation between number of references and topology distance
 ```{r check-busco-tree-setup, include=FALSE}
 f_write_log(fn_log=fn_log,
             msg=c("", "####################################",
@@ -22,15 +21,20 @@ if (!file.exists(params$file_genome_treefile)) {
     knitr::knit_exit()
 }
 
+# output file
+fn_busco_tiff <- paste0(dir_check_tree, "summary.tiff")
+
 # set seed for reproducibility
-set.seed(143)
+seed <- sample(1:10000, 1)
+set.seed(seed)
+f_write_log(fn_log=fn_log, msg=c(paste("Seed:",seed),""))
 ```
 
 ```{r check-busco-tree-metadata}
 # read genome treefile
 genome_tree_id <- f_ref_tips_to_id(params$file_genome_treefile, df_refs)
 genome_tree <- ape::read.tree(text=genome_tree_id)
-genome_tree$edge.length <- ifelse(is.na(genome_tree$edge.length), 0, genome_tree$edge.length)
+genome_tree$edge.length <- ifelse(is.na(genome_tree$edge.length), 0.05, genome_tree$edge.length)
 genome_dist <- ape::cophenetic.phylo(genome_tree)
 
 # set number of threads
@@ -62,8 +66,11 @@ for (i in 1:length(ls_refseq)) {
         # extract random refs
         ls_sampled_refs <- sample(ls_refseq, i, replace=FALSE)
 
+        # extract mapped reads
+        ls_shortreads_busco <- df_mapped_reads_busco$read[df_mapped_reads_busco$busco==busco & df_mapped_reads_busco$is_error==F]
+
         # iterate through the number of runs
-        for (read in ls_shortreads) {
+        for (read in ls_shortreads_busco) {
             # extract reference ID based on short-reads
             read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
             read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
@@ -242,13 +249,27 @@ for (i in 1:length(ls_refseq)) {
 stopCluster(nwcl)
 
 # visualisation
-fn_busco_tiff <- paste0(dir_check_tree, "summary.tiff")
-
 plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist, group=is_problematic)) +
-    geom_boxplot()
+    geom_boxplot() +
+    ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") 
 
 # save the plot
-tiff(file=fn_busco_tiff, units="px")
-print(plot)
+tiff(file=fn_busco_tiff, units="px", width=2880, height=1800)
+print(plot + theme(plot.title = element_text(hjust = 0.5, size = 50),
+                   plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
+                   axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
+                   axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
+                   axis.text.y=element_text(size=30),
+                   axis.text.x=element_text(size=30),
+                   strip.text = element_text(size=30),
+                   legend.title=element_text(size=30),
+                   legend.text=element_text(size=30),
+                   legend.key.size=unit(2,"cm")))
 dev.off()
+```
+
+### Note: add filters to differentiate problematic BUSCOs
+```{r, out.width="100%", echo=FALSE}
+print(plot + theme(plot.title = element_text(face = "bold"),
+                   plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm")))
 ```

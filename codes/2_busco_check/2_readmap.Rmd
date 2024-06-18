@@ -40,6 +40,7 @@ lapply(list(dir_check_shortreads,dir_readmap), function(x){if(!dir.exists(x)) di
 
 ```{r check-readmap-thread, include=FALSE}
 min_read_quality <- 25
+is_check_coverage <- FALSE
 
 thread_bwamem2 <- ifelse(params$thread < 50, params$thread, 50)
 thread_qualimap <- ifelse(params$thread < 50, params$thread, 50)
@@ -86,6 +87,12 @@ if (length(ls_shortread_qc) > 0) {
 }
 ```
 
+```{r}
+# print the number of filtered short reads in HTML document
+cat(paste0("Available filtered short reads (", length(ls_shortread_done), "/", length(ls_shortreads), ")"))
+cat(paste("Short reads to be filtered:", length(ls_shortread_qc)))
+```
+
 ```{r check-readmap-qcreads, include=is_qcreads, eval=is_qcreads}
 f_write_log(fn_log=fn_log, msg=paste("Running AdapterRemoval using", thread_adapterremoval, "threads"))
 
@@ -121,6 +128,7 @@ foreach (read = ls_shortread_qc) %dopar% {
 stopCluster(nwcl)
 ```
 
+## Map short reads to reference using BWA-MEM2
 ```{r check-readmap-refmap, include=FALSE}
 # create data.frame to store directory of reference sequence
 df_refseq_dir <- data.frame(id=character(), dir=character())
@@ -142,7 +150,6 @@ for (ref in ls_refseq) {
 }
 ```
 
-## Map short reads to reference using BWA-MEM2
 ```{r, include=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "------------ Read Mapping ----------"))
 
@@ -179,6 +186,12 @@ if (length(ls_readmap_done) > 0) {
 if (length(ls_readmap_run) > 0) {
     is_readmap <- TRUE
 }
+```
+
+```{r}
+# print the number of mapped reads in HTML document
+cat(paste0("Available mapped reads (", length(ls_readmap_done), "/", length(ls_prefix), ")"))
+cat(paste("Short reads to be mapped:", length(ls_readmap_run)))
 ```
 
 ```{r check-readmap, include=is_readmap, eval=is_readmap}
@@ -233,7 +246,7 @@ foreach (prefix = ls_readmap_run) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r check-readmap-coverage, eval=FALSE}
+```{r check-readmap-coverage, include=is_check_coverage, eval=is_check_coverage}
 # set up variable
 ls_coverage_run <- c()
 
@@ -309,6 +322,12 @@ if (length(ls_variant_done) > 0) {
 if (length(ls_variant_run) > 0) {
     is_variant <- TRUE
 }
+```
+
+```{r}
+# print the number of VCF files in HTML document
+cat(paste0("Available VCF files (", length(ls_variant_done), "/", length(ls_prefix), ")"))
+cat(paste("Variants to be called:", length(ls_variant_run)))
 ```
 
 ```{r check-readmap-calling, include=is_variant, eval=is_variant}

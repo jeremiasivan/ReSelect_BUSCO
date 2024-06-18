@@ -36,9 +36,9 @@ fn_mapped_reads_busco <- paste0(dir_busco_read, "metadata.tsv")
 ```
 
 ```{r check-busco-params, include=FALSE}
-thread_busco <- ifelse(params$thread < 50, params$thread, 50)
-
 min_ref_busco_identity <- 99
+
+thread_busco <- ifelse(params$thread < 50, params$thread, 50)
 ```
 
 ```{r busco-check-species-map, include=FALSE}
@@ -108,6 +108,12 @@ if (length(ls_busco_ref_run) > 0) {
 }
 ```
 
+```{r}
+# print the number of reference BUSCO in HTML document
+cat(paste0("Available reference BUSCO (", length(ls_busco_ref_done), "/", length(ls_refseq), ")"))
+cat(paste("Reference BUSCO to run:", length(ls_busco_ref_run)))
+```
+
 ```{r check-busco-ref, include=is_busco_ref, eval=is_busco_ref}
 f_write_log(fn_log=fn_log, msg=paste("Running BUSCO using", thread_busco, "threads"))
 
@@ -149,6 +155,9 @@ for (ref in ls_refseq) {
     shared_busco <- intersect(shared_busco, busco_ids)
   }
 }
+
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO between references:", length(shared_busco)))
 
 # check if shared BUSCOs found
 if (length(shared_busco) == 0) {
@@ -264,6 +273,8 @@ stopCluster(nwcl)
 ls_problematic_busco <- unique(df_chr_busco$busco[df_chr_busco$is_error])
 shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
 
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO after filtering non-identical genes:", length(shared_busco)))
 f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering problematic genes: ", length(shared_busco), ".")))
 
 # stop the knit if shared busco is zero
@@ -334,7 +345,6 @@ foreach (busco = shared_busco) %dopar% {
     }
 }
 
-log4r::info(fn_logger, "File created/modified: BUSCO trees.")
 stopCluster(nwcl)
 ```
 
@@ -371,5 +381,6 @@ foreach (busco = shared_busco) %dopar% {
     }
 }
 
+log4r::info(fn_logger, "File created/modified: BUSCO trees.")
 stopCluster(nwcl)
 ```

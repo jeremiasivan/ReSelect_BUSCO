@@ -36,7 +36,7 @@ min_busco_depth <- 10
 max_busco_depth <- 60
 include_incomplete <- TRUE # now only works for coordinate-based extraction
 
-min_taxa <- 3
+min_taxa <- 4
 file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
 #################################
 

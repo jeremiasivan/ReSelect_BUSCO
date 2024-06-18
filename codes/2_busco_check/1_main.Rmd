@@ -1,8 +1,13 @@
 ---
-title: "BUSCO Check for Reference Sequences"
+title: "BUSCO Check for Reference Sequences Bias"
+author: "Jeremias Ivan"
+date: "`r format(Sys.time(), '%d %B %Y, %H:%M%p')`"
+
 output:
   html_document:
     code_folding: show
+    toc: true
+    toc_float: true
 
 params:
   # general
@@ -12,10 +17,11 @@ params:
   thread: 5
   redo: TRUE
 
-  # input file
+  # input files
   file_refseq: ""
   file_shortreads: ""
   file_adapters: ""
+  file_genome_treefile: ""
   
   # executables
   exe_adapterremoval: ""
@@ -32,18 +38,16 @@ params:
   exe_iqtree2: ""
   exe_mafft: ""
 
-  # BUSCO
+  # BUSCO pipeline
+  min_taxa: 4
+
   busco_lineage: ""
   busco_mode: "genome"
   type: "coordinate"
 
   min_busco_depth: 10
   max_busco_depth: 60
-  include_incomplete: TRUE # now only works for coordinate-based extraction
-
-  # BUSCO tree
-  min_taxa: 3
-  file_genome_treefile: ""
+  include_incomplete: TRUE
 ---
 
 ## Load required libraries and functions
