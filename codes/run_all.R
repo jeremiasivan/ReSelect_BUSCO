@@ -28,16 +28,16 @@ exe_iqtree2 <- "iqtree2"
 exe_mafft <- "mafft"
 exe_treeshrink <- "treeshrink"
 
+file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
+min_taxa <- 4
+
 busco_lineage <- "eudicots_odb10"
 busco_mode <- "genome"
 type <- "coordinate"
 
 min_busco_depth <- 10
 max_busco_depth <- 60
-include_incomplete <- TRUE # now only works for coordinate-based extraction
-
-min_taxa <- 4
-file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
+include_incomplete <- TRUE
 #################################
 
 # set up outdir
