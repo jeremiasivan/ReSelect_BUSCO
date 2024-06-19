@@ -80,6 +80,7 @@ stopCluster(nwcl)
 
 # save the output file
 if (is.null(df_mapped_reads_busco) || params$redo) {
+    df_mapped_reads_busco <- df_chr_busco
     data.table::fwrite(df_chr_busco, file=fn_mapped_reads_busco, sep="\t", quote=F)
 
     if (!params$include_incomplete) {

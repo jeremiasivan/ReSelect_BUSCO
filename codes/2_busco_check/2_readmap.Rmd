@@ -338,7 +338,7 @@ nwcl <- makeCluster(floor(params$thread/thread_samtools))
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over reference sequences
-foreach (prefix = ls_convert_run) %dopar% {
+foreach (prefix = ls_variant_run) %dopar% {
     # output directory
     dir_output <- paste0(dir_readmap, prefix, "/")
 
