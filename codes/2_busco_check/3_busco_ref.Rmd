@@ -300,7 +300,7 @@ if (!is.null(df_mapped_reads_busco) && !params$redo) {
         # count the number of errors per BUSCO
         df_mapped_reads_busco_count <- df_mapped_reads_busco %>%
             group_by(busco,read) %>%
-            summarise(n_ref=sum(ifelse(!error, 1, 0))) %>%
+            summarise(n_ref=sum(ifelse(!is_error, 1, 0))) %>%
             group_by(busco) %>%
             summarise(n_read=sum(ifelse(n_ref>0, 1, 0)))
         
