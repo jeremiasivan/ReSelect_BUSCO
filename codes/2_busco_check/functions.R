@@ -394,7 +394,10 @@ f_extract_summary_lm <- function(lm_result) {
         return(NULL)
     })
 
-    return(list(rsquared=rsquared, pvalue=pvalue))
+    # extract slope
+    slope <- round(coef(lm_result)["x"],3)
+
+    return(list(rsquared=rsquared, pvalue=pvalue, slope=slope))
 }
 
 # function: check the closest reference given reads

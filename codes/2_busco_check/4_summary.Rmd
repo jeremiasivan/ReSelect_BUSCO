@@ -23,7 +23,7 @@ for (read in ls_shortreads) {
 
 # output files
 fn_prefix <- paste0(dir_check_summary, params$prefix)
-fn_cor_summary <- paste0(fn_prefix, ".cor.p.sumtable")
+fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
 
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
 ```
@@ -196,7 +196,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         lm_filtered_noout <- lm(read_dist~ref_dist, data=temp_df_dist)
         lm_statistics <- f_extract_summary_lm(lm_filtered_noout)
 
-        read_out[[read_species_name]] <- lm_statistics$pvalue
+        read_out[[read_species_name]] <- paste0(lm_statistics$slope, " (", lm_statistics$pvalue, ")")
 
         # subset data.frame
         temp_df_dist_filtered <- temp_df_dist[temp_df_dist$shape == "IN",]
