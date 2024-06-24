@@ -10,8 +10,12 @@ if (!dir.exists(dir_run_database)) {
     dir.create(dir_run_database, recursive=T)
 }
 
-# download database
-f_easy353_build_database(params$easy353_taxonomy, dir_run_database, params$thread, params$exe_build_database)
+# check if database exists
+ls_fasta <- list.files(paste0(dir_run_database, "353gene/"), pattern="*.fasta$", recursive=F, full.names=F)
+if (length(ls_fasta)==0 || params$redo) {
+    # download database
+    f_easy353_build_database(params$easy353_taxonomy, dir_run_database, params$thread, params$exe_build_database)
+}
 ```
 
 ## Extract BUSCO based on reference coordinates
@@ -31,6 +35,12 @@ foreach (read = ls_shortreads) %dopar% {
     dir_output <- paste0(dir_run_alignment, prefix, "/")
     if (!dir.exists(dir_output)) {
         dir.create(dir_output, recursive=T)
+    }
+
+    # list FASTA files
+    ls_fasta_temp <- list.files(paste0(dir_output, "assemble_out/"), pattern="*.a353.fasta$", recursive=F, full.names=F)
+    if (length(ls_fasta_temp)>0 && !params$redo) {
+        return(NULL)
     }
 
     # extract FASTQ file

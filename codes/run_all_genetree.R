@@ -37,7 +37,7 @@ rmarkdown::render(input=paste0(codedir,"/1_data_download/1_main.Rmd"),
                               exe_datasets=exe_datasets, bin_sratoolkit=bin_sratoolkit),
                   quiet=TRUE)
 
-# BUSCO check
+# genetree
 rmarkdown::render(input=paste0(codedir,"/3_gene_tree_run/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, prefix, ".genetree.html"),
                   params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
