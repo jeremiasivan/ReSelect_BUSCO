@@ -32,13 +32,13 @@ f_easy353_build_database <- function(taxonomy, dir_out, thread, exe_build_db) {
 }
 
 # function: run Easy353
-f_easy353_run <- function(fastq_one, fastq_two, dir_db, dir_out, exe_easy353) {
+f_easy353_run <- function(fastq_one, fastq_two, dir_db, dir_out, thread, exe_easy353) {
     cmd_easy353 <- paste(exe_easy353, "-1", fastq_one)
 
     if (!is.null(fastq_two)) {
         cmd_easy353 <- paste(cmd_easy353, "-2", fastq_two)
     }
 
-    cmd_easy353 <- paste(cmd_easy353, "-r", dir_db, "-o", dir_out)
+    cmd_easy353 <- paste(cmd_easy353, "-r", dir_db, "-o", dir_out, "-ft", thread, "-at", thread)
     system(cmd_easy353)
 }

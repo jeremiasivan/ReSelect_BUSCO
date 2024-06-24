@@ -18,6 +18,8 @@ f_easy353_build_database(params$easy353_taxonomy, dir_run_database, params$threa
 ```{r easy353-run}
 # set up thread
 nthread <- ifelse(params$thread > length(ls_shortreads), length(ls_shortreads), params$thread)
+easy353_thread <- floor(params$thread / length(ls_shortreads))
+easy353_thread <- ifelse(easy353_thread==0, 1, easy353_thread)
 
 # create doSNOW cluster
 nwcl <- makeCluster(nthread)
@@ -44,7 +46,7 @@ foreach (read = ls_shortreads) %dopar% {
     }
     
     # run Easy353
-    f_easy353_run(file_fastq_one, file_fastq_two, dir_run_database, dir_output, params$exe_easy353)
+    f_easy353_run(file_fastq_one, file_fastq_two, dir_run_database, dir_output, easy353_thread, params$exe_easy353)
     log4r::info(fn_logger, paste0("File created: Easy353 results for ", read, "."))
 }
 
