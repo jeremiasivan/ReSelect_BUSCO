@@ -63,11 +63,18 @@ for (i in 1:length(ls_refseq)) {
         # create data.table to store metadata
         df_temp <- data.table::data.table(busco=character(), read=character(), ref=character())
 
-        # extract random refs
-        ls_sampled_refs <- sample(ls_refseq, i, replace=FALSE)
-
         # extract mapped reads
-        ls_shortreads_busco <- df_mapped_reads_busco$read[df_mapped_reads_busco$busco==busco & df_mapped_reads_busco$is_error==F]
+        df_mapped_reads_subset <- df_mapped_reads_busco[df_mapped_reads_busco$busco==busco & df_mapped_reads_busco$is_error==F,]
+        ls_refseq_busco <- unique(df_mapped_reads_subset$ref)
+        ls_shortreads_busco <- unique(df_mapped_reads_subset$read)
+
+        # return NULL if number of references is inadequate
+        if (length(ls_refseq_busco) < i) {
+            return(NULL)
+        }
+
+        # extract random refs
+        ls_sampled_refs <- sample(ls_refseq_busco, i, replace=FALSE)
 
         # iterate through the number of runs
         for (read in ls_shortreads_busco) {
