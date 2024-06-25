@@ -308,13 +308,90 @@ if (!is.null(df_mapped_reads_busco) && !params$redo) {
         ls_problematic_busco <- unique(df_mapped_reads_busco_count$busco[df_mapped_reads_busco_count$n_read < params$min_taxa])
         shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
     }
+} else {
+    # run BUSCO extraction for mapped reads
+    if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
+        knitr::knit_child(paste0(params$codedir,"/2_busco_check/3a_coordinate.Rmd"))
+    } else if (params$type == "pipeline") {
+        knitr::knit_child(paste0(params$codedir,"/2_busco_check/3b_pipeline.Rmd"))
+    }
+}
+```
+
+## Convert individual BUSCO alignments into MSA
+```{r check-busco-msa}
+# set up variables
+busco_refs_dir_mid <- "/fasta/"
+busco_read_dir_mid <- "/"
+if (params$type == "pipeline") {
+    busco_refs_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
+    busco_read_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
 }
 
-# run BUSCO extraction for mapped reads
-if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
-    knitr::knit_child(paste0(params$codedir,"/2_busco_check/3a_coordinate.Rmd"))
-} else if (params$type == "pipeline") {
-    knitr::knit_child(paste0(params$codedir,"/2_busco_check/3b_pipeline.Rmd"))
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over shared BUSCOs
+output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    dir_output <- paste0(dir_busco_tree, busco, "/")
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
+    }
+
+    # output MSA file
+    fn_out <- paste0(dir_output, busco, ".fa")
+    fn_out_aligned <- paste0(dir_output, busco, "_aligned.fa")
+    if (all(file.exists(fn_out, fn_out_aligned)) && !params$redo) {
+        # check if file is not empty
+        if (file.size(fn_out_aligned) != 0L) {
+            return(NULL)
+        }
+    }
+
+    # extract BUSCO alignment from reference sequences
+    for (ref in ls_refseq) {
+        file_busco_ref <- paste0(dir_busco_ref, ref, busco_refs_dir_mid, busco, ".fna")
+        if (!file.exists(file_busco_ref)) {
+            next
+        }
+
+        f_fasta2msa(file_busco_ref, ref, fn_out)
+    }
+
+    # extract BUSCO alignment from short reads
+    count_unavailable_prefix <- 0
+    for (read in ls_prefix) {
+        file_busco_read <- paste0(dir_busco_read, read, busco_read_dir_mid, busco, ".fna")
+        if (!file.exists(file_busco_read)) {
+            count_unavailable_prefix <- count_unavailable_prefix + 1
+            next
+        }
+
+        f_fasta2msa(file_busco_read, read, fn_out)
+    }
+
+    # align using MAFFT FFT-NS-2
+    f_mafft(fn_out, fn_out_aligned, "--retree 2", params$exe_mafft)
+
+    # return BUSCOs with zero mapped reads
+    if (count_unavailable_prefix == length(ls_prefix)) {
+        return(busco)
+    }
+}
+
+stopCluster(nwcl)
+
+# update the number of shared BUSCOs
+shared_busco <- shared_busco[!shared_busco %in% output]
+
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO after filtering reference-only genes:", length(shared_busco)))
+f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering genes with zero mapped reads: ", length(shared_busco), ".")))
+
+# stop the knit if shared busco is zero
+if (length(shared_busco) == 0) {
+    knitr::knit_exit()
 }
 ```
 
