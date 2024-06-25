@@ -138,8 +138,8 @@ if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
 
 ```{r}
 # print the number of reference sequences to be downloaded in HTML document
-cat(paste0("Available reference sequences (", length(ls_refseq_available), "/", length(ls_refseq), ")"))
-cat(paste("Reference sequences to be downloaded:", length(ls_refseq_download)))
+cat("Available reference sequences (", length(ls_refseq_available), "/", length(ls_refseq), ")")
+cat("Reference sequences to be downloaded: ", length(ls_refseq_download))
 ```
 
 ```{r download-refseq, include=is_refseq_available, eval=is_refseq_available}
@@ -234,8 +234,8 @@ if (length(ls_shortreads) == 0 || is.null(ls_shortreads)) {
 
 ```{r}
 # print the number of short reads to be downloaded in HTML document
-cat(paste0("Available short reads (", length(ls_reads_available), "/", length(ls_shortreads), ")"))
-cat(paste("Short reads to be downloaded:", length(ls_reads_download)))
+cat("Available short reads (", length(ls_reads_available), "/", length(ls_shortreads), ")")
+cat("Short reads to be downloaded: ", length(ls_reads_download))
 ```
 
 ```{r download-shortreads, include=is_shortreads_available, eval=is_shortreads_available}

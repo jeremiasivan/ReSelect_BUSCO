@@ -284,7 +284,7 @@ if (length(shared_busco) == 0) {
 ```
 
 ## Extract BUSCOs for mapped reads
-```{r}
+```{r results='asis'}
 # open metadata file
 df_mapped_reads_busco <- NULL
 if (file.exists(fn_mapped_reads_busco)) {
@@ -396,7 +396,7 @@ if (length(shared_busco) == 0) {
 ```
 
 ## Generate BUSCO trees
-```{r check-busco-tree}
+```{r check-busco-tree, echo=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "------------ BUSCO Trees -----------"))
               
 # create doSNOW cluster
@@ -425,7 +425,7 @@ foreach (busco = shared_busco) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r check-busco-treeshrink}
+```{r check-busco-treeshrink, echo=FALSE}
 f_write_log(fn_log=fn_log, msg=c("", "------------ TreeShrink ------------"))
               
 # create doSNOW cluster

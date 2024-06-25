@@ -216,7 +216,7 @@ for (i in 1:length(ls_refseq)) {
 stopCluster(nwcl)
 ```
 
-```{r check-busco-tree-distance}
+```{r check-busco-tree-distance, echo=FALSE}
 # output data.table
 df_output <- data.table::data.table(n_ref=numeric(), busco=character(), is_problematic=logical(), dist=numeric())
 
@@ -275,8 +275,8 @@ print(plot + theme(plot.title = element_text(hjust = 0.5, size = 50),
 dev.off()
 ```
 
-### Note: add filters to differentiate problematic BUSCOs
 ```{r, out.width="100%", echo=FALSE}
+# note: add filters to differentiate problematic BUSCOs
 print(plot + theme(plot.title = element_text(face = "bold"),
                    plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm")))
 ```
