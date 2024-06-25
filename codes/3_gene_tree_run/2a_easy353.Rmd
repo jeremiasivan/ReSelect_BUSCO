@@ -23,7 +23,13 @@ if (length(ls_fasta)==0 || params$redo) {
 # set up thread
 nthread <- ifelse(params$thread > length(ls_shortreads), length(ls_shortreads), params$thread)
 easy353_thread <- floor(params$thread / length(ls_shortreads))
-easy353_thread <- ifelse(easy353_thread==0, 1, easy353_thread)
+
+# set the minimum and maximum number of threads
+if (easy353_thread==0) {
+    easy353_thread <- 1
+} else if (easy353_thread>20) {
+    easy353_thread <- 20
+}
 
 # create doSNOW cluster
 nwcl <- makeCluster(nthread)

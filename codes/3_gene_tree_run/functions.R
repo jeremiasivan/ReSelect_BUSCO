@@ -39,6 +39,6 @@ f_easy353_run <- function(fastq_one, fastq_two, dir_db, dir_out, thread, exe_eas
         cmd_easy353 <- paste(cmd_easy353, "-2", fastq_two)
     }
 
-    cmd_easy353 <- paste(cmd_easy353, "-r", dir_db, "-o", dir_out, "-ft", thread, "-at", thread)
+    cmd_easy353 <- paste(cmd_easy353, "-r", dir_db, "-o", dir_out, "-ft 1 -at", thread)
     system(cmd_easy353)
 }
