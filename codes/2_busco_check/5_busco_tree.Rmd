@@ -22,6 +22,7 @@ if (!file.exists(params$file_genome_treefile)) {
 }
 
 # output file
+fn_busco_sumtable <- paste0(dir_check_tree, "summary.nRF.sumtable")
 fn_busco_tiff <- paste0(dir_check_tree, "summary.tiff")
 
 # set seed for reproducibility
@@ -259,8 +260,11 @@ for (i in 1:length(ls_refseq)) {
 
 stopCluster(nwcl)
 
+# save file
+data.table::fwrite(df_output, file=fn_busco_sumtable, quote=F, sep="\t")
+
 # visualisation
-plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist, group=is_problematic)) +
+plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist)) +
     geom_boxplot() +
     ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") 
 
