@@ -1,8 +1,13 @@
 ---
-title: "BUSCO Check for Reference Sequences"
+title: "BUSCO Check for Reference Sequences Bias"
+author: "Jeremias Ivan"
+date: "`r format(Sys.time(), '%d %B %Y, %H:%M%p')`"
+
 output:
   html_document:
     code_folding: show
+    toc: true
+    toc_float: true
 
 params:
   # general
@@ -12,10 +17,11 @@ params:
   thread: 5
   redo: TRUE
 
-  # input file
+  # input files
   file_refseq: ""
   file_shortreads: ""
   file_adapters: ""
+  file_genome_treefile: ""
   
   # executables
   exe_adapterremoval: ""
@@ -32,10 +38,16 @@ params:
   exe_iqtree2: ""
   exe_mafft: ""
 
-  # BUSCO
+  # BUSCO pipeline
+  min_taxa: 4
+
   busco_lineage: ""
   busco_mode: "genome"
   type: "coordinate"
+
+  min_busco_depth: 10
+  max_busco_depth: 60
+  include_incomplete: TRUE
 ---
 
 ## Load required libraries and functions
@@ -51,6 +63,7 @@ library(doSNOW)
 # install.packages("Biostrings")
 # install.packages("data.table")
 # install.packages("log4r")
+# install.packages("phangorn")
 # install.packages("tidyverse")
 
 # store initial system time
@@ -70,6 +83,7 @@ if (!dir.exists(logdir)) {
 
 # create log file
 fn_log <- paste0(logdir, params$prefix, ".check.log")
+fn_warning_log <- paste0(logdir, params$prefix, ".warning.log")
 log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::default_log_layout())
 fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
 if (!file.exists(fn_log) || params$redo) {
@@ -89,10 +103,14 @@ knitr::opts_knit$set(root.dir = currentdir)
 ```{r child = paste0(params$codedir,"/2_busco_check/4_summary.Rmd")}
 ```
 
+```{r child = paste0(params$codedir,"/2_busco_check/5_busco_tree.Rmd")}
+```
+
 ```{r, include=FALSE}
 # store final system time
 sys_toc <- Sys.time()
 
 # write the system time in log file
+f_write_log(fn_log=fn_warning_log, msg=warnings())
 f_write_log(fn_log=fn_log, msg=c("", paste0("Total elapsed time: ", round(as.numeric(difftime(sys_toc, sys_tic, units = "mins")), 3), " mins")))
 ```
