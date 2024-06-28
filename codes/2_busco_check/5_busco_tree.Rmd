@@ -143,6 +143,10 @@ for (i in 1:length(ls_refseq)) {
             for (j in 1:nrow(df_metadata_subset)) {
                 prefix <- paste0(df_metadata_subset$read[j], "--", df_metadata_subset$ref[j])
 
+                # convert mapped reads ID to reference ID
+                read_species_name <- df_reads_ref$species[df_reads_ref$reads==df_metadata_subset$read[j]]
+                read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
+
                 # input FASTA file
                 fn_fasta_read <- ""
                 if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
@@ -152,7 +156,7 @@ for (i in 1:length(ls_refseq)) {
                 }
 
                 # MSA
-                f_fasta2msa(fn_fasta_read, prefix, fn_out_read)
+                f_fasta2msa(fn_fasta_read, read_ref_id, fn_out_read)
             }
 
             # align using MAFFT FFT-NS-2
