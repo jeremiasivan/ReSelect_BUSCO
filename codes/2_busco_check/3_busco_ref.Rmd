@@ -32,6 +32,7 @@ dir_busco_tree <- paste0(dir_busco, "trees/")
 lapply(list(dir_busco_lineage,dir_busco_ref,dir_busco_read,dir_busco_tree), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
 # output file
+fn_refs_busco <- paste0(dir_busco_ref, "metadata.tsv")
 fn_mapped_reads_busco <- paste0(dir_busco_read, "metadata.tsv")
 ```
 
@@ -169,9 +170,34 @@ if (length(shared_busco) == 0) {
 ```
 
 ## Extract BUSCOs for reference sequences
-```{r check-busco-extract-ref}
+```{r check-busco-extract-ref-metadata, include=FALSE}
+is_ref_extract <- TRUE
+
+# open the metadata file
+if (file.exists(fn_refs_busco) && !params$redo) {
+    df_chr_busco <- data.table::fread(fn_refs_busco)
+
+    # exclude problematic BUSCOs from further analyses
+    shared_busco <- unique(df_chr_busco$busco)
+    ls_problematic_busco <- unique(df_chr_busco$busco[df_chr_busco$is_error])
+    shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
+
+    # print the number of BUSCO in HTML document
+    cat(paste("Number of shared BUSCO after filtering non-identical genes:", length(shared_busco)))
+    f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering problematic genes: ", length(shared_busco), ".")))
+
+    is_ref_extract <- FALSE
+}
+
+# stop the knit if shared busco is zero
+if (length(shared_busco) == 0) {
+    knitr::knit_exit()
+}
+```
+
+```{r check-busco-extract-ref, include=is_ref_extract, eval=is_ref_extract}
 # output data.table
-df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical())
+df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), identity=numeric())
 
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
@@ -205,11 +231,6 @@ for (ref in ls_refseq) {
         file_busco_bed_out <- paste0(dir_busco_out, busco, ".bed")
         file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
 
-        # check if file exists
-        if (all(file.exists(file_busco_gff_out, file_busco_bed_out, file_busco_concat)) && file.size(file_busco_concat) != 0L && !params$redo) {
-            return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE))
-        }
-
         # extract header
         busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
 
@@ -217,7 +238,7 @@ for (ref in ls_refseq) {
         coordinates <- f_extract_coordinates(busco_header, busco, ref)
         if (!is.null(coordinates$errmsg)) {
             f_write_log(fn_log=fn_log, msg=coordinates$errmsg)
-            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE))
+            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=0))
         }
 
         # manipulate GFF file
@@ -229,7 +250,7 @@ for (ref in ls_refseq) {
             if (!is.null(msg)) {
                 if (!is.null(msg$errmsg)) {
                     f_write_log(fn_log=fn_log, msg=msg$errmsg)
-                    return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE))
+                    return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=0))
                 } else if (!is.null(msg$warnmsg)) {
                     f_write_log(fn_log=fn_log, msg=msg$warnmsg)
                 }
@@ -247,18 +268,18 @@ for (ref in ls_refseq) {
         output <- f_compare_fasta(file_busco_fas, file_busco_concat)
         if (!is.null(output$errmsg)) {
             f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA files for ", ref, ": ", output$errmsg, "."))
-            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE))
+            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=0))
         } else {
             if (!output$is_identical){
                 f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA file for ", ref, ". Sequences are non-identical (identity=", output$score, ")."))
 
                 if (output$score < min_ref_busco_identity) {
-                    return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE))
+                    return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=output$score))
                 }
             }
         }
 
-        return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE))
+        return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=output$score))
     }
 
     # update the list of output data.table
@@ -268,6 +289,9 @@ for (ref in ls_refseq) {
 }
 
 stopCluster(nwcl)
+
+# save data.table
+data.table::fwrite(df_chr_busco, file=fn_refs_busco, quote=F, sep="\t")
 
 # exclude problematic BUSCOs from further analyses
 ls_problematic_busco <- unique(df_chr_busco$busco[df_chr_busco$is_error])
