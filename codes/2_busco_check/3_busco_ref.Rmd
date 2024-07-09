@@ -238,7 +238,7 @@ for (ref in ls_refseq) {
         coordinates <- f_extract_coordinates(busco_header, busco, ref)
         if (!is.null(coordinates$errmsg)) {
             f_write_log(fn_log=fn_log, msg=coordinates$errmsg)
-            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=0))
+            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
         }
 
         # manipulate GFF file
@@ -250,7 +250,7 @@ for (ref in ls_refseq) {
             if (!is.null(msg)) {
                 if (!is.null(msg$errmsg)) {
                     f_write_log(fn_log=fn_log, msg=msg$errmsg)
-                    return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=0))
+                    return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
                 } else if (!is.null(msg$warnmsg)) {
                     f_write_log(fn_log=fn_log, msg=msg$warnmsg)
                 }
@@ -268,7 +268,7 @@ for (ref in ls_refseq) {
         output <- f_compare_fasta(file_busco_fas, file_busco_concat)
         if (!is.null(output$errmsg)) {
             f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA files for ", ref, ": ", output$errmsg, "."))
-            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=0))
+            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
         } else {
             if (!output$is_identical){
                 score <- round(as.numeric(output$score),3)
