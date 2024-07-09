@@ -281,7 +281,7 @@ for (ref in ls_refseq) {
             }
         }
 
-        return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=score))
+        return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=100))
     }
 
     # update the list of output data.table
