@@ -24,11 +24,6 @@ if (!file.exists(params$file_genome_treefile)) {
 # output file
 fn_busco_sumtable <- paste0(dir_check_tree, "summary.nRF.sumtable")
 fn_busco_tiff <- paste0(dir_check_tree, "summary.tiff")
-
-# set seed for reproducibility
-seed <- sample(1:10000, 1)
-set.seed(seed)
-f_write_log(fn_log=fn_log, msg=c(paste("Seed:",seed),""))
 ```
 
 ```{r check-busco-tree-metadata}
@@ -101,6 +96,8 @@ stopCluster(nwcl)
 ```
 
 ```{r check-busco-tree-alignment}
+f_write_log(fn_log=fn_log, msg=c("", "---------- BUSCO Alignment ---------"))
+
 # create doSNOW cluster
 nwcl <- makeCluster(nthread)
 doSNOW::registerDoSNOW(nwcl)
@@ -139,7 +136,7 @@ for (i in 1:length(ls_refseq)) {
         df_metadata_subset <- df_metadata[df_metadata$busco == busco,]
 
         # check if output files exist for mapped reads
-        if (!all(file.exists(fn_out_read, fn_out_read_aligned) || params$redo)) {
+        if (!all(file.exists(fn_out_read, fn_out_read_aligned)) || params$redo) {
             # iterate over rows
             for (j in 1:nrow(df_metadata_subset)) {
                 prefix <- paste0(df_metadata_subset$read[j], "--", df_metadata_subset$ref[j])
@@ -165,7 +162,7 @@ for (i in 1:length(ls_refseq)) {
         }
 
         # check if output files exist for reference sequences
-        if (!all(file.exists(fn_out_refs, fn_out_refs_aligned) || params$redo)) {
+        if (!all(file.exists(fn_out_refs, fn_out_refs_aligned)) || params$redo) {
             # iterate over rows
             for (j in 1:nrow(df_metadata_subset)) {
                 # extract reference ID based on short-reads
@@ -189,6 +186,8 @@ stopCluster(nwcl)
 ```
 
 ```{r check-busco-tree-build}
+f_write_log(fn_log=fn_log, msg=c("", "------------- BUSCO Tree -----------"))
+
 # create doSNOW cluster
 nwcl <- makeCluster(nthread)
 doSNOW::registerDoSNOW(nwcl)
