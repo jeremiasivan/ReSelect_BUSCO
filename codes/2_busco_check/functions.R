@@ -395,7 +395,7 @@ f_extract_summary_lm <- function(lm_result) {
     })
 
     # extract slope
-    slope <- round(coef(lm_result)["x"],3)
+    slope <- round(coef(lm_result)[2],3)
 
     return(list(rsquared=rsquared, pvalue=pvalue, slope=slope))
 }

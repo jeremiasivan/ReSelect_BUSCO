@@ -222,50 +222,58 @@ stopCluster(nwcl)
 ```
 
 ```{r check-busco-tree-distance, echo=FALSE}
+f_write_log(fn_log=fn_log, msg=c("", "-------- BUSCO Tree Distance -------"))
+
 # output data.table
 df_output <- data.table::data.table(n_ref=numeric(), busco=character(), is_problematic=logical(), dist=numeric())
 
-# create doSNOW cluster
-nwcl <- makeCluster(nthread)
-doSNOW::registerDoSNOW(nwcl)
+if (file.exists(fn_busco_sumtable) && !params$redo) {
+    df_output <- data.table::fread(fn_busco_sumtable)
+} else {
+    # create doSNOW cluster
+    nwcl <- makeCluster(nthread)
+    doSNOW::registerDoSNOW(nwcl)
 
-# iterate over number of reference sequences
-for (i in 1:length(ls_refseq)) {
-    # output directory
-    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
+    # iterate over number of reference sequences
+    for (i in 1:length(ls_refseq)) {
+        # output directory
+        dir_check_tree_category <- paste0(dir_check_tree, i, "/")
 
-    # list BUSCOs
-    ls_uq_busco <- list.dirs(dir_check_tree_category, recursive=F, full.names=F)
+        # list BUSCOs
+        ls_uq_busco <- list.dirs(dir_check_tree_category, recursive=F, full.names=F)
 
-    # iterate over BUSCOs
-    df_output_subset <- foreach (busco = ls_uq_busco, .combine='rbind') %dopar% {
-        # input files
-        dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
-        fn_tree_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.treefile")
-        fn_tree_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.fna.treefile")
+        # iterate over BUSCOs
+        df_output_subset <- foreach (busco = ls_uq_busco, .combine='rbind') %dopar% {
+            # input files
+            dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
+            fn_tree_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.treefile")
+            fn_tree_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.fna.treefile")
 
-        # check if file exists
-        if (!all(file.exists(fn_tree_one, fn_tree_two))) {
-            return(NULL)
+            # check if file exists
+            if (!all(file.exists(fn_tree_one, fn_tree_two))) {
+                return(NULL)
+            }
+
+            # calculate nRF
+            nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
+            return(data.table::data.table(n_ref=i, busco=busco, is_problematic=FALSE, dist=nrf_dist))
         }
 
-        # calculate nRF
-        nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
-        return(data.table::data.table(n_ref=i, busco=busco, is_problematic=FALSE, dist=nrf_dist))
+        # update data.table
+        df_output <- rbind(df_output, df_output_subset)
     }
 
-    # update data.table
-    df_output <- rbind(df_output, df_output_subset)
+    stopCluster(nwcl)
+
+    # save file
+    data.table::fwrite(df_output, file=fn_busco_sumtable, quote=F, sep="\t")
 }
 
-stopCluster(nwcl)
-
-# save file
-data.table::fwrite(df_output, file=fn_busco_sumtable, quote=F, sep="\t")
-
 # visualisation
-plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist)) +
-    geom_boxplot() +
+plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist, fill=as.factor(n_ref))) +
+    geom_flat_violin(position=position_nudge(x=0.2), alpha=0.4) +
+    geom_point(aes(color=as.factor(n_ref)), position=position_jitter(w=0.15), size=1, alpha=0.4, show.legend=F) +
+    geom_boxplot(width=0.25, outlier.shape=NA, alpha=0.5) +
     ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") 
 
 # save the plot
