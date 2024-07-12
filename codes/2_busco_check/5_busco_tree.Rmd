@@ -269,10 +269,9 @@ if (file.exists(fn_busco_sumtable) && !params$redo) {
 }
 
 # visualisation
-plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist, fill=as.factor(n_ref))) +
-    geom_flat_violin(position=position_nudge(x=0.2), alpha=0.4) +
-    geom_point(aes(color=as.factor(n_ref)), position=position_jitter(w=0.15), size=1, alpha=0.4, show.legend=F) +
-    geom_boxplot(width=0.25, outlier.shape=NA, alpha=0.5) +
+plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist)) +
+    geom_point(position=position_jitter(width=0.05), size=2, show.legend=F) +
+    geom_violin(alpha=0.5) +
     ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") 
 
 # save the plot
