@@ -119,7 +119,7 @@ print(plot + theme(plot.title = element_text(face = "bold"),
 ```
 
 ## Correlation analysis on BUSCO phylogenetic distances
-```{r check-summary-correlation, eval=FALSE}
+```{r check-summary-correlation}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)

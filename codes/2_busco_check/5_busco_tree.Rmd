@@ -269,7 +269,7 @@ data.table::fwrite(df_output, file=fn_busco_sumtable, quote=F, sep="\t")
 
 # visualisation
 plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist, fill=ntaxa)) +
-    geom_point(aes(color=ntaxa), position=position_jitter(height=0.05, width=0.05), size=2, show.legend=F) +
+    geom_point(aes(color=ntaxa), position=position_jitter(height=0.01, width=0.05), size=2, show.legend=F) +
     geom_violin(alpha=0.5) +
     ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") 
 
