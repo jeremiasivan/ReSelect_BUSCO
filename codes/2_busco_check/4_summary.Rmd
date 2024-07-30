@@ -147,6 +147,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     ls_shortreads_available <- sapply(ls_prefix_available, function(x) {
         strsplit(x, split="--")[[1]][1]
     })
+    ls_shortreads_available <- unique(ls_shortreads_available)
 
     # calculate phylogenetic distance
     distance_tre <- ape::cophenetic.phylo(tre_original)
@@ -163,8 +164,14 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
         read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
 
+        # extract available available reference sequences
+        ls_refseq_available <- grep(paste0("^",read), ls_refseq, value=T)
+        ls_refseq_available <- sapply(ls_refseq_available, function(x) {
+            strsplit(x, split="--")[[1]][2]
+        })
+
         # iterate over reference sequence
-        for (ref in ls_refseq) {
+        for (ref in ls_refseq_available) {
             # check if prefix if filtered out by TreeShrink
             prefix <- paste0(read,"--",ref)
             prefix_shape <- ifelse(prefix %in% tre_treeshrink_tips, "IN", "OUT")
@@ -192,30 +199,28 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
             return(NULL)
         }
 
-        # run linear model
-        lm_filtered_noout <- lm(read_dist~ref_dist, data=temp_df_dist)
-        lm_statistics <- f_extract_summary_lm(lm_filtered_noout)
-
-        read_out[[read_species_name]] <- paste0(lm_statistics$slope, " (", lm_statistics$pvalue, ")")
-
         # subset data.frame
         temp_df_dist_filtered <- temp_df_dist[temp_df_dist$shape == "IN",]
         temp_df_dist_filtered_noout <- temp_df_dist_filtered[temp_df_dist_filtered$grouping != "Outgroup",]
+
+        # check if filtered table has more than one entry and consists of all NULL or NAs
+        if (nrow(temp_df_dist_filtered)==0 || f_all_null_or_na(temp_df_dist_filtered$ref_dist) || f_all_null_or_na(temp_df_dist_filtered$read_dist)) {
+            NULL
+        }
+
+        # run linear model
+        lm <- lm(read_dist~ref_dist, data=temp_df_dist_filtered)
+        lm_statistics <- f_extract_summary_lm(lm)
+
+        read_out[[read_species_name]] <- paste0(lm_statistics$slope, " (", lm_statistics$pvalue, ")")
 
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
 
         plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist, color=grouping)) +
             geom_point(aes(size=20, shape=shape)) +
-            geom_abline(slope=1, intercept=0, linetype=3, aes(linewidth=3))
-
-        # check if filtered table has more than one entry
-        if (nrow(temp_df_dist_filtered) > 0) {
-            # check if all values are NULL
-            if (!f_all_null_or_na(temp_df_dist_filtered$ref_dist) && !f_all_null_or_na(temp_df_dist_filtered$read_dist)) {
-                plot <- plot + stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, alpha=0.5)
-            }
-        }
+            geom_abline(slope=1, intercept=0, linetype=3, aes(linewidth=3)) +
+            stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, alpha=0.5)
 
         if (nrow(temp_df_dist_filtered_noout) > 0) {
             # check if all values are NULL
