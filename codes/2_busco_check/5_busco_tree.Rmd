@@ -266,9 +266,14 @@ for (i in 1:length(ls_refseq)) {
             filter(busco=busco) %>%
             summarise(sum_dist=round(sum(genome_dist),3))
 
+        # extract the number of parsimony informative sites
+        fn_log_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.iqtree")
+        n_infsites <- gsub("^.* ", "", system(paste("grep '^Number of parsimony informative sites:'",fn_log_one), intern = T))
+        n_infsites <- as.numeric(n_infsites)
+
         # calculate nRF
         nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
-        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), dist=nrf_dist, sum_genome_dist=genome_dist$sum_dist))
+        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), dist=nrf_dist, sum_genome_dist=genome_dist$sum_dist, ninfsites=n_infsites))
     }
 
     # update data.table
@@ -281,8 +286,8 @@ stopCluster(nwcl)
 data.table::fwrite(df_output, file=fn_busco_sumtable, quote=F, sep="\t")
 
 # nRF vs. number of reference sequences
-plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist, fill=ntaxa)) +
-    geom_point(aes(color=ntaxa), position=position_jitter(height=0.01, width=0.05), size=2, show.legend=F) +
+plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist, fill=ninfsites)) +
+    geom_point(aes(color=ninfsites), position=position_jitter(height=0.01, width=0.05), size=2, show.legend=F) +
     geom_violin(alpha=0.5) +
     ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") 
 
@@ -301,7 +306,7 @@ dev.off()
 
 # nRF vs. total genomic distance
 plot <- ggplot(df_output, aes(x=sum_genome_dist, y=dist)) +
-    geom_point(aes(color=ntaxa), size=2, show.legend=F) +
+    geom_point(aes(color=ninfsites), size=2, show.legend=F) +
     ggtitle("Normalised RF Distance across Total Genomic Distances") + xlab("Genomic distance") + ylab("nRF distance") +
     theme(plot.title = element_text(hjust = 0.5, size = 50),
           plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
