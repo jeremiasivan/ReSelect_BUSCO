@@ -404,7 +404,7 @@ f_extract_summary_lm <- function(lm_result) {
 f_spearman_test <- function(x, y) {
     corr <- cor.test(x, y, method='spearman')
 
-    return(list(rho=round(corr$estimate, 3), pvalue=round(corr$p.value), 3))
+    return(list(rho=round(corr$estimate, 3), pvalue=round(corr$p.value, 3)))
 }
 
 # function: check the closest reference given reads
@@ -416,7 +416,7 @@ f_check_closest_ref <- function(dist_matrix, species_read, ls_species_ref) {
     # return the closest reference if there is only one reference
     len_ls_species_ref <- length(ls_species_ref)
     if (len_ls_species_ref == 1) {
-        return (closest_ref)
+        return (list(ref=closest_ref, dist=round(closest_ref_dist, 3)))
     }
 
     # iterate over reference sequence
@@ -432,7 +432,7 @@ f_check_closest_ref <- function(dist_matrix, species_read, ls_species_ref) {
     }
 
     # return the closest reference
-    return (closest_ref)
+    return (list(ref=closest_ref, dist=round(closest_ref_dist, 3)))
 }
 
 # function: calculate normalised RF distance between two trees

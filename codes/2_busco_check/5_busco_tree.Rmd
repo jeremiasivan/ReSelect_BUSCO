@@ -57,7 +57,7 @@ for (i in 1:length(ls_refseq)) {
     # iterate over BUSCOs
     ls_output <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
         # create data.table to store metadata
-        df_temp <- data.table::data.table(busco=character(), read=character(), ref=character())
+        df_temp <- data.table::data.table(busco=character(), read=character(), ref=character(), genome_dist=numeric())
 
         # extract mapped reads
         df_mapped_reads_subset <- df_mapped_reads_busco[df_mapped_reads_busco$busco==busco & df_mapped_reads_busco$is_error==F,]
@@ -82,7 +82,7 @@ for (i in 1:length(ls_refseq)) {
             closest_ref <- f_check_closest_ref(genome_dist, read_ref_id, ls_sampled_refs)
 
             # update data.table
-            df_temp <- rbind(df_temp, data.table::data.table(busco=busco, read=read, ref=closest_ref))
+            df_temp <- rbind(df_temp, data.table::data.table(busco=busco, read=read, ref=closest_ref$ref, genome_dist=closest_ref$dist))
         }
 
         return(df_temp)
