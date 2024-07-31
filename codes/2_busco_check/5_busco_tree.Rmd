@@ -324,3 +324,11 @@ dev.off()
 print(plot + theme(plot.title = element_text(face = "bold"),
                    plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm")))
 ```
+
+```{r check-busco-tree-cf}
+f_write_log(fn_log=fn_log, msg=c("", "-- BUSCO Tree Concordance Factors --"))
+
+# generate the species tree of each number of reference, run ASTRAL, and calculate qCF
+
+
+```
