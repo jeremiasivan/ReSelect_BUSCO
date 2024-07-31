@@ -23,7 +23,8 @@ if (!file.exists(params$file_genome_treefile)) {
 
 # output file
 fn_busco_sumtable <- paste0(dir_check_tree, "summary.nRF.sumtable")
-fn_busco_tiff <- paste0(dir_check_tree, "summary.tiff")
+fn_busco_nref_tiff <- paste0(dir_check_tree, "nRF_nref.tiff")
+fn_busco_genomedist_tiff <- paste0(dir_check_tree, "nRF_genomedist.tiff")
 ```
 
 ```{r check-busco-tree-metadata}
@@ -224,7 +225,7 @@ stopCluster(nwcl)
 f_write_log(fn_log=fn_log, msg=c("", "-------- BUSCO Tree Distance -------"))
 
 # output data.table
-df_output <- data.table::data.table(n_ref=numeric(), busco=character(), is_problematic=logical(), ntaxa=numeric(), dist=numeric())
+df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), dist=numeric())
 
 # create doSNOW cluster
 nwcl <- makeCluster(nthread)
@@ -235,7 +236,14 @@ for (i in 1:length(ls_refseq)) {
     # output directory
     dir_check_tree_category <- paste0(dir_check_tree, i, "/")
 
-    # list BUSCOs
+    # open metadata file
+    fn_metadata <- paste0(dir_check_tree_category, "metadata.tsv")
+    if (!file.exists(fn_metadata)) {
+        next
+    }
+
+    # input files
+    df_metadata <- data.table::fread(fn_metadata)
     ls_uq_busco <- list.dirs(dir_check_tree_category, recursive=F, full.names=F)
 
     # iterate over BUSCOs
@@ -253,9 +261,14 @@ for (i in 1:length(ls_refseq)) {
         # check the number of taxa
         tre <- ape::read.tree(fn_tree_two)
 
+        # extract the total genome distance
+        genome_dist <- df_metadata %>%
+            filter(busco=busco) %>%
+            summarise(sum_dist=round(sum(genome_dist),3))
+
         # calculate nRF
         nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
-        return(data.table::data.table(n_ref=i, busco=busco, is_problematic=FALSE, ntaxa=length(tre$tip.label), dist=nrf_dist))
+        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), dist=nrf_dist, sum_genome_dist=genome_dist$sum_dist))
     }
 
     # update data.table
@@ -267,14 +280,13 @@ stopCluster(nwcl)
 # save file
 data.table::fwrite(df_output, file=fn_busco_sumtable, quote=F, sep="\t")
 
-# visualisation
+# nRF vs. number of reference sequences
 plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=dist, fill=ntaxa)) +
     geom_point(aes(color=ntaxa), position=position_jitter(height=0.01, width=0.05), size=2, show.legend=F) +
     geom_violin(alpha=0.5) +
     ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") 
 
-# save the plot
-tiff(file=fn_busco_tiff, units="px", width=2880, height=1800)
+tiff(file=fn_busco_nref_tiff, units="px", width=2880, height=1800)
 print(plot + theme(plot.title = element_text(hjust = 0.5, size = 50),
                    plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
                    axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
@@ -286,9 +298,28 @@ print(plot + theme(plot.title = element_text(hjust = 0.5, size = 50),
                    legend.text=element_text(size=30),
                    legend.key.size=unit(2,"cm")))
 dev.off()
+
+# nRF vs. total genomic distance
+plot <- ggplot(df_output, aes(x=sum_genome_dist, y=dist)) +
+    geom_point(aes(color=ntaxa), size=2, show.legend=F) +
+    ggtitle("Normalised RF Distance across Total Genomic Distances") + xlab("Genomic distance") + ylab("nRF distance") +
+    theme(plot.title = element_text(hjust = 0.5, size = 50),
+          plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
+          axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
+          axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
+          axis.text.y=element_text(size=30),
+          axis.text.x=element_text(size=30),
+          strip.text = element_text(size=30),
+          legend.title=element_text(size=30),
+          legend.text=element_text(size=30),
+          legend.key.size=unit(2,"cm"))
+
+tiff(file=fn_busco_genomedist_tiff, units="px", width=2880, height=1800)
+print(plot)
+dev.off()
 ```
 
-```{r, out.width="100%", echo=FALSE}
+```{r, out.width="100%", eval=FALSE}
 # note: add filters to differentiate problematic BUSCOs
 print(plot + theme(plot.title = element_text(face = "bold"),
                    plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm")))
