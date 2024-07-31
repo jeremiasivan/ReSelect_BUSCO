@@ -125,11 +125,11 @@ nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over BUSCOs
-ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
     library(ggplot2)
 
     # output variables
-    read_out <- list(busco=busco)
+    read_out <- data.table::data.table(busco=character(), read=character(), lm_r2=numeric(), lm_slope=numeric(), lm_p=numeric(), spearman_rho=numeric(), spearman_p=numeric())
 
     # input treefiles
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
@@ -196,7 +196,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
         # check if all values are NULL or NAs
         if (f_all_null_or_na(temp_df_dist$ref_dist) || f_all_null_or_na(temp_df_dist$read_dist)) {
-            return(NULL)
+            next
         }
 
         # subset data.frame
@@ -205,14 +205,22 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
         # check if filtered table has more than one entry and consists of all NULL or NAs
         if (nrow(temp_df_dist_filtered)==0 || f_all_null_or_na(temp_df_dist_filtered$ref_dist) || f_all_null_or_na(temp_df_dist_filtered$read_dist)) {
-            NULL
+            next
         }
 
         # run linear model
         lm <- lm(read_dist~ref_dist, data=temp_df_dist_filtered)
         lm_statistics <- f_extract_summary_lm(lm)
+        sp_statistics <- f_spearman_test(temp_df_dist_filtered$read_dist, temp_df_dist_filtered$ref_dist)
 
-        read_out[[read_species_name]] <- paste0(lm_statistics$slope, " (", lm_statistics$pvalue, ")")
+        # update data.frame
+        read_out <- rbind(read_out, data.table::data.table(busco=busco,
+                                                           read=read,
+                                                           lm_r2=lm_statistics$rsquared,
+                                                           lm_slope=lm_statistics$slope,
+                                                           lm_p=lm_statistics$pvalue,
+                                                           spearman_rho=sp_statistics$rho,
+                                                           spearman_p=sp_statistics$pvalue))
 
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
@@ -252,13 +260,9 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         dev.off()
     }
 
-    return(list(read_out=read_out))
+    return(read_out)
 }
 
-# convert list into dataframe
-ls_read_out <- ls_output[names(ls_output)=="read_out"]
-
 # save the data.frame
-df_output <- data.table::as.data.table(do.call(rbind, ls_read_out), fill=TRUE)
 data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
 ```

@@ -400,6 +400,13 @@ f_extract_summary_lm <- function(lm_result) {
     return(list(rsquared=rsquared, pvalue=pvalue, slope=slope))
 }
 
+# function: run Spearman correlatio test
+f_spearman_test <- function(x, y) {
+    corr <- cor.test(x, y, method='spearman')
+
+    return(list(rho=round(corr$estimate, 3), pvalue=round(corr$p.value), 3))
+}
+
 # function: check the closest reference given reads
 f_check_closest_ref <- function(dist_matrix, species_read, ls_species_ref) {
     # initiate variables

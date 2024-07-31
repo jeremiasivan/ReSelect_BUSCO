@@ -34,4 +34,3 @@ GCA_017140475.1    E.fibrosa    Symphyomyrtus
 GCA_017140595.1    E.curtisii    Acerosae
 GCA_017140615.1    E.cladocalyx    Symphyomyrtus
 GCF_016545825.1    E.grandis    Symphyomyrtus
-GCA_007663325.1    E.pauciflora    Eucalyptus
