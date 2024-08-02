@@ -165,7 +165,7 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
         read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
 
         # extract available available reference sequences
-        ls_refseq_available <- grep(paste0("^",read), ls_refseq, value=T)
+        ls_refseq_available <- grep(paste0("^",read), tre_original_tips, value=T)
         ls_refseq_available <- sapply(ls_refseq_available, function(x) {
             strsplit(x, split="--")[[1]][2]
         })
