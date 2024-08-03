@@ -225,7 +225,7 @@ stopCluster(nwcl)
 f_write_log(fn_log=fn_log, msg=c("", "-------- BUSCO Tree Distance -------"))
 
 # output data.table
-df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), dist=numeric())
+df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), dist=numeric(), sum_genome_dist=numeric(), ninfsites=numeric())
 
 # create doSNOW cluster
 nwcl <- makeCluster(nthread)
@@ -248,8 +248,6 @@ for (i in 1:length(ls_refseq)) {
 
     # iterate over BUSCOs
     df_output_subset <- foreach (busco = ls_uq_busco, .combine='rbind') %dopar% {
-        require(dplyr)
-
         # input files
         dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
         fn_tree_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.treefile")
@@ -264,9 +262,7 @@ for (i in 1:length(ls_refseq)) {
         tre <- ape::read.tree(fn_tree_two)
 
         # extract the total genome distance
-        genome_dist <- df_metadata %>%
-            filter(busco=busco) %>%
-            summarise(sum_dist=round(sum(genome_dist),3))
+        genome_dist <- sum(df_metadata$genome_dist[df_metadata$busco==busco])
 
         # extract the number of parsimony informative sites
         fn_log_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.iqtree")
@@ -275,7 +271,7 @@ for (i in 1:length(ls_refseq)) {
 
         # calculate nRF
         nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
-        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), dist=nrf_dist, sum_genome_dist=genome_dist$sum_dist, ninfsites=n_infsites))
+        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), dist=nrf_dist, sum_genome_dist=genome_dist, ninfsites=n_infsites))
     }
 
     # update data.table
