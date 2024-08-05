@@ -225,15 +225,15 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
 
-        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist, color=grouping)) +
-            geom_point(aes(size=20, shape=shape)) +
+        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist)) +
+            geom_point(aes(size=20, shape=shape, color=grouping)) +
             geom_abline(slope=1, intercept=0, linetype=3, aes(linewidth=3)) +
-            stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, alpha=0.5)
+            stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=1, method='lm', formula=y~x, color="black", alpha=0.5)
 
         if (nrow(temp_df_dist_filtered_noout) > 0) {
             # check if all values are NULL
             if (!f_all_null_or_na(temp_df_dist_filtered_noout$ref_dist) && !f_all_null_or_na(temp_df_dist_filtered_noout$read_dist)) {
-                plot <- plot + stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=1, method='lm', formula=y~x)
+                plot <- plot + stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, color="red", alpha=0.5)
             }
         }
 
