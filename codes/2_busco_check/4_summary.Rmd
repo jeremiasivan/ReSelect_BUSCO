@@ -129,7 +129,9 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
     library(ggplot2)
 
     # output variables
-    read_out <- data.table::data.table(busco=character(), read=character(), lm_r2=numeric(), lm_slope=numeric(), lm_p=numeric(), spearman_rho=numeric(), spearman_p=numeric())
+    read_out <- data.table::data.table(busco=character(), read=character(),
+                                       lm_r2=numeric(), lm_slope=numeric(), lm_p=numeric(), spearman_rho=numeric(), spearman_p=numeric(),
+                                       lm_r2_noout=numeric(), lm_slope_noout=numeric(), lm_p_noout=numeric(), spearman_rho_noout=numeric(), spearman_p_noout=numeric())
 
     # input treefiles
     fn_tree <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
@@ -208,19 +210,10 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
             next
         }
 
-        # run linear model
+        # run linear model with outgroup
         lm <- lm(read_dist~ref_dist, data=temp_df_dist_filtered)
         lm_statistics <- f_extract_summary_lm(lm)
         sp_statistics <- f_spearman_test(temp_df_dist_filtered$read_dist, temp_df_dist_filtered$ref_dist)
-
-        # update data.frame
-        read_out <- rbind(read_out, data.table::data.table(busco=busco,
-                                                           read=read,
-                                                           lm_r2=lm_statistics$rsquared,
-                                                           lm_slope=lm_statistics$slope,
-                                                           lm_p=lm_statistics$pvalue,
-                                                           spearman_rho=sp_statistics$rho,
-                                                           spearman_p=sp_statistics$pvalue))
 
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
@@ -230,13 +223,34 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
             geom_abline(slope=1, intercept=0, linetype=3, aes(linewidth=3)) +
             stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=1, method='lm', formula=y~x, color="black", alpha=0.5)
 
-        if (nrow(temp_df_dist_filtered_noout) > 0) {
-            # check if all values are NULL
-            if (!f_all_null_or_na(temp_df_dist_filtered_noout$ref_dist) && !f_all_null_or_na(temp_df_dist_filtered_noout$read_dist)) {
-                plot <- plot + stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, color="red", alpha=0.5)
-            }
+        # linear model without outgroup
+        lm_statistics_noout <- list(rsquared=NULL, slope=NULL, pvalue=NULL)
+        sp_statistics_noout <- list(rho=NULL, pvalue=NULL)
+
+        if (nrow(temp_df_dist_filtered_noout) > 0 && !f_all_null_or_na(temp_df_dist_filtered_noout$ref_dist) && !f_all_null_or_na(temp_df_dist_filtered_noout$read_dist)) {
+            # run linear model without outgroup
+            lm_noout <- lm(read_dist~ref_dist, data=temp_df_dist_filtered_noout)
+            lm_statistics_noout <- f_extract_summary_lm(lm_noout)
+            sp_statistics_noout <- f_spearman_test(temp_df_dist_filtered_noout$read_dist, temp_df_dist_filtered_noout$ref_dist)
+
+            plot <- plot + stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, color="red", alpha=0.5)
         }
 
+        # update data.frame
+        read_out <- rbind(read_out, data.table::data.table(busco=busco,
+                                                           read=read,
+                                                           lm_r2=lm_statistics$rsquared,
+                                                           lm_slope=lm_statistics$slope,
+                                                           lm_p=lm_statistics$pvalue,
+                                                           spearman_rho=sp_statistics$rho,
+                                                           spearman_p=sp_statistics$pvalue,
+                                                           lm_r2_noout=lm_statistics_noout$rsquared,
+                                                           lm_slope_noout=lm_statistics_noout$slope,
+                                                           lm_p_noout=lm_statistics_noout$pvalue,
+                                                           spearman_rho_noout=sp_statistics_noout$rho,
+                                                           spearman_p_noout=sp_statistics_noout$pvalue,
+                                                           ))
+        
         # update plot
         plot <- plot + ggtitle(paste(busco, "Phylogenetic Distances")) +
             xlab("Reference Distance") + ylab("Mapped Reads Distance") +
