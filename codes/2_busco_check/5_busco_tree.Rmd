@@ -223,11 +223,11 @@ for (i in 1:length(ls_refseq)) {
 stopCluster(nwcl)
 ```
 
-```{r check-busco-tree-distance, echo=FALSE}
+```{r check-busco-tree-distance}
 f_write_log(fn_log=fn_log, msg=c("", "-------- BUSCO Tree Distance -------"))
 
 # output data.table
-df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), nrf=numeric(), nrf_highbs=numeric(), sum_genome_dist=numeric(), ninfsites=numeric())
+df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), nrf=numeric(), nrf_highbs=numeric(), ninfbranch=numeric(), sum_genome_dist=numeric(), ninfsites=numeric())
 
 # create doSNOW cluster
 nwcl <- makeCluster(nthread)
@@ -250,7 +250,6 @@ for (i in 1:length(ls_refseq)) {
 
     # iterate over BUSCOs
     df_output_subset <- foreach (busco = ls_uq_busco, .combine='rbind') %dopar% {
-        require(ape)
         require(phytools)
 
         # input files
@@ -278,7 +277,9 @@ for (i in 1:length(ls_refseq)) {
         nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
         nrf_dist_high_bs <- f_extract_high_support_branch(fn_tree_one, fn_tree_two, 95)
 
-        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), nrf=nrf_dist, nrf_highbs=nrf_dist_high_bs, sum_genome_dist=genome_dist, ninfsites=n_infsites))
+        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label),
+                                      nrf=nrf_dist, nrf_highbs=nrf_dist_high_bs$nrf, ninfbranch=nrf_dist_high_bs$n_infbranch,
+                                      sum_genome_dist=genome_dist, ninfsites=n_infsites))
     }
 
     # update data.table
@@ -292,7 +293,7 @@ data.table::fwrite(df_output, file=fn_busco_sumtable, quote=F, sep="\t")
 
 # nRF vs. total genomic distance
 plot <- ggplot(df_output, aes(x=sum_genome_dist, y=nrf)) +
-    geom_point(aes(color=ninfsites), size=2, show.legend=F) +
+    geom_point(size=2) +
     ggtitle("Normalised RF Distance across Total Genomic Distances") + xlab("Genomic distance") + ylab("nRF distance") +
     theme(plot.title = element_text(hjust = 0.5, size = 50),
           plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
@@ -311,7 +312,7 @@ dev.off()
 
 # nRF (high bootstrap) vs. total genomic distance
 plot <- ggplot(df_output, aes(x=sum_genome_dist, y=nrf_highbs)) +
-    geom_point(aes(color=ninfsites), size=2) +
+    geom_point(aes(color=ninfbranch), size=2) +
     ggtitle("Normalised RF Distance across Total Genomic Distances") + xlab("Genomic distance") + ylab("nRF distance") +
     viridis::scale_color_viridis() +
     theme(plot.title = element_text(hjust = 0.5, size = 50),
@@ -330,8 +331,8 @@ print(plot)
 dev.off()
 
 # nRF vs. number of reference sequences
-plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=nrf, fill=ninfsites)) +
-    geom_point(aes(color=ninfsites), position=position_jitter(height=0.01, width=0.05), size=2, show.legend=F) +
+plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=nrf)) +
+    geom_point(position=position_jitter(height=0.01, width=0.05), size=2, show.legend=F) +
     geom_violin(alpha=0.5) +
     ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") +
     theme(plot.title = element_text(hjust = 0.5, size = 50),
@@ -351,10 +352,11 @@ dev.off()
 
 # nRF (high bootstrap) vs. number of reference sequences
 plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=nrf_highbs)) +
-    geom_point(aes(color=ninfsites), position=position_jitter(height=0.01, width=0.05), size=2, show.legend=F) +
+    geom_point(aes(color=ninfbranch), position=position_jitter(height=0.01, width=0.05), size=2) +
     geom_violin(alpha=0.5) +
     ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") +
-    viridis::scale_color_viridis()
+    viridis::scale_color_viridis() +
+    guides(size="none")
 
 tiff(file=fn_busco_nref_highbs_tiff, units="px", width=2880, height=1800)
 print(plot + theme(plot.title = element_text(hjust = 0.5, size = 50),

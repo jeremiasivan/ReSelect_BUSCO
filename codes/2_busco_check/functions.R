@@ -467,7 +467,8 @@ f_extract_high_support_branch <- function(fn_gene_tree, fn_refs_tree, min_bootst
     df_node_bootstrap <- na.omit(df_node_bootstrap)
 
     # nRF value
-    nRF -> 0
+    nRF <- 0
+    n_infbranch <- 0
     nRF_increment <- 1 / (length(gene_tree$tip.label)-3)
 
     # iterate over branching events with high bootstrap value
@@ -490,8 +491,10 @@ f_extract_high_support_branch <- function(fn_gene_tree, fn_refs_tree, min_bootst
         if (!group1_monophyletic || !group2_monophyletic) {
             nRF <- nRF + nRF_increment
         }
+
+        n_infbranch <- n_infbranch + 1
     }
 
     # return value for nRF
-    return(round(nRF,3))
+    return(nrf=round(nRF,3), n_infbranch=n_infbranch)
 }

@@ -66,6 +66,7 @@ library(doSNOW)
 # install.packages("phangorn")
 # install.packages("phytools")
 # install.packages("tidyverse")
+# install.packages("viridis")
 
 # store initial system time
 sys_tic <- Sys.time()
