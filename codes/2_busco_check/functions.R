@@ -446,3 +446,52 @@ f_calculate_nRF <- function(fn_tree_one, fn_tree_two) {
 
     return(nrf_dist)
 }
+
+# function: extract nRF value based on the number of highly-supported branches
+f_extract_high_support_branch <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
+    # child function to get the tips under a given node (source: chatGPT)
+    get_tips <- function(tree, node) {
+        descendants <- phytools::getDescendants(tree, node)
+        return(tree$tip.label[descendants])
+    }
+
+    # open the trees
+    gene_tree <- ape::read.tree(fn_gene_tree)
+    refs_tree <- ape::read.tree(fn_refs_tree)
+
+    # extract bootstrap values and their respective nodes from gene tree (source: ChatGPT)
+    df_node_bootstrap <- data.frame(node = (length(gene_tree$tip.label) + 1):(length(gene_tree$tip.label) + gene_tree$Nnode), 
+                                    bootstrap = as.numeric(gene_tree$node.label))
+
+    # remove rows with NA bootstrap values (if any)
+    df_node_bootstrap <- na.omit(df_node_bootstrap)
+
+    # nRF value
+    nRF -> 0
+    nRF_increment <- 1 / (length(gene_tree$tip.label)-3)
+
+    # iterate over branching events with high bootstrap value
+    for (i in 1:nrow(df_node_bootstrap)) {
+        # check if bootstrap value is low
+        if (df_node_bootstrap$bootstrap[i] < min_bootstrap) {
+            next
+        }
+
+        # get the child nodes (source: ChatGPT)
+        child_nodes <- gene_tree$edge[gene_tree$edge[,1] == df_node_bootstrap$node[i], 2]
+
+        # get the tips under each child node (source: ChatGPT)
+        group1_tips <- get_tips(gene_tree, child_nodes[1])
+        group2_tips <- get_tips(gene_tree, child_nodes[2])
+
+        # check if both groups are monophyletic
+        group1_monophyletic <- ape::is.monophyletic(refs_tree, group1_tips)
+        group2_monophyletic <- ape::is.monophyletic(refs_tree, group2_tips)
+        if (!group1_monophyletic || !group2_monophyletic) {
+            nRF <- nRF + nRF_increment
+        }
+    }
+
+    # return value for nRF
+    return(round(nRF,3))
+}

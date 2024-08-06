@@ -248,7 +248,7 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
                                                            lm_slope_noout=lm_statistics_noout$slope,
                                                            lm_p_noout=lm_statistics_noout$pvalue,
                                                            spearman_rho_noout=sp_statistics_noout$rho,
-                                                           spearman_p_noout=sp_statistics_noout$pvalue,
+                                                           spearman_p_noout=sp_statistics_noout$pvalue
                                                            ))
         
         # update plot
