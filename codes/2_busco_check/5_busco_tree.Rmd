@@ -292,7 +292,7 @@ stopCluster(nwcl)
 data.table::fwrite(df_output, file=fn_busco_sumtable, quote=F, sep="\t")
 
 # nRF vs. total genomic distance
-plot <- ggplot(df_output, aes(x=sum_genome_dist, y=nrf)) +
+plot <- ggplot(df_output, aes(x=sum_genome_dist, y=nrf, ymin=0, ymax=1)) +
     geom_point(size=2) +
     ggtitle("Normalised RF Distance across Total Genomic Distances") + xlab("Genomic distance") + ylab("nRF distance") +
     theme(plot.title = element_text(hjust = 0.5, size = 50),
@@ -311,7 +311,7 @@ print(plot)
 dev.off()
 
 # nRF (high bootstrap) vs. total genomic distance
-plot <- ggplot(df_output, aes(x=sum_genome_dist, y=nrf_highbs)) +
+plot <- ggplot(df_output, aes(x=sum_genome_dist, y=nrf_highbs, ymin=0, ymax=1)) +
     geom_point(aes(color=ninfbranch), size=2) +
     ggtitle("Normalised RF Distance across Total Genomic Distances") + xlab("Genomic distance") + ylab("nRF distance") +
     viridis::scale_color_viridis() +
@@ -331,7 +331,7 @@ print(plot)
 dev.off()
 
 # nRF vs. number of reference sequences
-plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=nrf)) +
+plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=nrf, ymin=0, ymax=1)) +
     geom_point(position=position_jitter(height=0.01, width=0.05), size=2, show.legend=F) +
     geom_violin(alpha=0.5) +
     ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") +
@@ -351,7 +351,7 @@ print(plot)
 dev.off()
 
 # nRF (high bootstrap) vs. number of reference sequences
-plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=nrf_highbs)) +
+plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=nrf_highbs, ymin=0, ymax=1)) +
     geom_point(aes(color=ninfbranch), position=position_jitter(height=0.01, width=0.05), size=2) +
     geom_violin(alpha=0.5) +
     ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") +

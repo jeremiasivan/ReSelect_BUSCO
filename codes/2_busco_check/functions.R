@@ -496,5 +496,5 @@ f_extract_high_support_branch <- function(fn_gene_tree, fn_refs_tree, min_bootst
     }
 
     # return value for nRF
-    return(nrf=round(nRF,3), n_infbranch=n_infbranch)
+    return(list(nrf=round(nRF,3), n_infbranch=n_infbranch))
 }
