@@ -451,7 +451,7 @@ f_calculate_nRF <- function(fn_tree_one, fn_tree_two) {
 f_extract_high_support_branch <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
     # child function to get the tips under a given node (source: chatGPT)
     get_tips <- function(tree, node) {
-        descendants <- phytools::getDescendants(tree, node)
+        descendants <- phangorn::Descendants(tree, node, type = "tips")
         return(tree$tip.label[descendants])
     }
 

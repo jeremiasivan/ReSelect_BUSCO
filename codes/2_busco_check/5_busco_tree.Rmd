@@ -250,8 +250,6 @@ for (i in 1:length(ls_refseq)) {
 
     # iterate over BUSCOs
     df_output_subset <- foreach (busco = ls_uq_busco, .combine='rbind') %dopar% {
-        require(phytools)
-
         # input files
         dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
         fn_tree_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.treefile")
