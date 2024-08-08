@@ -50,7 +50,3 @@ rsconnect/
 
 # Temporary
 *.DS_Store
-codes/3_mash_sketch/*
-codes/4_read_mapping/*
-codes/5_busco/*
-data/eucs_refseq_chr.txt

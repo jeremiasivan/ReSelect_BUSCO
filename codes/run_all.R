@@ -28,6 +28,8 @@ exe_iqtree2 <- "iqtree2"
 exe_mafft <- "mafft"
 exe_treeshrink <- "treeshrink"
 
+exe_nwed <- ""
+
 file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
 min_taxa <- 4
 
@@ -60,7 +62,7 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                   params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools, exe_qualimap=exe_qualimap, 
                               exe_gffread=exe_gffread, exe_gff2bed=exe_gff2bed,
-                              exe_busco=exe_busco, exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink,
+                              exe_busco=exe_busco, exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink, exe_nwed=exe_nwed,
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters,
                               busco_lineage=busco_lineage, busco_mode=busco_mode, type=type,
                               min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, include_incomplete=include_incomplete,

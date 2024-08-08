@@ -1,5 +1,5 @@
 ---
-title: "BUSCO Check for Reference Sequences Bias"
+title: "Data Preparation for BUSCO Checking"
 author: "Jeremias Ivan"
 date: "`r format(Sys.time(), '%d %B %Y, %H:%M%p')`"
 
@@ -16,52 +16,36 @@ params:
   outdir: "~/busco"
   thread: 5
   redo: TRUE
-
-  # input files
+  
+  # list of accession numbers to be downloaded
   file_refseq: ""
   file_shortreads: ""
-  file_genome_treefile: ""
-  
-  # executables
-  exe_busco: ""
-  exe_gffread: ""
-  exe_gff2bed: ""
+  file_adapters: ""
 
-  exe_mafft: ""
-  exe_iqtree2: ""
-  exe_treeshrink: ""
-
-  exe_nwed: ""
-
-  # BUSCO pipeline
+  # minimum number of representative short-reads
   min_taxa: 4
 
-  busco_lineage: ""
-  busco_mode: "genome"
-  type: "coordinate"
+  # executables
+  exe_datasets: ""
+  bin_sratoolkit: ""
 
-  min_busco_depth: 10
-  max_busco_depth: 60
-  include_incomplete: TRUE
+  exe_adapterremoval: ""
+  exe_bwamem2: ""
+  exe_samtools: ""
+  exe_qualimap: ""
+  exe_bcftools: ""
 ---
 
 ## Load required libraries and functions
 ```{r}
 source(paste0(params$codedir, "/1_data_download/functions.R"))
-source(paste0(params$codedir, "/2_busco_check/functions.R"))
 
 library(doSNOW)
-library(dplyr)
 ```
 
 ```{r, include=FALSE}
-# install.packages("Biostrings")
 # install.packages("data.table")
 # install.packages("log4r")
-# install.packages("phangorn")
-# install.packages("tidyverse")
-# install.packages("TreeDist")
-# install.packages("viridis")
 
 # store initial system time
 sys_tic <- Sys.time()
@@ -79,7 +63,7 @@ if (!dir.exists(logdir)) {
 }
 
 # create log file
-fn_log <- paste0(logdir, params$prefix, ".busco_check.log")
+fn_log <- paste0(logdir, params$prefix, ".data_preparation.log")
 log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::default_log_layout())
 fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
 if (!file.exists(fn_log) || params$redo) {
@@ -90,13 +74,10 @@ if (!file.exists(fn_log) || params$redo) {
 knitr::opts_knit$set(root.dir = currentdir)
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/2_busco_ref.Rmd")}
+```{r child = paste0(params$codedir,"/1_data_preparation/2_download.Rmd")}
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/3_summary.Rmd")}
-```
-
-```{r child = paste0(params$codedir,"/2_busco_check/4_busco_tree.Rmd")}
+```{r child = paste0(params$codedir,"/1_data_preparation/3_readmap.Rmd")}
 ```
 
 ```{r, include=FALSE}

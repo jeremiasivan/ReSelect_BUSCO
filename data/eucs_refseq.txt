@@ -3,7 +3,7 @@ GCA_004368105.3    E.melliodora    Symphyomyrtus
 GCA_014182365.1    E.tenuipes    Cuboidea
 GCA_014182375.1    E.virginea    Symphyomyrtus
 GCA_014182385.1    E.viminalis    Symphyomyrtus
-GCA_014182395.1    E.ANBG9806169    None
+GCA_014182395.1    E.ANBG9806169    Eucalyptus
 GCA_014182405.1    E.sideroxylon    Symphyomyrtus
 GCA_014182515.1    E.microcorys    Alveolata
 GCA_014182545.1    E.globulus    Symphyomyrtus
@@ -15,11 +15,11 @@ GCA_014182695.1    E.albens    Symphyomyrtus
 GCA_014182705.1    E.camaldulensis    Symphyomyrtus
 GCA_014182715.1    E.cloeziana    Idiogenes
 GCA_014182725.1    E.brandiana    Symphyomyrtus
-GCA_014182735.1    C.maculata    Outgroup
-GCA_014182845.1    C.calophylla    Outgroup
+GCA_014182735.1    C.maculata    Corymbia
+GCA_014182845.1    C.calophylla    Corymbia
 GCA_014182855.1    E.regnans    Eucalyptus
 GCA_014182885.2    E.caleyi    Symphyomyrtus
-GCA_014182895.1    A.floribunda    Outgroup
+GCA_014182895.1    A.floribunda    Angophora
 GCA_016097485.1    E.sid_E.mel    Symphyomyrtus
 GCA_016097545.1    E.victrix    Symphyomyrtus
 GCA_016097595.1    E.pumila    Symphyomyrtus

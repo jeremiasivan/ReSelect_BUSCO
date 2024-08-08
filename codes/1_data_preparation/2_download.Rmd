@@ -1,68 +1,6 @@
 ---
-title: "Download Data from NCBI"
-author: "Jeremias Ivan"
-date: "`r format(Sys.time(), '%d %B %Y, %H:%M%p')`"
-
-output:
-  html_document:
-    code_folding: show
-    toc: true
-    toc_float: true
-
-params:
-  # general
-  codedir: "~/BusIER/codes"
-  prefix: ""
-  outdir: "~/busco"
-  thread: 5
-  redo: TRUE
-  
-  # list of accession numbers to be downloaded
-  file_refseq: ""
-  file_shortreads: ""
-
-  # executables
-  exe_datasets: ""
-  bin_sratoolkit: ""
+title: "Download Reference Assemblies and Short Reads"
 ---
-
-## Load required libraries and functions
-```{r}
-source(paste0(params$codedir, "/1_data_download/functions.R"))
-
-library(doSNOW)
-```
-
-```{r, include=FALSE}
-# install.packages("data.table")
-# install.packages("log4r")
-
-# store initial system time
-sys_tic <- Sys.time()
-
-# create outdir
-currentdir <- paste0(params$outdir, "/", params$prefix)
-if (!dir.exists(currentdir)) {
-  dir.create(currentdir, recursive = T)
-}
-
-# create directory for log files
-logdir <- paste0(currentdir, "/logs/")
-if (!dir.exists(logdir)) {
-  dir.create(logdir, recursive = T)
-}
-
-# create log file
-fn_log <- paste0(logdir, params$prefix, ".download.log")
-log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::default_log_layout())
-fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
-if (!file.exists(fn_log) || params$redo) {
-  unlink(fn_log)
-  f_write_log(fn_log=fn_log, msg="BusIER")
-}
-
-knitr::opts_knit$set(root.dir = currentdir)
-```
 
 ```{r, include=FALSE}
 f_write_log(fn_log=fn_log,
@@ -81,6 +19,10 @@ dir_shortreads <- paste0(currentdir, "/short_reads/")
 if (!dir.exists(dir_shortreads)) {
   dir.create(dir_shortreads, recursive = T)
 }
+
+# open input files
+df_refs <- data.table::fread(params$file_refseq)
+df_reads <- data.table::fread(params$file_shortreads)
 ```
 
 ## Download reference genome FASTA alignments from NCBI
@@ -89,17 +31,11 @@ f_write_log(fn_log=fn_log,
             msg=c("", "------------ Reference Sequences -----------"))
 
 # initiate variable to store list of reference sequences
-ls_refseq <- NULL
+ls_refseq <- df_refs$id
 is_refseq_available <- FALSE
 
 ls_refseq_available <- NULL
 ls_refseq_download <- NULL
-
-# open the file that contains the list of reference sequences
-if (params$file_refseq != "" && !is.null(params$file_refseq)) {
-  ls_refseq <- data.table::fread(params$file_refseq, select="id")
-  ls_refseq <- ls_refseq$id
-}
 
 # check the length of the reference sequences
 if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
@@ -185,17 +121,11 @@ f_write_log(fn_log=fn_log,
             msg=c("", "---------------- Short Reads ---------------"))
 
 # initiate variable to store list of reference sequences
-ls_shortreads <- NULL
+ls_shortreads <- df_reads$id[df_reads$is_check]
 is_shortreads_available <- FALSE
 
 ls_reads_available <- NULL
 ls_reads_download <- NULL
-
-# open the file that contains the list of short reads
-if (params$file_shortreads != "" && !is.null(params$file_shortreads)) {
-  ls_shortreads <- data.table::fread(params$file_shortreads, select="id")
-  ls_shortreads <- ls_shortreads$id
-}
 
 # check the length of the short reads
 if (length(ls_shortreads) == 0 || is.null(ls_shortreads)) {
@@ -257,12 +187,4 @@ foreach (read = ls_reads_download) %dopar% {
 }
 
 stopCluster(nwcl)
-```
-
-```{r, include=FALSE}
-# store final system time
-sys_toc <- Sys.time()
-
-# write the system time in log file
-f_write_log(fn_log=fn_log, msg=c("", paste0("Total elapsed time: ", round(as.numeric(difftime(sys_toc, sys_tic, units = "mins")), 3), " mins")))
 ```

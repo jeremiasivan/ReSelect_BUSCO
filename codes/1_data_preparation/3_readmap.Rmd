@@ -2,26 +2,13 @@
 title: "Read Mapping of Short Reads on Reference Sequences"
 ---
 
-```{r check-readmap-setup, include=FALSE}
+```{r, include=FALSE}
 f_write_log(fn_log=fn_log,
             msg=c("", "####################################",
                       "####        Read Mapping        ####",
                       "####################################"))
 
-# get current working directory
-dir_current <- getwd()
-
-# directories for reference sequence and short reads
-dir_refseq <- paste0(dir_current, "/refseq/")
-dir_shortreads <- paste0(dir_current, "/short_reads/")
-
-# list of reference sequences
-df_refs <- data.table::fread(params$file_refseq)
-ls_refseq <- df_refs$id
-
-# list of short reads
-df_reads <- data.table::fread(params$file_shortreads)
-ls_shortreads <- df_reads$id[df_reads$is_check]
+# check if number of representative short-reads sufficient
 if (length(ls_shortreads) < params$min_taxa) {
     log4r::error(fn_logger, "Number of representative species is lower than minimum number of taxa. Exited.")
     knitr::knit_exit()
@@ -31,14 +18,17 @@ if (length(ls_shortreads) < params$min_taxa) {
 ls_prefix <- outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--"))
 
 # output directories
-dir_check_shortreads <- paste0(dir_current, "/busco_check/short_reads/")
-dir_readmap <- paste0(dir_current, "/busco_check/readmap/")
+dir_shortreads_filtered <- paste0(dir_shortreads, "/filtered/")
+dir_readmap <- paste0(currentdir, "/readmap/")
 
 # create directory if not exist
-lapply(list(dir_check_shortreads,dir_readmap), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+lapply(list(dir_shortreads_filtered,dir_readmap), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+
+# output files
+fn_readmap_metadata <- paste0(dir_readmap, "metadata.tsv")
 ```
 
-```{r check-readmap-thread, include=FALSE}
+```{r readmap-thread, include=FALSE}
 min_read_quality <- 25
 is_check_coverage <- FALSE
 
@@ -64,7 +54,7 @@ if (params$redo) {
 } else {
     for (read in ls_shortreads) {
         # check if output file exists
-        file_fastq <- paste0(dir_check_shortreads, read, ".pair1.truncated")
+        file_fastq <- paste0(dir_shortreads_filtered, read, ".pair1.truncated")
         if (file.exists(file_fastq)) {
             ls_shortread_done <- c(ls_shortread_done, paste("-", read))
             next
@@ -93,7 +83,7 @@ cat(paste0("Available filtered short reads (", length(ls_shortread_done), "/", l
 cat(paste("Short reads to be filtered:", length(ls_shortread_qc)))
 ```
 
-```{r check-readmap-qcreads, include=is_qcreads, eval=is_qcreads}
+```{r readmap-qcreads, include=is_qcreads, eval=is_qcreads}
 f_write_log(fn_log=fn_log, msg=paste("Running AdapterRemoval using", thread_adapterremoval, "threads"))
 
 # create doSNOW cluster
@@ -102,7 +92,7 @@ doSNOW::registerDoSNOW(nwcl)
 
 # iterate over short reads
 foreach (read = ls_shortread_qc) %dopar% {
-    prefix <- paste0(dir_check_shortreads, read)
+    prefix <- paste0(dir_shortreads_filtered, read)
 
     # extract FASTQ files
     dir_reads <- paste0(dir_shortreads, read, "/fastq/")
@@ -129,7 +119,7 @@ stopCluster(nwcl)
 ```
 
 ## Map short reads to reference using BWA-MEM2
-```{r check-readmap-refmap, include=FALSE}
+```{r readmap-refmap, include=FALSE}
 # create data.frame to store directory of reference sequence
 df_refseq_dir <- data.frame(id=character(), dir=character())
 
@@ -148,6 +138,8 @@ for (ref in ls_refseq) {
     # update data.frame
     df_refseq_dir <- rbind(df_refseq_dir, data.frame(id=ref, dir=file_ref))
 }
+
+data.table::fwrite(df_refseq_dir, file=fn_readmap_metadata, sep="\t", quote=F)
 ```
 
 ```{r, include=FALSE}
@@ -194,7 +186,7 @@ cat(paste0("Available mapped reads (", length(ls_readmap_done), "/", length(ls_p
 cat(paste("Short reads to be mapped:", length(ls_readmap_run)))
 ```
 
-```{r check-readmap, include=is_readmap, eval=is_readmap}
+```{r readmap, include=is_readmap, eval=is_readmap}
 f_write_log(fn_log=fn_log, msg=paste("Running BWA-MEM2 using", thread_bwamem2, "threads"))
 
 # create doSNOW cluster
@@ -221,13 +213,13 @@ foreach (prefix = ls_readmap_run) %dopar% {
     file_ref <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
     # extract FASTQ file
-    file_fastq_one <- paste0(dir_check_shortreads, read, ".pair1.truncated")
+    file_fastq_one <- paste0(dir_shortreads_filtered, read, ".pair1.truncated")
     if (!file.exists(file_fastq_one)) {
         log4r::warn(fn_logger, paste0("File not found: filtered FASTQ file for ", read, ". Skipped."))
         return(NULL)
     }
 
-    file_fastq_two <- paste0(dir_check_shortreads, read, ".pair2.truncated")
+    file_fastq_two <- paste0(dir_shortreads_filtered, read, ".pair2.truncated")
     if (!file.exists(file_fastq_two)) {
         file_fastq_two <- NULL
     }
@@ -246,7 +238,7 @@ foreach (prefix = ls_readmap_run) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r check-readmap-coverage, include=is_check_coverage, eval=is_check_coverage}
+```{r readmap-coverage, include=is_check_coverage, eval=is_check_coverage}
 # set up variable
 ls_coverage_run <- c()
 
@@ -330,7 +322,7 @@ cat(paste0("Available VCF files (", length(ls_variant_done), "/", length(ls_pref
 cat(paste("Variants to be called:", length(ls_variant_run)))
 ```
 
-```{r check-readmap-calling, include=is_variant, eval=is_variant}
+```{r readmap-calling, include=is_variant, eval=is_variant}
 f_write_log(fn_log=fn_log, msg=paste("Running Bcftools using", thread_samtools, "threads"))
 
 # create doSNOW cluster

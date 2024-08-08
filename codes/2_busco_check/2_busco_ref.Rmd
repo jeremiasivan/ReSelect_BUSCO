@@ -8,6 +8,16 @@ f_write_log(fn_log=fn_log,
                       "####            BUSCO           ####",
                       "####################################"))
 
+# input files
+fn_readmap_metadata <- paste0(currentdir, "/readmap/metadata.tsv")
+df_refseq_dir <- data.table::fread(fn_readmap_metadata)
+
+df_refs <- data.table::fread(params$file_refseq)
+ls_refseq <- df_refs$id
+
+df_reads <- data.table::fread(params$file_shortreads)
+ls_shortreads <- df_reads$id[df_reads$is_check]
+
 # output directories
 dir_busco <- ""
 
@@ -31,7 +41,7 @@ dir_busco_tree <- paste0(dir_busco, "trees/")
 
 lapply(list(dir_busco_lineage,dir_busco_ref,dir_busco_read,dir_busco_tree), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
-# output file
+# output files
 fn_refs_busco <- paste0(dir_busco_ref, "metadata.tsv")
 fn_mapped_reads_busco <- paste0(dir_busco_read, "metadata.tsv")
 ```
@@ -337,9 +347,9 @@ if (!is.null(df_mapped_reads_busco) && !params$redo) {
 } else {
     # run BUSCO extraction for mapped reads
     if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
-        knitr::knit_child(paste0(params$codedir,"/2_busco_check/3a_coordinate.Rmd"))
+        knitr::knit_child(paste0(params$codedir,"/2_busco_check/2a_coordinate.Rmd"))
     } else if (params$type == "pipeline") {
-        knitr::knit_child(paste0(params$codedir,"/2_busco_check/3b_pipeline.Rmd"))
+        knitr::knit_child(paste0(params$codedir,"/2_busco_check/2b_pipeline.Rmd"))
     }
 }
 ```
