@@ -24,12 +24,14 @@ if (!file.exists(params$file_genome_treefile)) {
 }
 
 # output file
-fn_busco_sumtable <- paste0(dir_check_tree_summary, "summary.nRF.sumtable")
+fn_busco_sumtable <- paste0(dir_check_tree_summary, "summary.dist.sumtable")
 fn_busco_nref_tiff <- paste0(dir_check_tree_summary, "nRF_nref.tiff")
-fn_busco_nref_highbs_tiff <- paste0(dir_check_tree_summary, "nRF_highbs_nref.tiff")
 fn_busco_genomedist_tiff <- paste0(dir_check_tree_summary, "nRF_genomedist.tiff")
-fn_busco_genomedist_highbs_tiff <- paste0(dir_check_tree_summary, "nRF_highbs_genomedist.tiff")
-fn_busco_nref_mean_tiff <- paste0(dir_check_tree_summary, "nRF_mean.tiff")
+fn_busco_meandist_nref_tiff <- paste0(dir_check_tree_summary, "meandist_nref.tiff")
+```
+
+```{r, include=FALSE}
+is_collapse_lowbs <- FALSE
 ```
 
 ```{r check-busco-tree-metadata}
@@ -222,7 +224,7 @@ for (i in 1:length(ls_refseq)) {
 
             # output collapsed low-bootstrap branch
             fn_treefile_collapsed <- paste0(dir_output, busco, "_aligned.fna.collapsed.treefile")
-            if (!file.exists(fn_treefile_collapsed) || params$redo) {
+            if (is_collapse_lowbs && (!file.exists(fn_treefile_collapsed) || params$redo)) {
                 # run newick_utils
                 f_collapse_branch(fn_treefile, 95, fn_treefile_collapsed, params$exe_nwed)
             }
@@ -237,7 +239,9 @@ stopCluster(nwcl)
 f_write_log(fn_log=fn_log, msg=c("", "-------- BUSCO Tree Distance -------"))
 
 # output data.table
-df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), nrf=numeric(), nrf_highbs=numeric(), sum_genome_dist=numeric(), ninfsites=numeric())
+df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), n_spmatch=numeric(), sum_genome_dist=numeric(), 
+                                    nrf=numeric(), treedist=numeric(), treedist_highbs=numeric(), read_infsites=numeric(),
+                                    ratio_treelen=numeric(), ratio_meanbs=numeric(), ratio_read_tiplenlen=numeric())
 
 # create doSNOW cluster
 nwcl <- makeCluster(nthread)
@@ -264,11 +268,9 @@ for (i in 1:length(ls_refseq)) {
         dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
         fn_tree_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.treefile")
         fn_tree_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.fna.treefile")
-        fn_tree_one_collapsed <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.collapsed.treefile")
-        fn_tree_two_collapsed <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.fna.collapsed.treefile")
         
         # check if file exists
-        if (!all(file.exists(fn_tree_one, fn_tree_two, fn_tree_one_collapsed, fn_tree_two_collapsed))) {
+        if (!all(file.exists(fn_tree_one, fn_tree_two))) {
             return(NULL)
         }
 
@@ -277,19 +279,38 @@ for (i in 1:length(ls_refseq)) {
 
         # extract the total genome distance
         genome_dist <- sum(df_metadata$genome_dist[df_metadata$busco==busco])
+        n_spmatch <- length(df_metadata$read[df_metadata$busco==busco & df_metadata$genome_dist==0])
 
         # extract the number of parsimony informative sites
         fn_log_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.iqtree")
+        fn_log_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.fna.iqtree")
+
+        # extract tree lengths
+        read_blen <- as.numeric(gsub("^.* ", "", system(paste("grep '^Total tree length (sum of branch lengths):'",fn_log_one), intern = T)))
+        refs_blen <- as.numeric(gsub("^.* ", "", system(paste("grep '^Total tree length (sum of branch lengths):'",fn_log_two), intern = T)))
+        ratio_treelen <- round(read_blen/refs_blen, 3)
+
+        # extract ratio of tip to total tree lengths
+        read_inblen <- gsub("^.*\\: ", "", system(paste("grep '^Sum of internal branch lengths:'",fn_log_one), intern = T))
+        read_inblen <- as.numeric(gsub(".\\(.*$", "", read_inblen))
+        ratio_read_tiplenlen <- 1 - round(read_inblen/read_blen, 3)
+
+        # extract number of informative sites
         n_infsites <- gsub("^.* ", "", system(paste("grep '^Number of parsimony informative sites:'",fn_log_one), intern = T))
-        n_infsites <- as.numeric(n_infsites)
+
+        # extract average bootstrap
+        read_meanbs <- f_calculate_mean_bs(fn_tree_one)
+        refs_meanbs <- f_calculate_mean_bs(fn_tree_two)
+        ratio_meanbs <- round(read_meanbs/refs_meanbs, 3)
 
         # calculate nRF
         nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
-        nrf_dist_high_bs <- f_calculate_nRF(fn_tree_one_collapsed, fn_tree_two_collapsed)
+        treedist <- f_calculate_treedist(fn_tree_one, fn_tree_two, 0)
+        treedist_highbs <- f_calculate_treedist(fn_tree_one, fn_tree_two, 95)
 
-        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label),
-                                      nrf=nrf_dist, nrf_highbs=nrf_dist_high_bs,
-                                      sum_genome_dist=genome_dist, ninfsites=n_infsites))
+        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), n_spmatch=n_spmatch, sum_genome_dist=genome_dist, 
+                                      nrf=nrf_dist, treedist=treedist$dist, treedist_highbs=treedist_highbs$dist, read_infsites=n_infsites,
+                                      ratio_treelen=ratio_treelen, ratio_meanbs=ratio_meanbs, ratio_read_tiplenlen=ratio_read_tiplenlen))
     }
 
     # update data.table
@@ -321,27 +342,6 @@ tiff(file=fn_busco_genomedist_tiff, units="px", width=2880, height=1800)
 print(plot)
 dev.off()
 
-# nRF (high bootstrap) vs. total genomic distance
-plot <- ggplot(df_output, aes(x=sum_genome_dist, y=nrf_highbs, ymin=0, ymax=1)) +
-    geom_point(size=2) +
-    ggtitle("Normalised RF Distance across Total Genomic Distances") + xlab("Genomic distance") + ylab("nRF distance") +
-    facet_wrap(.~n_ref) +
-    # viridis::scale_color_viridis() +
-    theme(plot.title = element_text(hjust = 0.5, size = 50),
-          plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
-          axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
-          axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
-          axis.text.y=element_text(size=30),
-          axis.text.x=element_text(size=30),
-          strip.text = element_text(size=30),
-          legend.title=element_text(size=30),
-          legend.text=element_text(size=30),
-          legend.key.size=unit(2,"cm"))
-
-tiff(file=fn_busco_genomedist_highbs_tiff, units="px", width=2880, height=1800)
-print(plot)
-dev.off()
-
 # nRF vs. number of reference sequences
 plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=nrf, ymin=0, ymax=1)) +
     geom_point(position=position_jitter(height=0.01, width=0.05), size=2, show.legend=F) +
@@ -362,38 +362,16 @@ tiff(file=fn_busco_nref_tiff, units="px", width=2880, height=1800)
 print(plot) 
 dev.off()
 
-# nRF (high bootstrap) vs. number of reference sequences
-plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=nrf_highbs, ymin=0, ymax=1)) +
-    geom_point(position=position_jitter(height=0.01, width=0.05), size=2) +
-    geom_violin(alpha=0.5) +
-    ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") +
-    # viridis::scale_color_viridis() +
-    guides(size="none") + 
-    theme(plot.title = element_text(hjust = 0.5, size = 50),
-          plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
-          axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
-          axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
-          axis.text.y=element_text(size=30),
-          axis.text.x=element_text(size=30),
-          strip.text = element_text(size=30),
-          legend.title=element_text(size=30),
-          legend.text=element_text(size=30),
-          legend.key.size=unit(2,"cm"))
-
-tiff(file=fn_busco_nref_highbs_tiff, units="px", width=2880, height=1800)
-print(plot)
-dev.off()
-
-# mean nRF vs. number of reference sequences
+# mean distances vs. number of reference sequences
 df_output_mean <- df_output %>%
                     group_by(n_ref) %>%
-                    summarise(all=mean(nrf), high_bs=mean(nrf_highbs))%>%
+                    summarise(nrf=mean(nrf), treedist=mean(treedist), treedist_highbs=mean(treedist_highbs)) %>%
                     tidyr::pivot_longer(-n_ref)
 
 plot <- ggplot(df_output_mean, aes(x=as.factor(n_ref), y=value, colour=name, group=name, ymin=0, ymax=1)) +
     geom_line(linewidth=2) +
     geom_point(size=2) +
-    ggtitle("Mean of nRF Distance across Number of References") + xlab("Number of references") + ylab("Mean nRF") +
+    ggtitle("Mean of Tree Distances across Number of References") + xlab("Number of references") + ylab("Mean distance") +
     theme(plot.title=element_text(hjust = 0.5, size = 50),
           plot.margin=margin(1.25, 1.25, 1.25, 1.25, "cm"),
           axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
@@ -405,7 +383,7 @@ plot <- ggplot(df_output_mean, aes(x=as.factor(n_ref), y=value, colour=name, gro
           legend.text=element_text(size=30),
           legend.key.size=unit(2,"cm"))
 
-tiff(file=fn_busco_nref_mean_tiff, units="px", width=2880, height=1800)
+tiff(file=fn_busco_meandist_nref_tiff, units="px", width=2880, height=1800)
 print(plot)
 dev.off()
 ```

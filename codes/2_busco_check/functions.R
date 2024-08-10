@@ -362,17 +362,52 @@ f_calculate_nRF <- function(fn_tree_one, fn_tree_two) {
     tree_two <- ape::read.tree(fn_tree_two)
 
     # calculate nRF
-    nrf_dist <- TreeDist::RobinsonFoulds(tree_one, tree_two, normalize=TRUE)
+    nrf_dist <- phangorn::RF.dist(tree_one, tree_two, normalize=TRUE)
 
     return(nrf_dist)
 }
 
-# function: extract nRF value based on the number of highly-supported branches
-f_extract_high_support_branch <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
+# function: extract distance value based on the number of highly-supported branches
+f_calculate_treedist <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
     # child function to get the tips under a given node (source: chatGPT)
-    get_tips <- function(tree, node) {
+    f_get_tips <- function(tree, node) {
         descendants <- phangorn::Descendants(tree, node, type = "tips")
-        return(tree$tip.label[descendants])
+        return(tree$tip.label[unlist(descendants)])
+    }
+
+    # child function to check if tips are monophyletic
+    f_is_monophyletic <- function(tips, min_bootstrap, tree) {
+        # initial check
+        is_monophyletic <- ape::is.monophyletic(tree, tips)
+        if (is_monophyletic) {
+            return(TRUE)
+        }
+
+        # extract bootstrap values from the tree
+        df_node_bs <- data.frame(node = (length(tree$tip.label) + 1):(length(tree$tip.label) + tree$Nnode), 
+                                 bootstrap = as.numeric(tree$node.label))
+        df_node_bs <- na.omit(df_node_bs)
+
+        # extract the MRCA node
+        node_mrca <- ape::getMRCA(tree, tips)
+
+        # iterate over tips
+        ls_nodepath <- c()
+        for (tip in tips) {
+            tip_node <- which(tree$tip.label==tip)
+            ls_nodepath <- c(ls_nodepath, ape::nodepath(tree, tip_node, node_mrca))
+        }
+
+        # extract unique nodes
+        ls_nodepath <- unique(ls_nodepath)
+
+        # extract bootstrap values
+        ls_bootstrap_values <- df_node_bs$bootstrap[df_node_bs$node%in%c(node_mrca,ls_nodepath)]
+        if (all(ls_bootstrap_values < min_bootstrap)) {
+            return(TRUE)
+        }
+
+        return(FALSE)
     }
 
     # open the trees
@@ -402,12 +437,12 @@ f_extract_high_support_branch <- function(fn_gene_tree, fn_refs_tree, min_bootst
         child_nodes <- gene_tree$edge[gene_tree$edge[,1] == df_node_bootstrap$node[i], 2]
 
         # get the tips under each child node (source: ChatGPT)
-        group1_tips <- get_tips(gene_tree, child_nodes[1])
-        group2_tips <- get_tips(gene_tree, child_nodes[2])
+        group1_tips <- f_get_tips(gene_tree, child_nodes[1])
+        group2_tips <- f_get_tips(gene_tree, child_nodes[2])
 
         # check if both groups are monophyletic
-        group1_monophyletic <- ape::is.monophyletic(refs_tree, group1_tips)
-        group2_monophyletic <- ape::is.monophyletic(refs_tree, group2_tips)
+        group1_monophyletic <- f_is_monophyletic(group1_tips, min_bootstrap, refs_tree)
+        group2_monophyletic <- f_is_monophyletic(group2_tips, min_bootstrap, refs_tree)
         if (!group1_monophyletic || !group2_monophyletic) {
             nRF <- nRF + nRF_increment
         }
@@ -416,5 +451,16 @@ f_extract_high_support_branch <- function(fn_gene_tree, fn_refs_tree, min_bootst
     }
 
     # return value for nRF
-    return(list(nrf=round(nRF,3), n_infbranch=n_infbranch))
+    return(list(dist=round(nRF,3), n_infbranch=n_infbranch))
+}
+
+# function: extract average bootstrap value
+f_calculate_mean_bs <- function(fn_tree) {
+    # open treefile
+    tree <- ape::read.tree(fn_tree)
+
+    # calculate mean bootstrap values
+    mean_bs <- mean(as.numeric(tree$node.label[tree$node.label!=""]))
+
+    return(mean_bs)
 }
