@@ -440,8 +440,9 @@ for (i in 1:length(ls_refseq)) {
     f_tips_to_species(fn_astral_outfile, fn_astral_sp_outfile, ls_species_name)
     
     # calculate nRF distance
-    nrf_dist <- f_calculate_nRF(params$file_genome_treefile, fn_astral_sp_outfile)
-    f_write_log(fn_log=fn_log, msg=paste("-", i, "reference sequence(s):", nrf_dist))
+    astral_tree <- ape::read.tree(fn_astral_outfile)
+    genome_tree_subset <- ape::keep.tip(genome_tree, tip=astral_tree$tip.label)
+    f_write_log(fn_log=fn_log, msg=paste("-", i, "reference sequence(s):", phangorn::RF.dist(genome_tree_subset, astral_tree)))
 }
 
 stopCluster(nwcl)
