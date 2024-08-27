@@ -50,24 +50,24 @@ if (!dir.exists(outdir_prefix)) {
 }
 
 # data download
-rmarkdown::render(input=paste0(codedir,"/1_data_download/1_main.Rmd"),
+rmarkdown::render(input=paste0(codedir,"/1_data_preparation/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, prefix, ".download.html"),
                   params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
-                              file_refseq=file_refseq, file_shortreads=file_shortreads,
-                              exe_datasets=exe_datasets, bin_sratoolkit=bin_sratoolkit),
+                              file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters,
+                              min_taxa=min_taxa, exe_datasets=exe_datasets, bin_sratoolkit=bin_sratoolkit,
+                              exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools, exe_qualimap=exe_qualimap),
                   quiet=TRUE)
 
 # BUSCO check
 rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, prefix, ".check.html"),
                   params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
-                              exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools, exe_qualimap=exe_qualimap, 
-                              exe_gffread=exe_gffread, exe_gff2bed=exe_gff2bed,
-                              exe_busco=exe_busco, exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink, exe_nwed=exe_nwed, exe_astral=exe_astral,
-                              file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters,
-                              busco_lineage=busco_lineage, busco_mode=busco_mode, type=type,
-                              min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, include_incomplete=include_incomplete,
-                              min_taxa=min_taxa, file_genome_treefile=file_genome_treefile),
+                              file_refseq=file_refseq, file_shortreads=file_shortreads, file_genome_treefile=file_genome_treefile,
+                              exe_busco=exe_busco, exe_gffread=exe_gffread, exe_gff2bed=exe_gff2bed,
+                              exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink,
+                              exe_nwed=exe_nwed, exe_astral=exe_astral,
+                              min_taxa=min_taxa, busco_lineage=busco_lineage, busco_mode=busco_mode, type=type,
+                              min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, include_incomplete=include_incomplete),
                   quiet=TRUE)
 
 #################################

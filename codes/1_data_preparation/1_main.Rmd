@@ -38,7 +38,7 @@ params:
 
 ## Load required libraries and functions
 ```{r}
-source(paste0(params$codedir, "/1_data_download/functions.R"))
+source(paste0(params$codedir, "/1_data_preparation/functions.R"))
 
 library(doSNOW)
 ```
