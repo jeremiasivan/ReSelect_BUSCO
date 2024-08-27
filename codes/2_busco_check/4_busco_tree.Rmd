@@ -388,8 +388,51 @@ print(plot)
 dev.off()
 ```
 
-```{r, out.width="100%", eval=FALSE}
-# note: add filters to differentiate problematic BUSCOs
-print(plot + theme(plot.title = element_text(face = "bold"),
-                   plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm")))
+```{r check-busco-tree-astral}
+f_write_log(fn_log=fn_log, msg=c("", "--------- ASTRAL BUSCO Tree --------"))
+
+# create doSNOW cluster
+nwcl <- makeCluster(nthread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over number of reference sequences
+for (i in 1:length(ls_refseq)) {
+    # output directory
+    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
+
+    # open metadata file
+    fn_metadata <- paste0(dir_check_tree_category, "metadata.tsv")
+    if (!file.exists(fn_metadata)) {
+        next
+    }
+
+    # input files
+    df_metadata <- data.table::fread(fn_metadata)
+    ls_uq_busco <- list.dirs(dir_check_tree_category, recursive=F, full.names=F)
+
+    # iterate over BUSCOs
+    ls_trees <- foreach (busco = ls_uq_busco, .combine='c') %dopar% {
+        # input file
+        fn_tree <- paste0(dir_check_tree_category, busco, "/read/", busco, "_aligned.fna.treefile")
+        
+        # check if file exists
+        if (!file.exists(fn_tree)) {
+            return(NULL)
+        } else {
+            return(fn_tree)
+        }      
+    }
+
+    ls_trees <- paste(ls_trees, collapse=" ")
+
+    # combine all BUSCO trees
+    fn_outfile <- paste0(dir_check_tree_category, "alltrees.tre")
+    system(paste("cat", ls_trees, ">", fn_outfile))
+
+    # run ASTRAL-III
+    fn_astral_outfile <- paste0(dir_check_tree_category, "alltrees.astral.tre")
+    f_astral(fn_outfile, fn_astral_outfile, params$exe_astral)
+}
+
+stopCluster(nwcl)
 ```

@@ -32,6 +32,7 @@ params:
   exe_treeshrink: ""
 
   exe_nwed: ""
+  exe_astral: ""
 
   # BUSCO pipeline
   min_taxa: 4

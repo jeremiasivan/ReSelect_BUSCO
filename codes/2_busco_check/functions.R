@@ -464,3 +464,12 @@ f_calculate_mean_bs <- function(fn_tree) {
 
     return(mean_bs)
 }
+
+# function: run ASTRAL-III 
+f_astral <- function(fn_input, fn_output, exe_astral) {
+    cmd_astral <- paste("java -jar", exe_astral,
+                    "-i", fn_input,
+                    "-o", fn_output,
+                    "-t 2")
+    system(cmd_astral)
+}
