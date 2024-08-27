@@ -1,6 +1,6 @@
 #################################
 codedir <- "~/BusIER/codes"
-prefix <- ""
+outprefix <- ""
 outdir <- "~/busco"
 thread <- 5
 redo <- TRUE
@@ -44,15 +44,15 @@ include_incomplete <- TRUE
 #################################
 
 # set up outdir
-outdir_prefix <- paste0(outdir, "/", prefix, "/")
+outdir_prefix <- paste0(outdir, "/", outprefix, "/")
 if (!dir.exists(outdir_prefix)) {
     dir.create(outdir_prefix, recursive=T)
 }
 
 # data download
 rmarkdown::render(input=paste0(codedir,"/1_data_preparation/1_main.Rmd"),
-                  output_file=paste0(outdir_prefix, prefix, ".download.html"),
-                  params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
+                  output_file=paste0(outdir_prefix, outprefix, ".download.html"),
+                  params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters,
                               min_taxa=min_taxa, exe_datasets=exe_datasets, bin_sratoolkit=bin_sratoolkit,
                               exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools, exe_qualimap=exe_qualimap),
@@ -60,8 +60,8 @@ rmarkdown::render(input=paste0(codedir,"/1_data_preparation/1_main.Rmd"),
 
 # BUSCO check
 rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
-                  output_file=paste0(outdir_prefix, prefix, ".check.html"),
-                  params=list(prefix=prefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
+                  output_file=paste0(outdir_prefix, outprefix, ".check.html"),
+                  params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_genome_treefile=file_genome_treefile,
                               exe_busco=exe_busco, exe_gffread=exe_gffread, exe_gff2bed=exe_gff2bed,
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink,

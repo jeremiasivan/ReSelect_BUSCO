@@ -23,18 +23,18 @@ dir_busco <- ""
 
 # check the BUSCO extraction method
 if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
-    dir_busco <- paste0(dir_current, "/busco_check/busco_coordinate/")
+    dir_busco <- paste0(currentdir, "/busco_check/busco_coordinate/")
     f_write_log(fn_log=fn_log, msg="Running coordinate-based method.")
 } else if (params$type == "pipeline") {
-    dir_busco <- paste0(dir_current, "/busco_check/busco_pipeline/")
+    dir_busco <- paste0(currentdir, "/busco_check/busco_pipeline/")
     f_write_log(fn_log=fn_log, msg="Running pipeline-based method.")
 } else {
     log4r::error(fn_logger, "Invalid type of BUSCO extraction method. Exited.")
     knitr::knit_exit()
 }
 
-dir_busco_lineage <- paste0(dir_current, "/busco_lineage/")
-dir_busco_ref <- paste0(dir_current, "/busco_check/busco_refseq/")
+dir_busco_lineage <- paste0(currentdir, "/busco_lineage/")
+dir_busco_ref <- paste0(currentdir, "/busco_check/busco_refseq/")
 
 dir_busco_read <- paste0(dir_busco, "short_reads/")
 dir_busco_tree <- paste0(dir_busco, "trees/")
