@@ -390,7 +390,7 @@ dev.off()
 
 ```{r check-busco-tree-astral}
 f_write_log(fn_log=fn_log, msg=c("", "--------- ASTRAL BUSCO Tree --------",
-                                     "nRF Distance with Genome Tree))
+                                     "nRF Distance with Genome Tree"))
 
 
 # create doSNOW cluster
@@ -434,10 +434,13 @@ for (i in 1:length(ls_refseq)) {
     # run ASTRAL-III
     fn_astral_outfile <- paste0(dir_check_tree_category, "alltrees.astral.tre")
     f_astral(fn_outfile, fn_astral_outfile, params$exe_astral)
-
+    
+    # convert tips to species name
+    fn_astral_sp_outfile <- paste0(dir_check_tree_category, "alltrees.astral.sp.tre")
+    f_tips_to_species(fn_astral_outfile, fn_astral_sp_outfile, ls_species_name)
+    
     # calculate nRF distance
-    astral_tree <- ape::read.tree(fn_astral_outfile)
-    nrf_dist <- f_calculate_nRF(genome_tree, astral_tree)
+    nrf_dist <- f_calculate_nRF(params$file_genome_treefile, fn_astral_sp_outfile)
     f_write_log(fn_log=fn_log, msg=paste("-", i, "reference sequence(s):", nrf_dist))
 }
 
