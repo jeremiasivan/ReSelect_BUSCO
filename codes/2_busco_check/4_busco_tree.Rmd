@@ -75,7 +75,7 @@ for (i in 1:ngrouping) {
     ls_uq_busco <- unique(df_metadata$busco)
 
     # iterate over BUSCOs
-    foreach (busco = ls_uq_busco) %dopar% {
+    ls_busco_rm <- foreach (busco = ls_uq_busco, .combine='c') %dopar% {
         # output directories
         dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
         dir_check_busco_tree_read <- paste0(dir_check_busco_tree, "read/")
@@ -109,6 +109,10 @@ for (i in 1:ngrouping) {
                     fn_fasta_read <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
                 }
 
+                if (!file.exists(fn_fasta_read)) {
+                    return(dir_check_busco_tree)
+                }
+
                 # MSA
                 f_fasta2msa(fn_fasta_read, read_ref_id, fn_out_read)
             }
@@ -127,6 +131,9 @@ for (i in 1:ngrouping) {
 
                 # input FASTA file
                 fn_fasta_refs <- paste0(dir_busco_ref, read_ref_id, "/fasta/", busco, ".fna")
+                if (!file.exists(fn_fasta_refs)) {
+                    return(dir_check_busco_tree)
+                }
 
                 # MSA
                 f_fasta2msa(fn_fasta_refs, read_ref_id, fn_out_refs)
@@ -135,6 +142,12 @@ for (i in 1:ngrouping) {
             # align using MAFFT FFT-NS-2
             f_mafft(fn_out_refs, fn_out_refs_aligned, "--retree 2", params$exe_mafft)
         }
+    }
+
+    # delete folders for problematic BUSCOs
+    for (busco_dir in ls_busco_rm) {
+        cmd_del <- paste("rm -r", busco_dir)
+        system(cmd_del)
     }
 
     log4r::info(fn_logger, paste0("File created/modified: MSA for group ", i, "."))
@@ -329,7 +342,9 @@ for (i in 1:ngrouping) {
     # calculate nRF distance
     astral_tree <- ape::read.tree(fn_astral_outfile)
     genome_tree_subset <- ape::keep.tip(genome_tree, tip=astral_tree$tip.label)
-    f_write_log(fn_log=fn_log, msg=paste("-", i, "reference sequence(s):", phangorn::RF.dist(genome_tree_subset, astral_tree)))
+    nrf_dist <- round(phangorn::RF.dist(genome_tree_subset, astral_tree),3)
+
+    f_write_log(fn_log=fn_log, msg=paste0("- Group ", i, ": ", nrf_dist))
 }
 
 stopCluster(nwcl)
