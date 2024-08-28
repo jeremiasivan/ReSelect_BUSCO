@@ -110,7 +110,7 @@ for (i in 1:ngrouping) {
                 }
 
                 if (!file.exists(fn_fasta_read)) {
-                    return(dir_check_busco_tree)
+                    return(busco)
                 }
 
                 # MSA
@@ -132,7 +132,7 @@ for (i in 1:ngrouping) {
                 # input FASTA file
                 fn_fasta_refs <- paste0(dir_busco_ref, read_ref_id, "/fasta/", busco, ".fna")
                 if (!file.exists(fn_fasta_refs)) {
-                    return(dir_check_busco_tree)
+                    return(busco)
                 }
 
                 # MSA
@@ -145,8 +145,8 @@ for (i in 1:ngrouping) {
     }
 
     # delete folders for problematic BUSCOs
-    for (busco_dir in ls_busco_rm) {
-        cmd_del <- paste("rm -r", busco_dir)
+    for (busco in ls_busco_rm) {
+        cmd_del <- paste0("rm -r ", dir_check_tree_category, busco, "/")
         system(cmd_del)
     }
 

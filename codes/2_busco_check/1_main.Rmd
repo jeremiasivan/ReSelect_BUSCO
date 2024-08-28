@@ -65,7 +65,6 @@ library(dplyr)
 # install.packages("log4r")
 # install.packages("phangorn")
 # install.packages("tidyverse")
-# install.packages("viridis")
 
 # store initial system time
 sys_tic <- Sys.time()

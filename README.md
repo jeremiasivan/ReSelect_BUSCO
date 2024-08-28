@@ -1,6 +1,6 @@
 # BusIER
 
-**BusIER (Busco-based Inference of Evolutionary Relationship)** is an R pipeline to construct the evolutionary history of empirical data by generating BUSCO trees and assess the branching events of each tree in greater depth. Currently, it only consists of two main steps: data download and reference bias check. It is mainly developed and tested using MacOS and Linux, so there might be incompatibilities using Windows.
+**BusIER (Busco-based Inference of Evolutionary Relationship)** is an R pipeline to assess the presence of reference bias in BUSCO inference. It consists of two main steps: data preparation and reference bias check. It is mainly developed and tested using MacOS and Linux, so there might be incompatibilities using Windows.
 
 ## Table of Content
 - <a href="#prereqs">Prerequisites</a>
@@ -10,30 +10,32 @@
 This pipeline requires several software and R packages to run. All software have to be executable (except for **SRA Toolkit** which points to `bin` directory), while the R packages should be installed either in your local directory or virtual environment. We recommend you to use environment management system (e.g. `conda`) to install the software and packages, but you can also use `install.packages()` built-in function in R or RStudio.
 
 ### Software
-| Name             | Website / Github                                                      |
-| ---------------- |:---------------------------------------------------------------------:|
-| AdapterRemoval   | <a href="https://adapterremoval.readthedocs.io/en/stable/#">Link</a>  |
-| Bcftools         | <a href="https://github.com/samtools/bcftools">Link</a>               |
-| BUSCO            | <a href="https://busco.ezlab.org">Link</a>                            |
-| BWA-MEM2         | <a href="https://github.com/bwa-mem2/bwa-mem2">Link</a>               |
-| Gff2Bed (BEDOPS) | <a href="https://bedops.readthedocs.io/en/latest/index.html">Link</a> |
-| GffRead          | <a href="https://github.com/gpertea/gffread">Link</a>                 |
-| IQ-TREE 2        | <a href="http://www.iqtree.org">Link</a>                              |
-| MAFFT            | <a href="https://mafft.cbrc.jp/alignment/software/">Link</a>          |
-| NCBI Datasets    | <a href="https://github.com/ncbi/datasets">Link</a>                   |
-| QualiMap         | <a href="http://qualimap.conesalab.org/">Link</a>                     |
-| Samtools         | <a href="https://github.com/samtools/samtools">Link</a>               |
-| SRA Toolkit      | <a href="https://github.com/ncbi/sra-tools">Link</a>                  |
-| TreeShrink       | <a href="https://github.com/uym2/TreeShrink">Link</a>                 |
+| Name                    | Website / Github                                                      |
+| ----------------------- |:---------------------------------------------------------------------:|
+| AdapterRemoval          | <a href="https://adapterremoval.readthedocs.io/en/stable/#">Link</a>  |
+| ASTRAL                  | <a href="https://github.com/smirarab/ASTRAL">Link</a>                 |
+| Bcftools                | <a href="https://github.com/samtools/bcftools">Link</a>               |
+| BUSCO                   | <a href="https://busco.ezlab.org">Link</a>                            |
+| BWA-MEM2                | <a href="https://github.com/bwa-mem2/bwa-mem2">Link</a>               |
+| Gff2Bed (BEDOPS)        | <a href="https://bedops.readthedocs.io/en/latest/index.html">Link</a> |
+| GffRead                 | <a href="https://github.com/gpertea/gffread">Link</a>                 |
+| IQ-TREE 2               | <a href="http://www.iqtree.org">Link</a>                              |
+| MAFFT                   | <a href="https://mafft.cbrc.jp/alignment/software/">Link</a>          |
+| NCBI Datasets           | <a href="https://github.com/ncbi/datasets">Link</a>                   |
+| Newick Utils (optional) | <a href="https://github.com/tjunier/newick_utils">Link</a>            |
+| QualiMap                | <a href="http://qualimap.conesalab.org/">Link</a>                     |
+| Samtools                | <a href="https://github.com/samtools/samtools">Link</a>               |
+| SRA Toolkit             | <a href="https://github.com/ncbi/sra-tools">Link</a>                  |
+| TreeShrink              | <a href="https://github.com/uym2/TreeShrink">Link</a>                 |
 
 ### R packages
 |    Name      |                                 CRAN / Bioconductor                                     |                                   Anaconda                               |
 | ------------ |:---------------------------------------------------------------------------------------:|:------------------------------------------------------------------------:|
-| ape          | <a href="https://cran.r-project.org/package=ape">Link</a>                               | <a href="https://anaconda.org/conda-forge/r-ape">Link</a>                |
 | Biostrings   | <a href="https://www.bioconductor.org/packages//2.7/bioc/html/Biostrings.html">Link</a> | <a href="https://anaconda.org/bioconda/bioconductor-biostrings">Link</a> |
 | data.table   | <a href="https://cran.r-project.org/package=data.table">Link</a>                        | <a href="https://anaconda.org/conda-forge/r-data.table">Link</a>         |
 | doSNOW       | <a href="https://cran.r-project.org/package=doSNOW">Link</a>                            | <a href="https://anaconda.org/conda-forge/r-dosnow">Link</a>             |
 | log4r        | <a href="https://cran.r-project.org/package=log4r">Link</a>                             | <a href="https://anaconda.org/conda-forge/r-log4r">Link</a>              |
+| phangorn     | <a href="https://cran.r-project.org/package=phangorn">Link</a>                          | <a href="https://anaconda.org/conda-forge/r-phangorn">Link</a>           |
 | rmarkdown    | <a href="https://cran.r-project.org/package=rmarkdown">Link</a>                         | <a href="https://anaconda.org/conda-forge/r-rmarkdown">Link</a>          |
 | tidyverse    | <a href="https://cran.r-project.org/package=tidyverse">Link</a>                         | <a href="https://anaconda.org/conda-forge/r-tidyverse">Link</a>          |
 
@@ -74,4 +76,4 @@ This pipeline requires several software and R packages to run. All software have
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `start`, but I have never tried it before. 
 
 ---
-*Last update: 24 April 2024 by Jeremias Ivan*
+*Last update: 28 August 2024 by Jeremias Ivan*
