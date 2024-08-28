@@ -11,11 +11,16 @@ f_write_log(fn_log=fn_log,
 
 # output directory
 dir_check_tree <- paste0(dir_busco, "busco_tree/")
+if (!file.exists(params$file_buscotree)) {
+    dir_check_tree <- paste0(dir_check_tree, "random/")
+} else {
+    dir_check_tree <- paste0(dir_check_tree, "control/")
+}
+
 dir_check_tree_summary <- paste0(dir_check_tree, "summary/")
 if (!dir.exists(dir_check_tree_summary)) {
     dir.create(dir_check_tree_summary, recursive=T)
 }
-
 
 # check input genome treefile
 if (!file.exists(params$file_genome_treefile)) {
@@ -25,16 +30,9 @@ if (!file.exists(params$file_genome_treefile)) {
 
 # output file
 fn_busco_sumtable <- paste0(dir_check_tree_summary, "summary.dist.sumtable")
-fn_busco_nref_tiff <- paste0(dir_check_tree_summary, "nRF_nref.tiff")
-fn_busco_genomedist_tiff <- paste0(dir_check_tree_summary, "nRF_genomedist.tiff")
-fn_busco_meandist_nref_tiff <- paste0(dir_check_tree_summary, "meandist_nref.tiff")
 ```
 
-```{r, include=FALSE}
-is_collapse_lowbs <- FALSE
-```
-
-```{r check-busco-tree-metadata}
+```{r results='asis'}
 # read genome treefile
 genome_tree_id <- f_ref_tips_to_id(params$file_genome_treefile, df_refs)
 genome_tree <- ape::read.tree(text=genome_tree_id)
@@ -44,63 +42,13 @@ genome_dist <- ape::cophenetic.phylo(genome_tree)
 # set number of threads
 nthread <- ifelse(params$thread > length(shared_busco), length(shared_busco), params$thread)
 
-# create doSNOW cluster
-nwcl <- makeCluster(nthread)
-doSNOW::registerDoSNOW(nwcl)
-
-# iterate over number of reference sequences
-for (i in 1:length(ls_refseq)) {
-    # output directory
-    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
-    if (!dir.exists(dir_check_tree_category)) {
-        dir.create(dir_check_tree_category, recursive=T)
-    }
-
-    # output file
-    fn_metadata <- paste0(dir_check_tree_category, "metadata.tsv")
-    if (file.exists(fn_metadata) && !params$redo) {
-        next
-    }
-
-    # iterate over BUSCOs
-    ls_output <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
-        # create data.table to store metadata
-        df_temp <- data.table::data.table(busco=character(), read=character(), ref=character(), genome_dist=numeric())
-
-        # extract mapped reads
-        df_mapped_reads_subset <- df_mapped_reads_busco[df_mapped_reads_busco$busco==busco & df_mapped_reads_busco$is_error==F,]
-        ls_refseq_busco <- unique(df_mapped_reads_subset$ref)
-        ls_shortreads_busco <- unique(df_mapped_reads_subset$read)
-
-        # return NULL if number of references is inadequate
-        if (length(ls_refseq_busco) < i) {
-            return(NULL)
-        }
-
-        # extract random refs
-        ls_sampled_refs <- sample(ls_refseq_busco, i, replace=FALSE)
-
-        # iterate through the number of runs
-        for (read in ls_shortreads_busco) {
-            # extract reference ID based on short-reads
-            read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
-            read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
-
-            # extract the closest reference
-            closest_ref <- f_check_closest_ref(genome_dist, read_ref_id, ls_sampled_refs)
-
-            # update data.table
-            df_temp <- rbind(df_temp, data.table::data.table(busco=busco, read=read, ref=closest_ref$ref, genome_dist=closest_ref$dist))
-        }
-
-        return(df_temp)
-    }
-
-    # save data.table
-    data.table::fwrite(ls_output, file=fn_metadata, sep="\t", quote=F, row.names=F)
+# check if analysis done according to input file or random
+ngrouping <- length(ls_refseq)
+if (!file.exists(params$file_buscotree)) {
+    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4a_random.Rmd"))
+} else {
+    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4b_control.Rmd"))
 }
-
-stopCluster(nwcl)
 ```
 
 ```{r check-busco-tree-alignment}
@@ -111,7 +59,7 @@ nwcl <- makeCluster(nthread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over number of reference sequences
-for (i in 1:length(ls_refseq)) {
+for (i in 1:ngrouping) {
     # output directory
     dir_check_tree_category <- paste0(dir_check_tree, i, "/")
 
@@ -201,7 +149,7 @@ nwcl <- makeCluster(nthread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over number of reference sequences
-for (i in 1:length(ls_refseq)) {
+for (i in 1:ngrouping) {
     # output directory
     dir_check_tree_category <- paste0(dir_check_tree, i, "/")
 
@@ -224,7 +172,7 @@ for (i in 1:length(ls_refseq)) {
 
             # output collapsed low-bootstrap branch
             fn_treefile_collapsed <- paste0(dir_output, busco, "_aligned.fna.collapsed.treefile")
-            if (is_collapse_lowbs && (!file.exists(fn_treefile_collapsed) || params$redo)) {
+            if (params$is_collapse_lowbs && (!file.exists(fn_treefile_collapsed) || params$redo)) {
                 # run newick_utils
                 f_collapse_branch(fn_treefile, 95, fn_treefile_collapsed, params$exe_nwed)
             }
@@ -248,7 +196,7 @@ nwcl <- makeCluster(nthread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over number of reference sequences
-for (i in 1:length(ls_refseq)) {
+for (i in 1:ngrouping) {
     # output directory
     dir_check_tree_category <- paste0(dir_check_tree, i, "/")
 
@@ -321,71 +269,6 @@ stopCluster(nwcl)
 
 # save file
 data.table::fwrite(df_output, file=fn_busco_sumtable, quote=F, sep="\t")
-
-# nRF vs. total genomic distance
-plot <- ggplot(df_output, aes(x=sum_genome_dist, y=nrf, ymin=0, ymax=1)) +
-    geom_point(size=2) +
-    ggtitle("Normalised RF Distance across Total Genomic Distances") + xlab("Genomic distance") + ylab("nRF distance") +
-    facet_wrap(.~n_ref) +
-    theme(plot.title = element_text(hjust = 0.5, size = 50),
-          plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
-          axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
-          axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
-          axis.text.y=element_text(size=30),
-          axis.text.x=element_text(size=30),
-          strip.text = element_text(size=30),
-          legend.title=element_text(size=30),
-          legend.text=element_text(size=30),
-          legend.key.size=unit(2,"cm"))
-
-tiff(file=fn_busco_genomedist_tiff, units="px", width=2880, height=1800)
-print(plot)
-dev.off()
-
-# nRF vs. number of reference sequences
-plot <- ggplot(df_output, aes(x=as.factor(n_ref), y=nrf, ymin=0, ymax=1)) +
-    geom_point(position=position_jitter(height=0.01, width=0.05), size=2, show.legend=F) +
-    geom_violin(alpha=0.5) +
-    ggtitle("Normalised RF Distance across Number of References") + xlab("Number of references") + ylab("nRF distance") +
-    theme(plot.title = element_text(hjust = 0.5, size = 50),
-          plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
-          axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
-          axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
-          axis.text.y=element_text(size=30),
-          axis.text.x=element_text(size=30),
-          strip.text = element_text(size=30),
-          legend.title=element_text(size=30),
-          legend.text=element_text(size=30),
-          legend.key.size=unit(2,"cm"))
-
-tiff(file=fn_busco_nref_tiff, units="px", width=2880, height=1800)
-print(plot) 
-dev.off()
-
-# mean distances vs. number of reference sequences
-df_output_mean <- df_output %>%
-                    group_by(n_ref) %>%
-                    summarise(nrf=mean(nrf), treedist=mean(treedist), treedist_highbs=mean(treedist_highbs)) %>%
-                    tidyr::pivot_longer(-n_ref)
-
-plot <- ggplot(df_output_mean, aes(x=as.factor(n_ref), y=value, colour=name, group=name, ymin=0, ymax=1)) +
-    geom_line(linewidth=2) +
-    geom_point(size=2) +
-    ggtitle("Mean of Tree Distances across Number of References") + xlab("Number of references") + ylab("Mean distance") +
-    theme(plot.title=element_text(hjust = 0.5, size = 50),
-          plot.margin=margin(1.25, 1.25, 1.25, 1.25, "cm"),
-          axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
-          axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
-          axis.text.y=element_text(size=30),
-          axis.text.x=element_text(size=30),
-          strip.text=element_text(size=30),
-          legend.title=element_blank(),
-          legend.text=element_text(size=30),
-          legend.key.size=unit(2,"cm"))
-
-tiff(file=fn_busco_meandist_nref_tiff, units="px", width=2880, height=1800)
-print(plot)
-dev.off()
 ```
 
 ```{r check-busco-tree-astral}
@@ -398,7 +281,7 @@ nwcl <- makeCluster(nthread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over number of reference sequences
-for (i in 1:length(ls_refseq)) {
+for (i in 1:ngrouping) {
     # output directory
     dir_check_tree_category <- paste0(dir_check_tree, i, "/")
 

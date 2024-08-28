@@ -1,0 +1,64 @@
+---
+title: "Generate metadata from random selection"
+---
+
+## Generate metadata from random selection
+```{r check-busco-tree-metadata-random}
+# create doSNOW cluster
+nwcl <- makeCluster(nthread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over number of reference sequences
+for (i in 1:ngrouping) {
+    # output directory
+    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
+    if (!dir.exists(dir_check_tree_category)) {
+        dir.create(dir_check_tree_category, recursive=T)
+    }
+
+    # output file
+    fn_metadata <- paste0(dir_check_tree_category, "metadata.tsv")
+    if (file.exists(fn_metadata) && !params$redo) {
+        next
+    }
+
+    # iterate over BUSCOs
+    ls_output <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
+        # create data.table to store metadata
+        df_temp <- data.table::data.table(busco=character(), read=character(), ref=character(), genome_dist=numeric())
+
+        # extract mapped reads
+        df_mapped_reads_subset <- df_mapped_reads_busco[df_mapped_reads_busco$busco==busco & df_mapped_reads_busco$is_error==F,]
+        ls_refseq_busco <- unique(df_mapped_reads_subset$ref)
+        ls_shortreads_busco <- unique(df_mapped_reads_subset$read)
+
+        # return NULL if number of references is inadequate
+        if (length(ls_refseq_busco) < i) {
+            return(NULL)
+        }
+
+        # extract random refs
+        ls_sampled_refs <- sample(ls_refseq_busco, i, replace=FALSE)
+
+        # iterate through the number of runs
+        for (read in ls_shortreads_busco) {
+            # extract reference ID based on short-reads
+            read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
+            read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
+
+            # extract the closest reference
+            closest_ref <- f_check_closest_ref(genome_dist, read_ref_id, ls_sampled_refs)
+
+            # update data.table
+            df_temp <- rbind(df_temp, data.table::data.table(busco=busco, read=read, ref=closest_ref$ref, genome_dist=closest_ref$dist))
+        }
+
+        return(df_temp)
+    }
+
+    # save data.table
+    data.table::fwrite(ls_output, file=fn_metadata, sep="\t", quote=F, row.names=F)
+}
+
+stopCluster(nwcl)
+```

@@ -21,6 +21,7 @@ params:
   file_refseq: ""
   file_shortreads: ""
   file_genome_treefile: ""
+  file_buscotree: ""
   
   # executables
   exe_busco: ""
@@ -44,6 +45,9 @@ params:
   min_busco_depth: 10
   max_busco_depth: 60
   include_incomplete: TRUE
+
+  # BUSCO tree
+  is_collapse_lowbs: FALSE
 ---
 
 ## Load required libraries and functions

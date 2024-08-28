@@ -31,7 +31,6 @@ exe_treeshrink <- "treeshrink"
 exe_nwed <- ""
 exe_astral <- "astral.jar"
 
-file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
 min_taxa <- 4
 
 busco_lineage <- "eudicots_odb10"
@@ -41,6 +40,12 @@ type <- "coordinate"
 min_busco_depth <- 10
 max_busco_depth <- 60
 include_incomplete <- TRUE
+
+# BUSCO tree
+file_buscotree <- paste0(codedir, "/../data/eucs_buscotree.txt")
+file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
+
+is_collapse_lowbs <- FALSE
 #################################
 
 # set up outdir
@@ -62,12 +67,12 @@ rmarkdown::render(input=paste0(codedir,"/1_data_preparation/1_main.Rmd"),
 rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, outprefix, ".check.html"),
                   params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
-                              file_refseq=file_refseq, file_shortreads=file_shortreads, file_genome_treefile=file_genome_treefile,
+                              file_refseq=file_refseq, file_shortreads=file_shortreads, file_genome_treefile=file_genome_treefile, file_buscotree=file_buscotree,
                               exe_busco=exe_busco, exe_gffread=exe_gffread, exe_gff2bed=exe_gff2bed,
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink,
                               exe_nwed=exe_nwed, exe_astral=exe_astral,
                               min_taxa=min_taxa, busco_lineage=busco_lineage, busco_mode=busco_mode, type=type,
-                              min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, include_incomplete=include_incomplete),
+                              min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, include_incomplete=include_incomplete, is_collapse_lowbs=is_collapse_lowbs),
                   quiet=TRUE)
 
 #################################

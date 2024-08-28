@@ -1,0 +1,4 @@
+grouping   taxa    sister_taxa    outgroup
+1   E.melliodora    E.lansdowneana  C.maculata
+2   E.tenuipes  E.cloeziana C.maculata
+3   E.virginea  E.cladocalyx    C.maculata
