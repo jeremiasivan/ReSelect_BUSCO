@@ -136,6 +136,8 @@ for (i in 1:ngrouping) {
             f_mafft(fn_out_refs, fn_out_refs_aligned, "--retree 2", params$exe_mafft)
         }
     }
+
+    log4r::info(fn_logger, paste0("File created/modified: MSA for group ", i, "."))
 }
 
 stopCluster(nwcl)
@@ -178,6 +180,8 @@ for (i in 1:ngrouping) {
             }
         })
     }
+
+    log4r::info(fn_logger, paste0("File created/modified: BUSCO trees for group ", i, "."))
 }
 
 stopCluster(nwcl)

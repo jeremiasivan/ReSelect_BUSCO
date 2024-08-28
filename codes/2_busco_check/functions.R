@@ -364,7 +364,7 @@ f_calculate_nRF <- function(fn_tree_one, fn_tree_two) {
     # calculate nRF
     nrf_dist <- phangorn::RF.dist(tree_one, tree_two, normalize=TRUE)
 
-    return(nrf_dist)
+    return(round(nrf_dist,3))
 }
 
 # function: extract distance value based on the number of highly-supported branches
