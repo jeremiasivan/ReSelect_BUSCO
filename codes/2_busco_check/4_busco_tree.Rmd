@@ -145,9 +145,11 @@ for (i in 1:ngrouping) {
     }
 
     # delete folders for problematic BUSCOs
-    for (busco in ls_busco_rm) {
-        cmd_del <- paste0("rm -r ", dir_check_tree_category, busco, "/")
-        system(cmd_del)
+    if (length(ls_busco_rm) > 0) {
+        for (busco in ls_busco_rm) {
+            cmd_del <- paste0("rm -r ", dir_check_tree_category, busco, "/")
+            system(cmd_del)
+        }
     }
 
     log4r::info(fn_logger, paste0("File created/modified: MSA for group ", i, "."))
