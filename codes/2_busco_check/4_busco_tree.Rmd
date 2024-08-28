@@ -335,7 +335,8 @@ for (i in 1:ngrouping) {
 
     # run ASTRAL-III
     fn_astral_outfile <- paste0(dir_check_tree_category, "alltrees.astral.tre")
-    f_astral(fn_outfile, fn_astral_outfile, params$exe_astral)
+    fn_astral_logfile <- paste0(dir_check_tree_category, "alltrees.astral.log")
+    f_astral(fn_outfile, fn_astral_outfile, fn_astral_logfile, params$exe_astral)
     
     # convert tips to species name
     fn_astral_sp_outfile <- paste0(dir_check_tree_category, "alltrees.astral.sp.tre")
@@ -344,9 +345,13 @@ for (i in 1:ngrouping) {
     # calculate nRF distance
     astral_tree <- ape::read.tree(fn_astral_outfile)
     genome_tree_subset <- ape::keep.tip(genome_tree, tip=astral_tree$tip.label)
-    nrf_dist <- round(phangorn::RF.dist(genome_tree_subset, astral_tree),3)
 
-    f_write_log(fn_log=fn_log, msg=paste0("- Group ", i, ": ", nrf_dist))
+    # extract information
+    nrf_dist <- round(phangorn::RF.dist(genome_tree_subset, astral_tree),3)
+    quartet_score <- gsub("^.*\\: ", "", system(paste("grep '^Final normalized quartet score is:'",fn_astral_logfile), intern = T))
+    quartet_score <- round(as.numeric(quartet_score), 3)
+
+    f_write_log(fn_log=fn_log, msg=paste0("- Group ", i, ": ", nrf_dist, " (qScore: ", quartet_score, ")"))
 }
 
 stopCluster(nwcl)
