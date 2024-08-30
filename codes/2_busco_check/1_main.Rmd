@@ -46,6 +46,8 @@ params:
   max_busco_depth: 60
   include_incomplete: TRUE
 
+  outgroup: !r c("")
+
   # BUSCO tree
   is_collapse_lowbs: FALSE
 ---

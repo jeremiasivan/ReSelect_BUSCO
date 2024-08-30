@@ -203,7 +203,7 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
 
         # subset data.frame
         temp_df_dist_filtered <- temp_df_dist[temp_df_dist$shape == "IN",]
-        temp_df_dist_filtered_noout <- temp_df_dist_filtered[temp_df_dist_filtered$grouping != "Outgroup",]
+        temp_df_dist_filtered_noout <- temp_df_dist_filtered[!temp_df_dist_filtered$grouping %in% params$outgroup,]
 
         # check if filtered table has more than one entry and consists of all NULL or NAs
         if (nrow(temp_df_dist_filtered)==0 || f_all_null_or_na(temp_df_dist_filtered$ref_dist) || f_all_null_or_na(temp_df_dist_filtered$read_dist)) {

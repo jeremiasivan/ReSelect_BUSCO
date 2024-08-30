@@ -41,6 +41,8 @@ min_busco_depth <- 10
 max_busco_depth <- 60
 include_incomplete <- TRUE
 
+outgroup <- c("Angophora","Corymbia")
+
 # BUSCO tree
 file_buscotree <- paste0(codedir, "/../data/eucs_buscotree.txt")
 file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
@@ -71,7 +73,7 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                               exe_busco=exe_busco, exe_gffread=exe_gffread, exe_gff2bed=exe_gff2bed,
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink,
                               exe_nwed=exe_nwed, exe_astral=exe_astral,
-                              min_taxa=min_taxa, busco_lineage=busco_lineage, busco_mode=busco_mode, type=type,
+                              min_taxa=min_taxa, busco_lineage=busco_lineage, busco_mode=busco_mode, type=type, outgroup=outgroup,
                               min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, include_incomplete=include_incomplete, is_collapse_lowbs=is_collapse_lowbs),
                   quiet=TRUE)
 
