@@ -330,6 +330,16 @@ if (file.exists(fn_mapped_reads_busco)) {
 # filter out BUSCOs according to several criteria
 if (!is.null(df_mapped_reads_busco) && !params$redo) {
     if (!params$include_incomplete) {
+        # remove BUSCOs with incomplete taxa
+        df_mapped_reads_busco <- df_mapped_reads_busco %>% mutate(prefix=paste0(read,"--",ref))
+        df_mapped_reads_busco <- df_mapped_reads_busco %>%
+                                    group_by(busco) %>%
+                                    filter(n_distinct(prefix) == n_distinct(df_mapped_reads_busco$prefix))
+        
+        # update list
+        shared_busco <- shared_busco[shared_busco %in% unique(df_mapped_reads_busco$busco)]
+
+        # remove BUSCOs with low coverage
         ls_problematic_busco <- unique(df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
         shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
     } else {
@@ -352,6 +362,10 @@ if (!is.null(df_mapped_reads_busco) && !params$redo) {
         knitr::knit_child(paste0(params$codedir,"/2_busco_check/2b_pipeline.Rmd"))
     }
 }
+
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO after filtering low-coverage and incomplete genes:", length(shared_busco)))
+f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering problematic genes: ", length(shared_busco), ".")))
 ```
 
 ## Convert individual BUSCO alignments into MSA

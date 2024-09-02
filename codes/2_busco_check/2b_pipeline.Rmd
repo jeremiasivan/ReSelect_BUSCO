@@ -101,6 +101,16 @@ data.table::fwrite(df_mapped_reads_busco, file=fn_mapped_reads_busco, sep="\t", 
 
 # update the list of BUSCO
 if (!params$include_incomplete) {
+    # remove BUSCOs with incomplete taxa
+    df_mapped_reads_busco <- df_mapped_reads_busco %>% mutate(prefix=paste0(read,"--",ref))
+    df_mapped_reads_busco <- df_mapped_reads_busco %>%
+                                group_by(busco) %>%
+                                filter(n_distinct(prefix) == n_distinct(df_mapped_reads_busco$prefix))
+    
+    # update list
+    shared_busco <- shared_busco[shared_busco %in% unique(df_mapped_reads_busco$busco)]
+
+    # remove BUSCOs with low coverage
     ls_problematic_busco <- unique(df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
     shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
 } else {
@@ -116,14 +126,9 @@ if (!params$include_incomplete) {
     shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
 }
 
-# print the number of BUSCO in HTML document
-cat(paste("Number of shared BUSCO between reference and mapped reads:", length(shared_busco)))
-
 # check if shared BUSCOs found
 if (length(shared_busco) == 0) {
     log4r::error(fn_logger, paste0("Error: no BUSCO shared between sequences. Exited."))
     knitr::knit_exit()
-} else {
-    f_write_log(fn_log=fn_log, msg=c("", paste0("Updated number of complete single-copy BUSCOs: ", length(shared_busco), ".")))
 }
 ```
