@@ -70,7 +70,7 @@ for (read in 1:nrow(df_reads)) {
 ## Download BUSCO lineage dataset
 ```{r busco-lineage-download}
 # download specific BUSCO lineage
-dir_lineage <- paste0(dir_busco_lineage, "lineages/", params$busco_lineage)
+dir_lineage <- paste0(dir_busco_lineage, params$busco_lineage)
 if (!dir.exists(dir_lineage)) {
     busco_cmd <- paste(params$exe_busco, "--download_path", dir_busco_lineage, "--download", params$busco_lineage)
     system(busco_cmd)

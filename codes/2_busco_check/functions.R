@@ -349,7 +349,7 @@ f_check_closest_ref <- function(dist_matrix, species_read, ls_species_ref) {
     return (list(ref=closest_ref, dist=round(closest_ref_dist, 3)))
 }
 
-# function: collapse branch with low bootstrap value
+# function: collapse branch with low bootstrap value [NOT USED]
 f_collapse_branch <- function(fn_tree, bootstrap, fn_out, exe_nwed) {
     newick_cmd <- paste0(exe_nwed, " ", fn_tree, " 'i & b<", bootstrap, "' o > ", fn_out)
     system(newick_cmd)

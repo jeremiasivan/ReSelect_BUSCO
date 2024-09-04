@@ -32,7 +32,6 @@ params:
   exe_iqtree2: ""
   exe_treeshrink: ""
 
-  exe_nwed: ""
   exe_astral: ""
 
   # BUSCO pipeline
@@ -47,9 +46,6 @@ params:
   include_incomplete: TRUE
 
   outgroup: !r c("")
-
-  # BUSCO tree
-  is_collapse_lowbs: FALSE
 ---
 
 ## Load required libraries and functions

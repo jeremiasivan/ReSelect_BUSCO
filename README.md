@@ -22,7 +22,6 @@ This pipeline requires several software and R packages to run. All software have
 | IQ-TREE 2               | <a href="http://www.iqtree.org">Link</a>                              |
 | MAFFT                   | <a href="https://mafft.cbrc.jp/alignment/software/">Link</a>          |
 | NCBI Datasets           | <a href="https://github.com/ncbi/datasets">Link</a>                   |
-| Newick Utils (optional) | <a href="https://github.com/tjunier/newick_utils">Link</a>            |
 | QualiMap                | <a href="http://qualimap.conesalab.org/">Link</a>                     |
 | Samtools                | <a href="https://github.com/samtools/samtools">Link</a>               |
 | SRA Toolkit             | <a href="https://github.com/ncbi/sra-tools">Link</a>                  |
@@ -76,4 +75,4 @@ This pipeline requires several software and R packages to run. All software have
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `start`, but I have never tried it before. 
 
 ---
-*Last update: 28 August 2024 by Jeremias Ivan*
+*Last update: 04 September 2024 by Jeremias Ivan*
