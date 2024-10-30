@@ -163,39 +163,39 @@ f_calculate_read_coverage <- function(fn_bam, fn_bed, exe_samtools) {
 # function: extract all BUSCO alignments from GFF
 f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out, exe_gffread){
     # run gffread
-    cmd_gffread <- paste(exe_gffread, "-g", fn_input, "-x", fn_cds_out, fn_gff)
+    cmd_gffread <- paste(exe_gffread, "-g", fn_input, "-y", fn_concat_out, fn_gff)
     system(cmd_gffread)
 
-    # open the CDS sequences
-    all_cds <- Biostrings::readDNAStringSet(fn_cds_out)
-    all_headers <- stringr::str_sort(names(all_cds), numeric=T)
-
-    # concat all CDS sequences
-    header <- ""
-    seq <- ""
-    for (i in all_headers) {
-        ls_header <- unlist(strsplit(i, split="\\|"))
-
-        if (header == "") {
-            header <- paste0(header, ls_header[length(ls_header)])
-        } else {
-            header <- paste0(header, "|", ls_header[length(ls_header)])
-        }
-        
-        seq <- paste0(seq, all_cds[[i]])
-    }
-
-    # save the concatenated FASTA in a file
-    concat_cds <- Biostrings::DNAStringSet(seq)
-    names(concat_cds) <- header
-    Biostrings::writeXStringSet(concat_cds, filepath=fn_concat_out)
+    # # open the CDS sequences
+    # all_cds <- Biostrings::readDNAStringSet(fn_cds_out)
+    # all_headers <- stringr::str_sort(names(all_cds), numeric=T)
+    # 
+    # # concat all CDS sequences
+    # header <- ""
+    # seq <- ""
+    # for (i in all_headers) {
+    #     ls_header <- unlist(strsplit(i, split="\\|"))
+    # 
+    #     if (header == "") {
+    #         header <- paste0(header, ls_header[length(ls_header)])
+    #     } else {
+    #         header <- paste0(header, "|", ls_header[length(ls_header)])
+    #     }
+    #     
+    #     seq <- paste0(seq, all_cds[[i]])
+    # }
+    # 
+    # # save the concatenated FASTA in a file
+    # concat_cds <- Biostrings::DNAStringSet(seq)
+    # names(concat_cds) <- header
+    # Biostrings::writeXStringSet(concat_cds, filepath=fn_concat_out)
 }
 
 # function: compare two FASTA files
 f_compare_fasta <- function(fn_fasta_one, fn_fasta_two) {
     # open the two FASTA files
-    fasta_one <- Biostrings::readDNAStringSet(fn_fasta_one)
-    fasta_two <- Biostrings::readDNAStringSet(fn_fasta_two)
+    fasta_one <- Biostrings::readAAStringSet(fn_fasta_one)
+    fasta_two <- Biostrings::readAAStringSet(fn_fasta_two)
 
     # check if there is only one sequence
     header_one <- names(fasta_one)

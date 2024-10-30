@@ -84,9 +84,9 @@ for (prefix in ls_prefix) {
   read <- unlist(strsplit(prefix, split="--"))[1]
   ref <- unlist(strsplit(prefix, split="--"))[2]
 
-  # remove file extension .fna
-  busco_ids <- list.files(dir_buscos, pattern = "*.fna$", full.names = F, recursive = F)
-  busco_ids <- sapply(busco_ids, function(x) { gsub(".fna", "", x) })
+  # remove file extension .faa
+  busco_ids <- list.files(dir_buscos, pattern = "*.faa$", full.names = F, recursive = F)
+  busco_ids <- sapply(busco_ids, function(x) { gsub(".faa", "", x) })
   
   # update data.table
   df_chr_busco_temp <- data.table::data.table(ref=rep(ref,length(busco_ids)),

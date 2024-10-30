@@ -47,8 +47,8 @@ for (prefix in ls_prefix) {
         }
 
         # output files
-        file_busco_cds <- paste0(dir_busco_out, busco, ".cds.fna")
-        file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
+        file_busco_cds <- paste0(dir_busco_out, busco, ".cds.faa")
+        file_busco_concat <- paste0(dir_busco_out, busco, ".faa")
 
         # check if file exists
         if (file.exists(file_busco_concat) && file.size(file_busco_concat) != 0L && !params$redo) {

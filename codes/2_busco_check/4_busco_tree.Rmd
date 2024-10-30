@@ -83,10 +83,10 @@ for (i in 1:ngrouping) {
         lapply(list(dir_check_busco_tree_read,dir_check_busco_tree_refs), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
         # output files
-        fn_out_read <- paste0(dir_check_busco_tree_read, busco, ".fna")
-        fn_out_refs <- paste0(dir_check_busco_tree_refs, busco, ".fna")
-        fn_out_read_aligned <- paste0(dir_check_busco_tree_read, busco, "_aligned.fna")
-        fn_out_refs_aligned <- paste0(dir_check_busco_tree_refs, busco, "_aligned.fna")
+        fn_out_read <- paste0(dir_check_busco_tree_read, busco, ".faa")
+        fn_out_refs <- paste0(dir_check_busco_tree_refs, busco, ".faa")
+        fn_out_read_aligned <- paste0(dir_check_busco_tree_read, busco, "_aligned.faa")
+        fn_out_refs_aligned <- paste0(dir_check_busco_tree_refs, busco, "_aligned.faa")
 
         # subset the metadata data.table
         df_metadata_subset <- df_metadata[df_metadata$busco == busco,]
@@ -104,9 +104,9 @@ for (i in 1:ngrouping) {
                 # input FASTA file
                 fn_fasta_read <- ""
                 if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
-                    fn_fasta_read <- paste0(dir_busco_read, prefix, "/", busco, ".fna")
+                    fn_fasta_read <- paste0(dir_busco_read, prefix, "/", busco, ".faa")
                 } else if (params$type == "pipeline") {
-                    fn_fasta_read <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".fna")
+                    fn_fasta_read <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".faa")
                 }
 
                 if (!file.exists(fn_fasta_read)) {
@@ -130,7 +130,7 @@ for (i in 1:ngrouping) {
                 read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
 
                 # input FASTA file
-                fn_fasta_refs <- paste0(dir_busco_ref, read_ref_id, "/fasta/", busco, ".fna")
+                fn_fasta_refs <- paste0(dir_busco_ref, read_ref_id, "/fasta/", busco, ".faa")
                 if (!file.exists(fn_fasta_refs)) {
                     return(busco)
                 }
@@ -180,8 +180,8 @@ for (i in 1:ngrouping) {
             dir_output <- paste0(dir_check_tree_category, busco, "/", type, "/")
 
             # output IQ-Tree2 files
-            fn_fasta <- paste0(dir_output, busco, "_aligned.fna")
-            fn_treefile <- paste0(dir_output, busco, "_aligned.fna.treefile")
+            fn_fasta <- paste0(dir_output, busco, "_aligned.faa")
+            fn_treefile <- paste0(dir_output, busco, "_aligned.faa.treefile")
             if (!file.exists(fn_treefile) || params$redo) {
                 # run IQ-Tree2
                 f_iqtree2(fn_fasta, params$exe_iqtree2)
@@ -226,8 +226,8 @@ for (i in 1:ngrouping) {
     df_output_subset <- foreach (busco = ls_uq_busco, .combine='rbind') %dopar% {
         # input files
         dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
-        fn_tree_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.treefile")
-        fn_tree_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.fna.treefile")
+        fn_tree_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.faa.treefile")
+        fn_tree_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.faa.treefile")
         
         # check if file exists
         if (!all(file.exists(fn_tree_one, fn_tree_two))) {
@@ -242,8 +242,8 @@ for (i in 1:ngrouping) {
         n_spmatch <- length(df_metadata$read[df_metadata$busco==busco & df_metadata$genome_dist==0])
 
         # extract the number of parsimony informative sites
-        fn_log_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.fna.iqtree")
-        fn_log_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.fna.iqtree")
+        fn_log_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.faa.iqtree")
+        fn_log_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.faa.iqtree")
 
         # extract tree lengths
         read_blen <- as.numeric(gsub("^.* ", "", system(paste("grep '^Total tree length (sum of branch lengths):'",fn_log_one), intern = T)))
@@ -310,7 +310,7 @@ for (i in 1:ngrouping) {
     # iterate over BUSCOs
     ls_trees <- foreach (busco = ls_uq_busco, .combine='c') %dopar% {
         # input file
-        fn_tree <- paste0(dir_check_tree_category, busco, "/read/", busco, "_aligned.fna.treefile")
+        fn_tree <- paste0(dir_check_tree_category, busco, "/read/", busco, "_aligned.faa.treefile")
         
         # check if file exists
         if (!file.exists(fn_tree)) {

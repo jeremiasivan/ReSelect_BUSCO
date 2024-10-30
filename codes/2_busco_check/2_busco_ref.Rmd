@@ -47,7 +47,7 @@ fn_mapped_reads_busco <- paste0(dir_busco_read, "metadata.tsv")
 ```
 
 ```{r check-busco-params, include=FALSE}
-min_ref_busco_identity <- 99
+min_ref_busco_identity <- 100
 
 thread_busco <- ifelse(params$thread < 50, params$thread, 50)
 ```
@@ -155,9 +155,9 @@ for (ref in ls_refseq) {
   # directory for BUSCO alignments
   dir_buscos <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
   
-  # remove file extension .fna
-  busco_ids <- list.files(dir_buscos, pattern = "*.fna$", full.names = F, recursive = F)
-  busco_ids <- sapply(busco_ids, function(x) { gsub(".fna", "", x) })
+  # remove file extension .faa
+  busco_ids <- list.files(dir_buscos, pattern = "*.faa$", full.names = F, recursive = F)
+  busco_ids <- sapply(busco_ids, function(x) { gsub(".faa", "", x) })
   
   # extract shared BUSCOs between reference sequences
   if (length(shared_busco) == 0) {
@@ -232,14 +232,14 @@ for (ref in ls_refseq) {
 
         # BUSCO files
         dir_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco)
-        file_busco_fas <- paste0(dir_busco_gff, ".fna")
+        file_busco_fas <- paste0(dir_busco_gff, ".faa")
         file_busco_gff <- paste0(dir_busco_gff, ".gff")
 
         # output files
-        file_busco_cds <- paste0(dir_busco_out, busco, ".cds.fna")
+        file_busco_cds <- paste0(dir_busco_out, busco, ".cds.faa")
         file_busco_gff_out <- paste0(dir_busco_out, busco, ".gff")
         file_busco_bed_out <- paste0(dir_busco_out, busco, ".bed")
-        file_busco_concat <- paste0(dir_busco_out, busco, ".fna")
+        file_busco_concat <- paste0(dir_busco_out, busco, ".faa")
 
         # extract header
         busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
