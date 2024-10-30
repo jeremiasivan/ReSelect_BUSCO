@@ -273,7 +273,7 @@ for (ref in ls_refseq) {
         system(cmd_gff2bed)
         
         # extract BUSCO
-        f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
+        f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, fn_log, params$exe_gffread)
 
         # sanity check if FASTA is the same
         output <- f_compare_fasta(file_busco_fas, file_busco_concat)

@@ -161,7 +161,7 @@ f_calculate_read_coverage <- function(fn_bam, fn_bed, exe_samtools) {
 }
 
 # function: extract all BUSCO alignments from GFF
-f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out, exe_gffread){
+f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out, fn_log, exe_gffread){
     # run gffread
     cmd_gffread <- paste(exe_gffread, "-g", fn_input, "-y", fn_cds_out, fn_gff)
     system(cmd_gffread)
@@ -174,6 +174,10 @@ f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out
     header <- ""
     seq <- ""
     for (i in all_headers) {
+        if (is.na(i)) {
+            write.table(paste0(i, fn_cds_out), file=fn_log, quote=F, row.names=F, col.names=F, append=T)
+        }
+
         ls_header <- unlist(strsplit(i, split="\\|"))
     
         if (header == "") {
@@ -186,7 +190,7 @@ f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out
     }
      
     # save the concatenated FASTA in a file
-    concat_cds <- Biostrings::DNAStringSet(seq)
+    concat_cds <- Biostrings::AAStringSet(seq)
     names(concat_cds) <- header
     Biostrings::writeXStringSet(concat_cds, filepath=fn_concat_out)
 }
