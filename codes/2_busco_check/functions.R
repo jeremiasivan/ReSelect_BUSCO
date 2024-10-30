@@ -161,7 +161,7 @@ f_calculate_read_coverage <- function(fn_bam, fn_bed, exe_samtools) {
 }
 
 # function: extract all BUSCO alignments from GFF
-f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out, fn_log, exe_gffread){
+f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out, exe_gffread){
     # run gffread
     cmd_gffread <- paste(exe_gffread, "-g", fn_input, "-y", fn_cds_out, fn_gff)
     system(cmd_gffread)
@@ -174,10 +174,6 @@ f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out
     header <- ""
     seq <- ""
     for (i in all_headers) {
-        if (is.na(i)) {
-            write.table(paste0(i, fn_cds_out), file=fn_log, quote=F, row.names=F, col.names=F, append=T)
-        }
-
         ls_header <- unlist(strsplit(i, split="\\|"))
     
         if (header == "") {
@@ -217,7 +213,7 @@ f_compare_fasta <- function(fn_fasta_one, fn_fasta_two) {
 
     # if not equal, run pairwise distance calculation
     fasta_msa <- Biostrings::pairwiseAlignment(fasta_one, fasta_two, type = "global")
-    return(list(is_identical=FALSE, score=round(Biostrings::pid(fasta_msa), 3)))
+    return(list(is_identical=FALSE, score=round(Biostrings::pid(fasta_msa), 5)))
 }
 
 # function: combine individual FASTA as MSA
