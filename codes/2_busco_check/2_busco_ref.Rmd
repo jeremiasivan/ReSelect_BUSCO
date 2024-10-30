@@ -152,12 +152,12 @@ shared_busco <- c()
 
 # iterate over reference sequences
 for (ref in ls_refseq) {
-  # directory for BUSCO alignments
-  dir_buscos <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
+  # open BUSCO full table
+  fn_busco_fulltable <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/full_table.tsv")
+  df_busco_fulltable <- data.table::fread(fn_busco_fulltable, skip=3, fill=TRUE)
   
-  # remove file extension .faa
-  busco_ids <- list.files(dir_buscos, pattern = "*.faa$", full.names = F, recursive = F)
-  busco_ids <- sapply(busco_ids, function(x) { gsub(".faa", "", x) })
+  # extract complete BUSCO
+  busco_ids <- df_busco_fulltable$V1[df_busco_fulltable$V2=="Complete"]
   
   # extract shared BUSCOs between reference sequences
   if (length(shared_busco) == 0) {
@@ -220,6 +220,10 @@ for (ref in ls_refseq) {
     if (!dir.exists(dir_busco_out)) {
         dir.create(dir_busco_out, recursive=T)
     }
+
+    # open BUSCO full table
+    fn_busco_fulltable <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/full_table.tsv")
+    df_busco_fulltable <- data.table::fread(fn_busco_fulltable, skip=3, fill=TRUE)
   
     # extract reference file location
     file_fas <- df_refseq_dir$dir[df_refseq_dir$id==ref]
@@ -241,15 +245,12 @@ for (ref in ls_refseq) {
         file_busco_bed_out <- paste0(dir_busco_out, busco, ".bed")
         file_busco_concat <- paste0(dir_busco_out, busco, ".faa")
 
-        # extract header
-        busco_header <- system(paste("grep '^>'", file_busco_fas), intern=T)
-
         # extract BUSCO coordinates
-        coordinates <- f_extract_coordinates(busco_header, busco, ref)
-        if (!is.null(coordinates$errmsg)) {
-            f_write_log(fn_log=fn_log, msg=coordinates$errmsg)
-            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
-        }
+        df_busco_fulltable_subset <- df_busco_fulltable[df_busco_fulltable$V1==busco,]
+        coordinates <- list(seqname=unlist(strsplit(df_busco_fulltable_subset$V3[1], split=":"))[1],
+                            start=df_busco_fulltable_subset$V4[1],
+                            stop=df_busco_fulltable_subset$V5[1],
+                            strand=df_busco_fulltable_subset$V6[1])
 
         # manipulate GFF file
         if (!file.exists(file_busco_gff)) {
