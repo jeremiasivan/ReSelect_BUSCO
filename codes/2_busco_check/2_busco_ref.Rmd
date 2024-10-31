@@ -220,10 +220,6 @@ for (ref in ls_refseq) {
     if (!dir.exists(dir_busco_out)) {
         dir.create(dir_busco_out, recursive=T)
     }
-
-    # open BUSCO full table
-    fn_busco_fulltable <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/full_table.tsv")
-    df_busco_fulltable <- data.table::fread(fn_busco_fulltable, skip=3, fill=TRUE)
   
     # extract reference file location
     file_fas <- df_refseq_dir$dir[df_refseq_dir$id==ref]
@@ -241,39 +237,21 @@ for (ref in ls_refseq) {
 
         # output files
         file_busco_cds <- paste0(dir_busco_out, busco, ".cds.faa")
-        file_busco_gff_out <- paste0(dir_busco_out, busco, ".gff")
         file_busco_bed_out <- paste0(dir_busco_out, busco, ".bed")
         file_busco_concat <- paste0(dir_busco_out, busco, ".faa")
 
-        # extract BUSCO coordinates
-        df_busco_fulltable_subset <- df_busco_fulltable[df_busco_fulltable$V1==busco,]
-        coordinates <- list(seqname=unlist(strsplit(df_busco_fulltable_subset$V3[1], split=":"))[1],
-                            start=df_busco_fulltable_subset$V4[1],
-                            stop=df_busco_fulltable_subset$V5[1],
-                            strand=df_busco_fulltable_subset$V6[1])
-
-        # manipulate GFF file
+        # check if GFF file exists
         if (!file.exists(file_busco_gff)) {
-            f_create_gff(coordinates, busco, file_busco_gff_out)
-            log4r::warn(fn_logger, paste0("File not found: ", busco, " GFF file for ", ref, ". Extracting the whole alignment."))
-        } else {
-            msg <- f_manipulate_gff(file_busco_gff, coordinates, busco, ref, file_busco_gff_out)
-            if (!is.null(msg)) {
-                if (!is.null(msg$errmsg)) {
-                    f_write_log(fn_log=fn_log, msg=msg$errmsg)
-                    return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
-                } else if (!is.null(msg$warnmsg)) {
-                    f_write_log(fn_log=fn_log, msg=msg$warnmsg)
-                }
-            }
+            log4r::warn(fn_logger, paste0("File not found: ", busco, " GFF file for ", ref, ". Skipped."))
+            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
         }
 
         # run bedops gff2bed
-        cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff_out, ">", file_busco_bed_out)
+        cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff, ">", file_busco_bed_out)
         system(cmd_gff2bed)
 
         # extract BUSCO
-        f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
+        f_extract_fasta_from_gff(file_fas, file_busco_gff, file_busco_cds, file_busco_concat, params$exe_gffread)
 
         # sanity check if FASTA is the same
         output <- f_compare_fasta(file_busco_fas, file_busco_concat)
@@ -282,19 +260,11 @@ for (ref in ls_refseq) {
             return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
         } else {
             if (!output$is_identical){
-                # score <- round(as.numeric(output$score),3)
-
-                # f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA file for ", ref, ". Sequences are non-identical (identity=", score, ")."))
-
-                # if (score < min_ref_busco_identity) {
-                #     return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=score))
-                # }
-
                 return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
             }
-        }
 
-        return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=100))
+            return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=100))
+        }
     }
 
     # update the list of output data.table
