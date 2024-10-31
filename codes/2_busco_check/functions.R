@@ -211,9 +211,11 @@ f_compare_fasta <- function(fn_fasta_one, fn_fasta_two) {
         return(list(is_identical=TRUE))
     }
 
+    return(list(is_identical=FALSE))
+
     # if not equal, run pairwise distance calculation
-    fasta_msa <- Biostrings::pairwiseAlignment(fasta_one, fasta_two, type = "global")
-    return(list(is_identical=FALSE, score=round(Biostrings::pid(fasta_msa), 5)))
+    # fasta_msa <- Biostrings::pairwiseAlignment(fasta_one, fasta_two, type = "global")
+    # return(list(is_identical=FALSE, score=round(Biostrings::pid(fasta_msa), 5)))
 }
 
 # function: combine individual FASTA as MSA

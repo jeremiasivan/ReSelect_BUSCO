@@ -70,7 +70,7 @@ for (read in 1:nrow(df_reads)) {
 ## Download BUSCO lineage dataset
 ```{r busco-lineage-download}
 # download specific BUSCO lineage
-dir_lineage <- paste0(dir_busco_lineage, params$busco_lineage)
+dir_lineage <- paste0(dir_busco_lineage, "/lineages/", params$busco_lineage)
 if (!dir.exists(dir_lineage)) {
     busco_cmd <- paste(params$exe_busco, "--download_path", dir_busco_lineage, "--download", params$busco_lineage)
     system(busco_cmd)
@@ -271,29 +271,26 @@ for (ref in ls_refseq) {
         # run bedops gff2bed
         cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff_out, ">", file_busco_bed_out)
         system(cmd_gff2bed)
-        
+
         # extract BUSCO
         f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
 
-        f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA file for ", ref, ". Extract Success."))
-
         # sanity check if FASTA is the same
         output <- f_compare_fasta(file_busco_fas, file_busco_concat)
-
-        f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA file for ", ref, ". Compare Success."))
-
         if (!is.null(output$errmsg)) {
             f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA files for ", ref, ": ", output$errmsg, "."))
             return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
         } else {
             if (!output$is_identical){
-                score <- round(as.numeric(output$score),3)
+                # score <- round(as.numeric(output$score),3)
 
-                f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA file for ", ref, ". Sequences are non-identical (identity=", score, ")."))
+                # f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA file for ", ref, ". Sequences are non-identical (identity=", score, ")."))
 
-                if (score < min_ref_busco_identity) {
-                    return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=score))
-                }
+                # if (score < min_ref_busco_identity) {
+                #     return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=score))
+                # }
+
+                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
             }
         }
 
