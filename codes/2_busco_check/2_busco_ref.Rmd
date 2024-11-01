@@ -224,6 +224,17 @@ for (ref in ls_refseq) {
     # extract reference file location
     file_fas <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
+    # Metaeuk GFF files
+    dir_metaeuk_out_initial <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/initial_results/")
+    file_metaeuk_gff_initial <- list.files(dir_metaeuk_out_initial, pattern="*.gff$", full.names=T, recursive=F)
+    df_metaeuk_gff_initial <- data.table::fread(file_metaeuk_gff_initial, header=FALSE, select=1:9)
+    data.table::setnames(df_metaeuk_gff_initial, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+
+    dir_metaeuk_out_rerun <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/rerun_results/")
+    file_metaeuk_gff_rerun <- list.files(dir_metaeuk_out_rerun, pattern="*.gff$", full.names=T, recursive=F)
+    df_metaeuk_gff_rerun <- data.table::fread(file_metaeuk_gff_rerun, header=FALSE, select=1:9)
+    data.table::setnames(df_metaeuk_gff_rerun, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+
     # iterate over shared BUSCOs
     df_output_temp <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
         require(data.table)
@@ -237,6 +248,7 @@ for (ref in ls_refseq) {
 
         # output files
         file_busco_cds <- paste0(dir_busco_out, busco, ".cds.faa")
+        file_busco_gff_out <- paste0(dir_busco_out, busco, ".gff")
         file_busco_bed_out <- paste0(dir_busco_out, busco, ".bed")
         file_busco_concat <- paste0(dir_busco_out, busco, ".faa")
 
@@ -246,25 +258,52 @@ for (ref in ls_refseq) {
             return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
         }
 
+        # extract GFF entries from Metaeuk
+        df_busco_gff <- data.table::fread(file_busco_gff, header=FALSE, select=1:9)
+        data.table::setnames(df_busco_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+
+        target_id <- stringr::str_extract(df1$attribute[1], "^Target_ID=.*\\;")
+        df_metaeuk_gff_subset <- df_metaeuk_gff_initial[grepl(target_id, df_metaeuk_gff_initial$attribute),]
+        if (nrow(df_metaeuk_gff_subset) == 0) {
+            df_metaeuk_gff_subset <- df_metaeuk_gff_rerun[grepl(target_id, df_metaeuk_gff_rerun$attribute),]
+        }
+
+        # check if GFF file is problematic
+        if (nrow(df_metaeuk_gff_subset) == 0) {
+            f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " GFF entries for ", ref, " are not found on Metaeuk GFF. Skipped."))
+            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
+        } else if (nrow(df_metaeuk_gff_subset[df_metaeuk_gff_subset$feature=="gene"]) > 1) {
+            f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " GFF entries for ", ref, " have multiple gene entries on Metaeuk GFF. Skipped."))
+            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
+        }
+
+        # save the new GFF file
+        data.table::fwrite(df_metaeuk_gff_subset, file=file_busco_gff_out, sep="\t", quote=F, row.names=F, col.names=F)
+
         # run bedops gff2bed
-        cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff, ">", file_busco_bed_out)
+        cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff_out, ">", file_busco_bed_out)
         system(cmd_gff2bed)
 
         # extract BUSCO
-        f_extract_fasta_from_gff(file_fas, file_busco_gff, file_busco_cds, file_busco_concat, params$exe_gffread)
+        f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
 
         # sanity check if FASTA is the same
         output <- f_compare_fasta(file_busco_fas, file_busco_concat)
         if (!is.null(output$errmsg)) {
             f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA files for ", ref, ": ", output$errmsg, "."))
             return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
-        } else {
-            if (!output$is_identical){
-                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
+        }
+
+        if (!output$is_identical){
+            score <- as.numeric(output$score)
+            if (score >= min_ref_busco_identity) {
+                return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=score))
             }
 
-            return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=100))
+            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=score))
         }
+
+        return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=100))
     }
 
     # update the list of output data.table
