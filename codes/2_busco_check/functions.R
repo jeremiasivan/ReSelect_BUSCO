@@ -12,6 +12,7 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
                        "-i", fn_fasta,
                        "-l", lineage,
                        "-m", mode,
+                       "--metaeuk",
                        "-o", prefix,
                        "--download_path", dir_output,
                        "--out_path", dir_output,
