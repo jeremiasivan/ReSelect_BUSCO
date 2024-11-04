@@ -279,6 +279,7 @@ for (ref in ls_refseq) {
 
         # save the new GFF file
         df_metaeuk_gff_subset$attribute <- gsub("TCS_ID", "ID", df_metaeuk_gff_subset$attribute)
+        df_metaeuk_gff_subset <- df_metaeuk_gff_subset[abs(df_metaeuk_gff_subset$start-df_metaeuk_gff_subset$end)!=1,]
         data.table::fwrite(df_metaeuk_gff_subset, file=file_busco_gff_out, sep="\t", quote=F, row.names=F, col.names=F)
 
         # run bedops gff2bed
