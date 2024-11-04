@@ -27,6 +27,7 @@ params:
   exe_busco: ""
   exe_gffread: ""
   exe_gff2bed: ""
+  exe_samtools: ""
 
   exe_mafft: ""
   exe_iqtree2: ""

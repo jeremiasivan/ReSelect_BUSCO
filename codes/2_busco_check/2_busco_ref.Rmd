@@ -207,111 +207,124 @@ if (length(shared_busco) == 0) {
 
 ```{r check-busco-extract-ref, include=is_ref_extract, eval=is_ref_extract}
 # output data.table
-df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), identity=numeric())
+df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), note=character())
 
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
-# iterate over reference sequences
-for (ref in ls_refseq) {
-    # directory for BUSCO alignments
-    dir_busco_out <- paste0(dir_busco_ref, ref, "/fasta/")
-    if (!dir.exists(dir_busco_out)) {
-        dir.create(dir_busco_out, recursive=T)
-    }
-  
-    # extract reference file location
-    file_fas <- df_refseq_dir$dir[df_refseq_dir$id==ref]
-
-    # Metaeuk GFF files
-    dir_metaeuk_out_initial <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/initial_results/")
-    file_metaeuk_gff_initial <- list.files(dir_metaeuk_out_initial, pattern="*.gff$", full.names=T, recursive=F)
-    df_metaeuk_gff_initial <- data.table::fread(file_metaeuk_gff_initial, header=FALSE, select=1:9)
-    data.table::setnames(df_metaeuk_gff_initial, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
-
-    dir_metaeuk_out_rerun <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/rerun_results/")
-    file_metaeuk_gff_rerun <- list.files(dir_metaeuk_out_rerun, pattern="*.gff$", full.names=T, recursive=F)
-    df_metaeuk_gff_rerun <- data.table::fread(file_metaeuk_gff_rerun, header=FALSE, select=1:9)
-    data.table::setnames(df_metaeuk_gff_rerun, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
-
-    # iterate over shared BUSCOs
-    df_output_temp <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
-        require(data.table)
-        require(Biostrings)
-        require(stringr)
-
-        # BUSCO files
-        dir_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco)
-        file_busco_fas <- paste0(dir_busco_gff, ".faa")
-        file_busco_gff <- paste0(dir_busco_gff, ".gff")
-
-        # output files
-        file_busco_cds <- paste0(dir_busco_out, busco, ".cds.faa")
-        file_busco_gff_out <- paste0(dir_busco_out, busco, ".gff")
-        file_busco_bed_out <- paste0(dir_busco_out, busco, ".bed")
-        file_busco_concat <- paste0(dir_busco_out, busco, ".faa")
-
-        # check if GFF file exists
-        if (!file.exists(file_busco_gff)) {
-            log4r::warn(fn_logger, paste0("File not found: ", busco, " GFF file for ", ref, ". Skipped."))
-            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
+# check the BUSCO extraction method
+if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
+    # iterate over reference sequences
+    for (ref in ls_refseq) {
+        # directory for BUSCO alignments
+        dir_busco_out <- paste0(dir_busco_ref, ref, "/fasta/")
+        if (!dir.exists(dir_busco_out)) {
+            dir.create(dir_busco_out, recursive=T)
         }
+    
+        # extract reference file location
+        file_fas <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
-        # extract GFF entries from Metaeuk
-        df_busco_gff <- data.table::fread(file_busco_gff, header=FALSE, select=1:9)
-        data.table::setnames(df_busco_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+        # Metaeuk GFF files
+        dir_metaeuk_out_initial <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/initial_results/")
+        file_metaeuk_gff_initial <- list.files(dir_metaeuk_out_initial, pattern="*.gff$", full.names=T, recursive=F)
+        df_metaeuk_gff_initial <- data.table::fread(file_metaeuk_gff_initial, header=FALSE, select=1:9)
+        data.table::setnames(df_metaeuk_gff_initial, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
 
-        target_id <- stringr::str_extract(df_busco_gff$attribute[1], "^Target_ID=.*\\;")
-        df_metaeuk_gff_subset <- df_metaeuk_gff_initial[grepl(target_id, df_metaeuk_gff_initial$attribute),]
-        if (nrow(df_metaeuk_gff_subset) == 0) {
-            df_metaeuk_gff_subset <- df_metaeuk_gff_rerun[grepl(target_id, df_metaeuk_gff_rerun$attribute),]
-        }
+        dir_metaeuk_out_rerun <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/rerun_results/")
+        file_metaeuk_gff_rerun <- list.files(dir_metaeuk_out_rerun, pattern="*.gff$", full.names=T, recursive=F)
+        df_metaeuk_gff_rerun <- data.table::fread(file_metaeuk_gff_rerun, header=FALSE, select=1:9)
+        data.table::setnames(df_metaeuk_gff_rerun, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
 
-        # check if GFF file is problematic
-        if (nrow(df_metaeuk_gff_subset) == 0) {
-            f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " GFF entries for ", ref, " are not found on Metaeuk GFF. Skipped."))
-            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
-        } else if (nrow(df_metaeuk_gff_subset[df_metaeuk_gff_subset$feature=="gene"]) > 1) {
-            f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " GFF entries for ", ref, " have multiple gene entries on Metaeuk GFF. Skipped."))
-            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
-        }
+        # iterate over shared BUSCOs
+        df_output_temp <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
+            require(data.table)
+            require(Biostrings)
+            require(stringr)
 
-        # save the new GFF file
-        df_metaeuk_gff_subset$attribute <- gsub("TCS_ID", "ID", df_metaeuk_gff_subset$attribute)
-        df_metaeuk_gff_subset <- df_metaeuk_gff_subset[abs(df_metaeuk_gff_subset$start-df_metaeuk_gff_subset$end)!=1,]
-        data.table::fwrite(df_metaeuk_gff_subset, file=file_busco_gff_out, sep="\t", quote=F, row.names=F, col.names=F)
+            # BUSCO files
+            dir_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco)
+            file_busco_fas <- paste0(dir_busco_gff, ".faa")
+            file_busco_gff <- paste0(dir_busco_gff, ".gff")
 
-        # run bedops gff2bed
-        cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff_out, ">", file_busco_bed_out)
-        system(cmd_gff2bed)
+            # output files
+            file_busco_cds <- paste0(dir_busco_out, busco, ".cds.faa")
+            file_busco_gff_out <- paste0(dir_busco_out, busco, ".gff")
+            file_busco_bed_out <- paste0(dir_busco_out, busco, ".bed")
+            file_busco_concat <- paste0(dir_busco_out, busco, ".faa")
 
-        # extract BUSCO
-        f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
-
-        # sanity check if FASTA is the same
-        output <- f_compare_fasta(file_busco_fas, file_busco_concat)
-        if (!is.null(output$errmsg)) {
-            f_write_log(fn_log=fn_log, paste0("Warn: ", busco, " FASTA files for ", ref, ": ", output$errmsg, "."))
-            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=NA))
-        }
-
-        if (!output$is_identical){
-            score <- as.numeric(output$score)
-            if (score >= min_ref_busco_identity) {
-                return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=score))
+            # check if GFF file exists
+            if (!file.exists(file_busco_gff)) {
+                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, note="File not found: GFF file"))
             }
 
-            return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=score))
+            # extract GFF entries from Metaeuk
+            df_busco_gff <- data.table::fread(file_busco_gff, header=FALSE, select=1:9)
+            data.table::setnames(df_busco_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
+
+            target_id <- stringr::str_extract(df_busco_gff$attribute[1], "^Target_ID=.*\\;")
+            df_metaeuk_gff_subset <- df_metaeuk_gff_initial[grepl(target_id, df_metaeuk_gff_initial$attribute),]
+            if (nrow(df_metaeuk_gff_subset) == 0) {
+                df_metaeuk_gff_subset <- df_metaeuk_gff_rerun[grepl(target_id, df_metaeuk_gff_rerun$attribute),]
+            }
+
+            # check if GFF file is problematic
+            if (nrow(df_metaeuk_gff_subset) == 0) {
+                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, note="File not found: GFF entries from Metaeuk output"))
+            } else if (nrow(df_metaeuk_gff_subset[df_metaeuk_gff_subset$feature=="gene"]) > 1) {
+                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, note="Error: multiple gene entries from Metaeuk output"))
+            }
+
+            # save the new GFF file
+            df_metaeuk_gff_subset$attribute <- gsub("TCS_ID", "ID", df_metaeuk_gff_subset$attribute)
+            df_metaeuk_gff_subset <- df_metaeuk_gff_subset[abs(df_metaeuk_gff_subset$start-df_metaeuk_gff_subset$end)!=1,]
+            data.table::fwrite(df_metaeuk_gff_subset, file=file_busco_gff_out, sep="\t", quote=F, row.names=F, col.names=F)
+
+            # run bedops gff2bed
+            cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff_out, ">", file_busco_bed_out)
+            system(cmd_gff2bed)
+
+            # extract BUSCO
+            f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
+
+            # sanity check if FASTA is the same
+            output <- f_compare_fasta(file_busco_fas, file_busco_concat)
+            if (!is.null(output$errmsg)) {
+                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, note=output$errmsg))
+            }
+
+            if (!output$is_identical){
+                score <- round(as.numeric(output$score),3)
+                if (score >= min_ref_busco_identity) {
+                    return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=paste("Identity:", score)))
+                }
+
+                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=paste("Identity:", score)))
+            }
+
+            return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, note=NA))
         }
 
-        return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=100))
+        # update the list of output data.table
+        df_chr_busco <- rbind(df_chr_busco, df_output_temp)
+
+        log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", ref, "."))
     }
 
-    # update the list of output data.table
-    df_chr_busco <- rbind(df_chr_busco, df_output_temp)
+} else if (params$type == "pipeline") {
+    df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), note=character())
 
-    log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", ref, "."))
+    # extract total number of BUSCO
+    len_shared_busco <- len(shared_busco)
+
+    # iterate over references
+    for (ref in ls_refseq) {
+        df_chr_busco <- rbind(df_chr_busco, data.table::data.table(ref=rep(ref, len_shared_busco)
+                                                                   busco=shared_busco,
+                                                                   is_error=rep(FALSE, len_shared_busco),
+                                                                   note=rep(NA, len_shared_busco)))
+    }
 }
 
 stopCluster(nwcl)
