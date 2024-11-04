@@ -262,7 +262,7 @@ for (ref in ls_refseq) {
         df_busco_gff <- data.table::fread(file_busco_gff, header=FALSE, select=1:9)
         data.table::setnames(df_busco_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
 
-        target_id <- stringr::str_extract(df1$attribute[1], "^Target_ID=.*\\;")
+        target_id <- stringr::str_extract(df_busco_gff$attribute[1], "^Target_ID=.*\\;")
         df_metaeuk_gff_subset <- df_metaeuk_gff_initial[grepl(target_id, df_metaeuk_gff_initial$attribute),]
         if (nrow(df_metaeuk_gff_subset) == 0) {
             df_metaeuk_gff_subset <- df_metaeuk_gff_rerun[grepl(target_id, df_metaeuk_gff_rerun$attribute),]
@@ -278,6 +278,7 @@ for (ref in ls_refseq) {
         }
 
         # save the new GFF file
+        df_metaeuk_gff_subset$attribute <- gsub("TCS_ID", "ID", df_metaeuk_gff_subset$attribute)
         data.table::fwrite(df_metaeuk_gff_subset, file=file_busco_gff_out, sep="\t", quote=F, row.names=F, col.names=F)
 
         # run bedops gff2bed
