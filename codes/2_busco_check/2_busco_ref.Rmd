@@ -295,12 +295,13 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
             }
 
             if (!output$is_identical){
-                score <- round(as.numeric(output$score),3)
-                if (score >= min_ref_busco_identity) {
-                    return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, identity=paste("Identity:", score)))
+                score_pid1 <- round(as.numeric(output$score_pid1),3)
+                score_pid4 <- round(as.numeric(output$score_pid4),3)
+                if (score_pid1 >= min_ref_busco_identity && score_pid4 >= min_ref_busco_identity) {
+                    return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, note=paste0("Identity: ", score_pid1, "/", score_pid4)))
                 }
 
-                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, identity=paste("Identity:", score)))
+                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, note=paste("Identity: ", score_pid1, "/", score_pid4)))
             }
 
             return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, note=NA))

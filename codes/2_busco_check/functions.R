@@ -214,7 +214,12 @@ f_compare_fasta <- function(fn_fasta_one, fn_fasta_two) {
 
     # if not equal, run pairwise distance calculation
     fasta_msa <- Biostrings::pairwiseAlignment(fasta_one, fasta_two, substitutionMatrix = "BLOSUM100")
-    return(list(is_identical=FALSE, score=Biostrings::pid(fasta_msa)))
+
+    # calculate the sequence identity
+    score_pid1 <- Biostrings::pid(fasta_msa, type="PID1")
+    score_pid4 <- Biostrings::pid(fasta_msa, type="PID4")
+
+    return(list(is_identical=FALSE, score_pid1=score_pid1, score_pid4=score_pid4))
 }
 
 # function: combine individual FASTA as MSA
