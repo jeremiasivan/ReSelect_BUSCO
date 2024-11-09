@@ -43,10 +43,13 @@ params:
   type: "coordinate"
 
   min_busco_depth: 10
-  max_busco_depth: 60
+  max_busco_depth: 40
   include_incomplete: TRUE
 
   outgroup: !r c("")
+
+  # BUSCO tree
+  busco_tree_mode: "control"
 ---
 
 ## Load required libraries and functions

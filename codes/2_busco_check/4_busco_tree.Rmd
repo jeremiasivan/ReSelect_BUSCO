@@ -11,10 +11,12 @@ f_write_log(fn_log=fn_log,
 
 # output directory
 dir_check_tree <- paste0(dir_busco, "busco_tree/")
-if (!file.exists(params$file_buscotree)) {
-    dir_check_tree <- paste0(dir_check_tree, "random/")
-} else {
+if (params$busco_tree_mode == "control" && file.exists(params$file_buscotree)) {
     dir_check_tree <- paste0(dir_check_tree, "control/")
+} else if (params$busco_tree_mode == "oneref") {
+    dir_check_tree <- paste0(dir_check_tree, "oneref/")
+} else {
+    dir_check_tree <- paste0(dir_check_tree, "random/")
 }
 
 dir_check_tree_summary <- paste0(dir_check_tree, "summary/")
@@ -44,10 +46,12 @@ nthread <- ifelse(params$thread > length(shared_busco), length(shared_busco), pa
 
 # check if analysis done according to input file or random
 ngrouping <- length(ls_refseq)
-if (!file.exists(params$file_buscotree)) {
-    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4a_random.Rmd"))
-} else {
+if (params$busco_tree_mode == "control" && file.exists(params$file_buscotree)) {
     knitr::knit_child(paste0(params$codedir,"/2_busco_check/4b_control.Rmd"))
+} else if (params$busco_tree_mode == "oneref") {
+    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4c_oneref.Rmd"))
+} else {
+    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4a_random.Rmd"))
 }
 ```
 
