@@ -204,7 +204,7 @@ f_write_log(fn_log=fn_log, msg=c("", "-------- BUSCO Tree Distance -------"))
 
 # output data.table
 df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), n_spmatch=numeric(), sum_genome_dist=numeric(), 
-                                    nrf=numeric(), treedist=numeric(), treedist_highbs=numeric(), read_infsites=numeric(),
+                                    nrf=numeric(), nrf_highbs=numeric(), read_infsites=numeric(),
                                     ratio_treelen=numeric(), ratio_meanbs=numeric(), ratio_read_tiplen=numeric())
 
 # create doSNOW cluster
@@ -268,12 +268,10 @@ for (i in 1:ngrouping) {
         ratio_meanbs <- round(read_meanbs/refs_meanbs, 3)
 
         # calculate nRF
-        nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
-        treedist <- f_calculate_treedist(fn_tree_one, fn_tree_two, 0)
-        treedist_highbs <- f_calculate_treedist(fn_tree_one, fn_tree_two, 95)
+        nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two, 95)
 
         return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), n_spmatch=n_spmatch, sum_genome_dist=genome_dist, 
-                                      nrf=nrf_dist, treedist=treedist$dist, treedist_highbs=treedist_highbs$dist, read_infsites=n_infsites,
+                                      nrf=nrf_dist$nrf, nrf_highbs=nrf_dist$nrf_highbs, read_infsites=n_infsites,
                                       ratio_treelen=ratio_treelen, ratio_meanbs=ratio_meanbs, ratio_read_tiplen=ratio_read_tiplen))
     }
 
