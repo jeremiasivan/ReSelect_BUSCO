@@ -282,7 +282,7 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
             data.table::fwrite(df_metaeuk_gff_subset, file=file_busco_gff_out, sep="\t", quote=F, row.names=F, col.names=F)
 
             # run bedops gff2bed
-            cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff_out, ">", file_busco_bed_out)
+            cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff, ">", file_busco_bed_out)
             system(cmd_gff2bed)
 
             # extract BUSCO
@@ -321,7 +321,7 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
 
     # iterate over references
     for (ref in ls_refseq) {
-        df_chr_busco <- rbind(df_chr_busco, data.table::data.table(ref=rep(ref, len_shared_busco)
+        df_chr_busco <- rbind(df_chr_busco, data.table::data.table(ref=rep(ref, len_shared_busco),
                                                                    busco=shared_busco,
                                                                    is_error=rep(FALSE, len_shared_busco),
                                                                    note=rep(NA, len_shared_busco)))
@@ -429,7 +429,7 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
     # extract BUSCO alignment from reference sequences
     for (ref in ls_refseq) {
-        file_busco_ref <- paste0(dir_busco_ref, ref, busco_refs_dir_mid, busco, ".fna")
+        file_busco_ref <- paste0(dir_busco_ref, ref, busco_refs_dir_mid, busco, ".faa")
         if (!file.exists(file_busco_ref)) {
             next
         }
@@ -440,7 +440,7 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     # extract BUSCO alignment from short reads
     count_unavailable_prefix <- 0
     for (read in ls_prefix) {
-        file_busco_read <- paste0(dir_busco_read, read, busco_read_dir_mid, busco, ".fna")
+        file_busco_read <- paste0(dir_busco_read, read, busco_read_dir_mid, busco, ".faa")
         if (!file.exists(file_busco_read)) {
             count_unavailable_prefix <- count_unavailable_prefix + 1
             next
