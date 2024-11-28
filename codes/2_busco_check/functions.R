@@ -355,29 +355,15 @@ f_collapse_branch <- function(fn_tree, bootstrap, fn_out, exe_nwed) {
 }
 
 # function: calculate normalised RF distance between two trees
-f_calculate_nRF <- function(fn_tree_one, fn_tree_two, bootstrap) {
+f_calculate_nRF <- function(fn_tree_one, fn_tree_two) {
     # open the two treefiles
     tree_one <- ape::read.tree(fn_tree_one)
     tree_two <- ape::read.tree(fn_tree_two)
 
     # calculate nRF
-    rf_dist <- phangorn::RF.dist(tree_one, tree_two)
-    max_rf <- 2 * (length(tree_two$tip.label) - 3)
-    nrf_dist <- rf_dist / max_rf
+    nrf_dist <- phangorn::RF.dist(tree_one, tree_two, normalize=T)
 
-    # calculate nRF with high BS
-    tree_one$node.label <- as.numeric(tree_one$node.label)
-    tree_one$node.label[tree_one$node.label < bootstrap] <- NA
-    collapsed_tree_one <- ape::di2multi(tree_one, tol = 0)
-
-    tree_two$node.label <- as.numeric(tree_two$node.label)
-    tree_two$node.label[tree_two$node.label < bootstrap] <- NA
-    collapsed_tree_two <- ape::di2multi(tree_two, tol = 0)
-
-    rf_dist_highbs <- phangorn::RF.dist(collapsed_tree_one, collapsed_tree_two)
-    nrf_dist_highbs <- rf_dist_highbs / max_rf
-
-    return(list(nrf=round(nrf_dist,3), nrf_highbs=round(nrf_dist_highbs,3)))
+    return(round(nrf_dist,3))
 }
 
 # function: extract distance value based on the number of highly-supported branches
