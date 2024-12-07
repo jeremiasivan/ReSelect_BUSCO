@@ -271,7 +271,7 @@ for (i in 1:ngrouping) {
         nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
         tree_dist_one <- f_calculate_treedist(fn_tree_one, fn_tree_two, 0)
         tree_dist_two <- f_calculate_treedist(fn_tree_two, fn_tree_one, 0)
-        tree_dist <- (tree_dist_one + tree_dist_two) / 2
+        tree_dist <- (tree_dist_one$dist + tree_dist_two$dist) / 2
 
         return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), n_spmatch=n_spmatch, sum_genome_dist=genome_dist, 
                                       nrf=nrf_dist, nrf_highbs=tree_dist, read_infsites=n_infsites,

@@ -260,7 +260,7 @@ nwcl <- makeCluster(floor(params$thread/thread_qualimap))
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over mapped reads
-foreach (prefix = ls_coverage_run) %dopar% {
+df_coverage <- foreach (prefix = ls_prefix, .combine='rbind') %dopar% {
     # input parameters
     dir_qualimap_output <- paste0(dir_readmap, prefix, "/qualimap/")
     file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
@@ -270,10 +270,34 @@ foreach (prefix = ls_coverage_run) %dopar% {
                           "-bam", file_bam,
                           "-outdir", dir_qualimap_output,
                           "-nt", thread_qualimap)
-    system(cmd_coverage)
+    if (prefix %in% ls_coverage_run) { system(cmd_coverage) }
+
+    # extract coverage
+    mean_coverage <- system(paste0("grep 'mean coverageData' ", dir_qualimap_output, "genome_results.txt"), intern=T)
+    mean_coverage <- strsplit(mean_coverage, split=" = ")[[1]][2]
+    mean_coverage <- as.numeric(strsplit(mean_coverage, split="X")[[1]][1])
+
+    # extract percentage of mapped reads
+    mapped_reads <- system(paste0("grep 'number of mapped reads' ", dir_qualimap_output, "genome_results.txt"), intern=T)
+    mapped_reads <- stringr::str_match(mapped_reads, "\\((.*)\\)")[,2]
+    mapped_reads <- as.numeric(strsplit(mapped_reads, split="%")[[1]][1])
+
+    # extract reference and reads
+    readref <- strsplit(prefix, split="--")[[1]]
+
+    return(data.table::data.table(read_id=readref[1],
+                                  ref_id=readref[2],
+                                  read_sp=df_reads$species[df_reads$id==readref[1]],
+                                  ref_sp=df_refs$species[df_refs$id==readref[2]],
+                                  mean_coverage=mean_coverage,
+                                  mapped_reads=mapped_reads))
 }
 
 stopCluster(nwcl)
+
+# save the file
+fn_output <- paste0(dir_readmap, "summary.tsv")
+data.table::fwrite(df_coverage, file=fn_output, sep="\t", quote=F, row.names=F, col.names=F)
 ```
 
 ## Variant calling
