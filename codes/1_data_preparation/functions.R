@@ -97,6 +97,20 @@ f_sam_to_bam <- function(prefix, dir_output, thread, exe_samtools) {
     system(cmd_bam_index)
 }
 
+# function: qualiMap
+f_qualimap <- function(fn_bam, dir_output, thread, fn_gff, exe_qualimap) {
+    cmd_coverage <- paste(exe_qualimap, "bamqc",
+                          "-bam", fn_bam,
+                          "-outdir", dir_output,
+                          "-nt", thread)
+
+    if (!is.null(fn_gff)) {
+        cmd_coverage <- paste(cmd_coverage, "-gff", fn_gff)
+    }
+    
+    system(cmd_coverage)
+}
+
 # function: variant calling
 f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_bcftools) {
     # initiate variables

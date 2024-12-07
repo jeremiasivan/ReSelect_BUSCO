@@ -266,11 +266,9 @@ df_coverage <- foreach (prefix = ls_prefix, .combine='rbind') %dopar% {
     file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
 
     # run QualiMap
-    cmd_coverage <- paste(params$exe_qualimap, "bamqc",
-                          "-bam", file_bam,
-                          "-outdir", dir_qualimap_output,
-                          "-nt", thread_qualimap)
-    if (prefix %in% ls_coverage_run) { system(cmd_coverage) }
+    if (prefix %in% ls_coverage_run) {
+        f_qualimap(file_bam, dir_qualimap_output, thread_qualimap, NULL, params$exe_qualimap)
+    }
 
     # extract coverage
     mean_coverage <- system(paste0("grep 'mean coverageData' ", dir_qualimap_output, "genome_results.txt"), intern=T)

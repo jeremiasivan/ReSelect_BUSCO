@@ -388,6 +388,59 @@ if (!is.null(df_mapped_reads_busco) && !params$redo) {
 # print the number of BUSCO in HTML document
 cat(paste("Number of shared BUSCO after filtering low-coverage and incomplete genes:", length(shared_busco)))
 f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering problematic genes: ", length(shared_busco), ".")))
+
+# check coverage for shared BUSCO
+for (ref in ls_refseq) {
+    # output file
+    mid_ident <- ifelse (params$type == "pipeline", "pipeline", "coordinate")
+    fn_busco_gff_all <- paste0(dir_busco_ref, ref, "/all_busco_", mid_ident, ".gff")
+
+    # concatenate all GFF files
+    shared_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", shared_busco, ".gff")
+    shared_busco_gff <- paste0(shared_busco_gff, collapse=" ")
+    system(paste("cat", shared_busco_gff, ">", fn_busco_gff_all))
+}
+
+# iterate over mapped reads
+df_coverage <- data.table::data.table()
+for (prefix in ls_prefix) {
+    # extract reference and reads
+    readref <- strsplit(prefix, split="--")[[1]]
+
+    # input parameters
+    dir_qualimap_output <- paste0(dir_busco_read, prefix, "/qualimap/")
+    file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
+
+    mid_ident <- ifelse (params$type == "pipeline", "pipeline", "coordinate")
+    file_gff <- paste0(dir_busco_ref, readref[2], "/all_busco_", mid_ident, ".gff")
+
+    # run QualiMap
+    file_qualimap_html <- paste0(dir_busco_read, prefix, "/qualimap/qualimapReport.html")
+    if (!file.exists(file_qualimap_html)) {
+        f_qualimap(file_bam, dir_qualimap_output, params$thread, file_gff, params$exe_qualimap)
+    }
+
+    # extract coverage
+    mean_coverage <- system(paste0("grep 'mean coverageData' ", dir_qualimap_output, "genome_results.txt"), intern=T)
+    mean_coverage <- strsplit(mean_coverage, split=" = ")[[1]][2]
+    mean_coverage <- as.numeric(strsplit(mean_coverage, split="X")[[1]][1])
+
+    # extract percentage of mapped reads
+    mapped_reads <- system(paste0("grep 'number of mapped reads' ", dir_qualimap_output, "genome_results.txt"), intern=T)
+    mapped_reads <- stringr::str_match(mapped_reads, "\\((.*)\\)")[,2]
+    mapped_reads <- as.numeric(strsplit(mapped_reads, split="%")[[1]][1])
+
+    # update the data.table
+    df_coverage <- rbind(df_coverage, data.table::data.table(read_id=readref[1], ref_id=readref[2],
+                                                             read_sp=df_reads$species[df_reads$id==readref[1]],
+                                                             ref_sp=df_refs$species[df_refs$id==readref[2]],
+                                                             mean_coverage=mean_coverage,
+                                                             mapped_reads=mapped_reads))
+}
+
+# save the file
+fn_output <- paste0(dir_busco_read, "summary_coverage.tsv")
+data.table::fwrite(df_coverage, file=fn_output, sep="\t", quote=F, row.names=F, col.names=F)
 ```
 
 ## Convert individual BUSCO alignments into MSA
