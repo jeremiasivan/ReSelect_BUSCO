@@ -14,16 +14,13 @@ params:
   codedir: "~/BusIER/codes"
   prefix: ""
   outdir: "~/busco"
-  thread: 5
+  thread: 50
   redo: TRUE
   
   # list of accession numbers to be downloaded
   file_refseq: ""
   file_shortreads: ""
   file_adapters: ""
-
-  # minimum number of representative short-reads
-  min_taxa: 4
 
   # executables
   exe_datasets: ""
@@ -32,8 +29,17 @@ params:
   exe_adapterremoval: ""
   exe_bwamem2: ""
   exe_samtools: ""
-  exe_qualimap: ""
   exe_bcftools: ""
+  exe_qualimap: ""
+
+  # data filtering
+  min_read_quality: 25
+
+  # number of threads
+  thread_adapterremoval: 10
+  thread_bwamem2: 50
+  thread_samtools: 10
+  thread_qualimap: 50
 ---
 
 ## Load required libraries and functions

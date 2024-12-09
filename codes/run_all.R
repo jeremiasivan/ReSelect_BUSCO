@@ -30,15 +30,12 @@ exe_treeshrink <- "treeshrink"
 
 exe_astral <- "astral.jar"
 
-min_taxa <- 4
-
 busco_lineage <- "eudicots_odb10"
 busco_mode <- "genome"
 type <- "coordinate"
 
 min_busco_depth <- 10
 max_busco_depth <- 60
-include_incomplete <- TRUE
 
 outgroup <- c("Angophora","Corymbia")
 
@@ -59,7 +56,7 @@ rmarkdown::render(input=paste0(codedir,"/1_data_preparation/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, outprefix, ".download.html"),
                   params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters,
-                              min_taxa=min_taxa, exe_datasets=exe_datasets, bin_sratoolkit=bin_sratoolkit,
+                              exe_datasets=exe_datasets, bin_sratoolkit=bin_sratoolkit,
                               exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools, exe_qualimap=exe_qualimap),
                   quiet=TRUE)
 
@@ -70,8 +67,8 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_genome_treefile=file_genome_treefile, file_buscotree=file_buscotree,
                               exe_busco=exe_busco, exe_gffread=exe_gffread, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed,
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
-                              min_taxa=min_taxa, busco_lineage=busco_lineage, busco_mode=busco_mode, type=type, outgroup=outgroup,
-                              min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, include_incomplete=include_incomplete, busco_tree_mode=busco_tree_mode),
+                              busco_lineage=busco_lineage, busco_mode=busco_mode, type=type, outgroup=outgroup,
+                              min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, busco_tree_mode=busco_tree_mode),
                   quiet=TRUE)
 
 #################################

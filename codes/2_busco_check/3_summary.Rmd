@@ -97,7 +97,7 @@ ls_output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
 stopCluster(nwcl)
 
-# visualization
+# visualisation
 plot <- ggplot(data.frame(ls_output), aes(x=ls_output, xmin=0, xmax=max(ls_output))) + 
     geom_histogram(bins = 100) +
     ggtitle("BUSCO Phylogenetic Distance between Mapped Reads and Reference") + ylab("Count")

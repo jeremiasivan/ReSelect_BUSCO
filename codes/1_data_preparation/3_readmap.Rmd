@@ -8,14 +8,8 @@ f_write_log(fn_log=fn_log,
                       "####        Read Mapping        ####",
                       "####################################"))
 
-# check if number of representative short-reads sufficient
-if (length(ls_shortreads) < params$min_taxa) {
-    log4r::error(fn_logger, "Number of representative species is lower than minimum number of taxa. Exited.")
-    knitr::knit_exit()
-}
-
 # list of prefix
-ls_prefix <- outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--"))
+ls_prefix <- as.vector(outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--")))
 
 # output directories
 dir_shortreads_filtered <- paste0(dir_shortreads, "/filtered/")
@@ -26,16 +20,6 @@ lapply(list(dir_shortreads_filtered,dir_readmap), function(x){if(!dir.exists(x))
 
 # output files
 fn_readmap_metadata <- paste0(dir_readmap, "metadata.tsv")
-```
-
-```{r readmap-thread, include=FALSE}
-min_read_quality <- 25
-is_check_coverage <- FALSE
-
-thread_bwamem2 <- ifelse(params$thread < 50, params$thread, 50)
-thread_qualimap <- ifelse(params$thread < 50, params$thread, 50)
-thread_adapterremoval <- ifelse(params$thread < 10, params$thread, 10)
-thread_samtools <- ifelse(params$thread < 10, params$thread, 10)
 ```
 
 ## QC of short reads
@@ -84,10 +68,16 @@ cat(paste("Short reads to be filtered:", length(ls_shortread_qc)))
 ```
 
 ```{r readmap-qcreads, include=is_qcreads, eval=is_qcreads}
-f_write_log(fn_log=fn_log, msg=paste("Running AdapterRemoval using", thread_adapterremoval, "threads"))
+f_write_log(fn_log=fn_log, msg=paste("Running AdapterRemoval using", params$thread_adapterremoval, "threads"))
 
 # create doSNOW cluster
-nwcl <- makeCluster(floor(params$thread/thread_adapterremoval))
+cl_adapterremoval <- floor(params$thread/params$thread_adapterremoval)
+if (cl_adapterremoval < 1) {
+    log4r::error(fn_logger, "Invalid thread for AdapterRemoval. Exited.")
+    knitr::knit_exit()
+}
+
+nwcl <- makeCluster(cl_adapterremoval)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over short reads
@@ -111,7 +101,7 @@ foreach (read = ls_shortread_qc) %dopar% {
     }
     
     # run AdapterRemoval
-    f_qc_short_reads(fn_fastq_one, fn_fastq_two, params$file_adapters, prefix, min_read_quality, thread_adapterremoval, params$exe_adapterremoval)
+    f_qc_short_reads(fn_fastq_one, fn_fastq_two, params$file_adapters, prefix, params$min_read_quality, params$thread_adapterremoval, params$exe_adapterremoval)
     log4r::info(fn_logger, paste0("File created: filtered FASTQ file for ", read, "."))
 }
 
@@ -187,10 +177,17 @@ cat(paste("Short reads to be mapped:", length(ls_readmap_run)))
 ```
 
 ```{r readmap, include=is_readmap, eval=is_readmap}
-f_write_log(fn_log=fn_log, msg=paste("Running BWA-MEM2 using", thread_bwamem2, "threads"))
+f_write_log(fn_log=fn_log, msg=paste("Running BWA-MEM2 using", params$thread_bwamem2, "threads"))
 
 # create doSNOW cluster
-nwcl <- makeCluster(floor(params$thread/thread_bwamem2))
+cl_bwamem2 <- floor(params$thread/params$thread_bwamem2)
+if (cl_bwamem2 < 1) {
+    log4r::error(fn_logger, "Invalid thread for BWA-MEM2. Exited.")
+    knitr::knit_exit()
+}
+
+# create doSNOW cluster
+nwcl <- makeCluster(cl_bwamem2)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over prefix
@@ -225,10 +222,10 @@ foreach (prefix = ls_readmap_run) %dopar% {
     }
     
     # run BWA-MEM2
-    f_read_mapping(file_ref, file_fastq_one, file_fastq_two, thread_bwamem2, params$exe_bwamem2, file_sam)
+    f_read_mapping(file_ref, file_fastq_one, file_fastq_two, params$thread_bwamem2, params$exe_bwamem2, file_sam)
 
     # convert SAM to BAM
-    f_sam_to_bam(prefix, dir_output, thread_bwamem2, params$exe_samtools)
+    f_sam_to_bam(prefix, dir_output, params$thread_samtools, params$exe_samtools)
 
     # delete SAM file
     unlink(file_sam)
@@ -238,7 +235,9 @@ foreach (prefix = ls_readmap_run) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r readmap-coverage, include=is_check_coverage, eval=is_check_coverage}
+```{r readmap-coverage, include=FALSE}
+f_write_log(fn_log=fn_log, msg=paste("Running QualiMap using", params$thread_qualimap, "threads"))
+
 # set up variable
 ls_coverage_run <- c()
 
@@ -256,7 +255,13 @@ if (params$redo) {
 }
 
 # create doSNOW cluster
-nwcl <- makeCluster(floor(params$thread/thread_qualimap))
+cl_qualimap <- floor(params$thread/params$thread_qualimap)
+if (cl_qualimap < 1) {
+    log4r::error(fn_logger, "Invalid thread for QualiMap. Exited.")
+    knitr::knit_exit()
+}
+
+nwcl <- makeCluster(cl_qualimap)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over mapped reads
@@ -267,7 +272,7 @@ df_coverage <- foreach (prefix = ls_prefix, .combine='rbind') %dopar% {
 
     # run QualiMap
     if (prefix %in% ls_coverage_run) {
-        f_qualimap(file_bam, dir_qualimap_output, thread_qualimap, NULL, params$exe_qualimap)
+        f_qualimap(file_bam, dir_qualimap_output, params$thread_qualimap, NULL, params$exe_qualimap)
     }
 
     # extract coverage
@@ -345,10 +350,16 @@ cat(paste("Variants to be called:", length(ls_variant_run)))
 ```
 
 ```{r readmap-calling, include=is_variant, eval=is_variant}
-f_write_log(fn_log=fn_log, msg=paste("Running Bcftools using", thread_samtools, "threads"))
+f_write_log(fn_log=fn_log, msg=paste("Running Bcftools using", params$thread_samtools, "threads"))
 
 # create doSNOW cluster
-nwcl <- makeCluster(floor(params$thread/thread_samtools))
+cl_samtools <- floor(params$thread/params$thread_samtools)
+if (cl_samtools < 1) {
+    log4r::error(fn_logger, "Invalid thread for Samtools. Exited.")
+    knitr::knit_exit()
+}
+
+nwcl <- makeCluster(cl_samtools)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over reference sequences
@@ -368,7 +379,7 @@ foreach (prefix = ls_variant_run) %dopar% {
     file_ref <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
     # variant calling
-    f_variant_calling(prefix, dir_output, thread_samtools, file_ref, params$exe_bcftools)
+    f_variant_calling(prefix, dir_output, params$thread_samtools, file_ref, params$exe_bcftools)
     log4r::info(fn_logger, paste0("File created: VCF and FASTA files for ", prefix, "."))
 }
 

@@ -1,6 +1,6 @@
-# BusIER
+# ReSelect BUSCO
 
-**BusIER (Busco-based Inference of Evolutionary Relationship)** is an R pipeline to assess the presence of reference bias in BUSCO inference. It consists of two main steps: data preparation and reference bias check. It is mainly developed and tested using MacOS and Linux, so there might be incompatibilities using Windows.
+**ReSelect BUSCO (Reference Selection on BUSCO Inference)** is an R pipeline to assess the extent of bias introduced by reference selection in BUSCO inference. It consists of two main steps: data preparation and reference bias checking. It is mainly developed and tested using MacOS and Linux, so there might be incompatibilities using Windows.
 
 ## Table of Content
 - <a href="#prereqs">Prerequisites</a>

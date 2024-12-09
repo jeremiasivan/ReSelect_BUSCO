@@ -50,11 +50,17 @@ cat(paste0("Available mapped reads BUSCO (", length(ls_busco_read_done), "/", le
 cat(paste("Mapped reads BUSCO to run:", length(ls_busco_read_run)))
 ```
 
-```{r check-busco-read-p, include=is_busco_read, eval=is_busco_read}
-f_write_log(fn_log=fn_log, msg=paste("Running BUSCO using", thread_busco, "threads"))
+```{r check-busco-pipeline-run, include=is_busco_read, eval=is_busco_read}
+f_write_log(fn_log=fn_log, msg=paste("Running BUSCO using", params$thread_busco, "threads"))
 
 # create doSNOW cluster
-nwcl <- makeCluster(floor(params$thread/thread_busco))
+cl_busco <- floor(params$thread/params$thread_busco)
+if (cl_busco < 1) {
+    log4r::error(fn_logger, "Invalid thread for BUSCO. Exited.")
+    knitr::knit_exit()
+}
+
+nwcl <- makeCluster(cl_busco)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over mapped reads
@@ -63,7 +69,7 @@ foreach (prefix = ls_busco_read_run) %dopar% {
     file_read <- paste0(dir_readmap, prefix, "/", prefix, ".fa")
 
     # run BUSCO
-    f_run_busco(file_read, dir_lineage, prefix, dir_busco_read, params$busco_mode, thread_busco, params$exe_busco)
+    f_run_busco(file_read, dir_lineage, prefix, dir_busco_read, params$busco_mode, params$thread_busco, params$exe_busco)
     log4r::info(fn_logger, paste0("File created: BUSCO run for ", prefix, "."))
 }
 
@@ -71,9 +77,9 @@ stopCluster(nwcl)
 ```
 
 ## Extract common BUSCOs between reference sequences and mapped reads
-```{r check-busco-common-p}
+```{r check-busco-pipeline-extract}
 # output data.table
-df_mapped_reads_busco <- data.table::data.table(ref=character(), read=character(), busco=character(), is_error=logical())
+df_mapped_reads_busco <- data.table::data.table(ref=character(), read=character(), busco=character(), is_error=logical(), note=character())
 
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
@@ -106,8 +112,7 @@ for (prefix in ls_prefix) {
         # input files
         file_busco_gff <- paste0(dir_buscos, busco, ".gff")
         if (!file.exists(file_busco_gff)) {
-            log4r::warn(fn_logger, msg=paste0("File not found: ", busco, " GFF for ", prefix, ". Skipped."))
-            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE))
+            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note="File not found: GFF file"))
         }
 
         # run bedops gff2bed
@@ -118,15 +123,13 @@ for (prefix in ls_prefix) {
         # calculate read depth
         read_coverage <- f_calculate_read_coverage(file_bam, file_busco_bed, params$exe_samtools)
         if (is.null(read_coverage) || is.na(read_coverage)) {
-            log4r::warn(fn_logger, msg=paste("Warn:", busco, "for", prefix, "has invalid coverage"))
+            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note="Error: invalid coverage"))
         } else if (read_coverage >= params$min_busco_depth && read_coverage <= params$max_busco_depth) {
-            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=FALSE))
+            f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
+            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=FALSE, note=NA))
         } else if (read_coverage < params$min_busco_depth || read_coverage > params$max_busco_depth) {
-            log4r::warn(fn_logger, msg=paste("Warn:", busco, "for", prefix, "has average CDS read depth of", read_coverage))
+            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note=paste("Average CDS coverage:", read_coverage)))
         }
-
-        # write log file
-        return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE))
     }
 
 
@@ -139,36 +142,69 @@ stopCluster(nwcl)
 # save the output file
 data.table::fwrite(df_mapped_reads_busco, file=fn_mapped_reads_busco, sep="\t", quote=F)
 
-# update the list of BUSCO
-if (!params$include_incomplete) {
-    # remove BUSCOs with incomplete taxa
-    df_mapped_reads_busco <- df_mapped_reads_busco %>% mutate(prefix=paste0(read,"--",ref))
-    df_mapped_reads_busco <- df_mapped_reads_busco %>%
-                                group_by(busco) %>%
-                                filter(n_distinct(prefix) == n_distinct(df_mapped_reads_busco$prefix))
-    
-    # update list
-    shared_busco <- shared_busco[shared_busco %in% unique(df_mapped_reads_busco$busco)]
+# remove BUSCOs with incomplete taxa
+df_mapped_reads_busco <- df_mapped_reads_busco %>% mutate(prefix=paste0(read,"--",ref))
+df_mapped_reads_busco <- df_mapped_reads_busco %>%
+                            group_by(busco) %>%
+                            filter(n_distinct(prefix) == n_distinct(df_mapped_reads_busco$prefix))
 
-    # remove BUSCOs with low coverage
-    ls_problematic_busco <- unique(df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
-    shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
-} else {
-    # count the number of errors per BUSCO
-    df_mapped_reads_busco_count <- df_mapped_reads_busco %>%
-        group_by(busco,read) %>%
-        summarise(n_ref=sum(ifelse(!is_error, 1, 0))) %>%
-        group_by(busco) %>%
-        summarise(n_read=sum(ifelse(n_ref>0, 1, 0)))
-    
-    # update the BUSCO list
-    ls_problematic_busco <- unique(df_mapped_reads_busco_count$busco[df_mapped_reads_busco_count$n_read < params$min_taxa])
-    shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
-}
+# update list
+shared_busco <- shared_busco[shared_busco %in% unique(df_mapped_reads_busco$busco)]
+
+# remove BUSCOs with low coverage
+ls_problematic_busco <- unique(df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
+shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
 
 # check if shared BUSCOs found
 if (length(shared_busco) == 0) {
     log4r::error(fn_logger, paste0("Error: no BUSCO shared between sequences. Exited."))
     knitr::knit_exit()
 }
+```
+
+```{r check-busco-pipeline-coverage}
+# iterate over mapped reads
+df_coverage <- data.table::data.table()
+
+for (prefix in ls_prefix) {
+    # extract reference and reads
+    readref <- strsplit(prefix, split="--")[[1]]
+
+    # input parameters
+    dir_qualimap_output <- paste0(dir_busco_read, prefix, "/qualimap/")
+    file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
+    file_gff <- paste0(dir_busco_read, prefix, "/all_busco.gff")
+
+    # concatenate all GFF files
+    shared_busco_gff <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", shared_busco, ".gff")
+    shared_busco_gff <- paste0(shared_busco_gff, collapse=" ")
+    system(paste("cat", shared_busco_gff, ">", file_gff))    
+
+    # run QualiMap
+    file_qualimap_html <- paste0(dir_busco_read, prefix, "/qualimap/qualimapReport.html")
+    if (!file.exists(file_qualimap_html)) {
+        f_qualimap(file_bam, dir_qualimap_output, params$thread, file_gff, params$exe_qualimap)
+    }
+
+    # extract coverage
+    mean_coverage <- system(paste0("grep 'mean coverageData' ", dir_qualimap_output, "genome_results.txt"), intern=T)
+    mean_coverage <- strsplit(mean_coverage, split=" = ")[[1]][2]
+    mean_coverage <- as.numeric(strsplit(mean_coverage, split="X")[[1]][1])
+
+    # extract percentage of mapped reads
+    mapped_reads <- system(paste0("grep 'number of mapped reads' ", dir_qualimap_output, "genome_results.txt"), intern=T)
+    mapped_reads <- stringr::str_match(mapped_reads, "\\((.*)\\)")[,2]
+    mapped_reads <- as.numeric(strsplit(mapped_reads, split="%")[[1]][1])
+
+    # update the data.table
+    df_coverage <- rbind(df_coverage, data.table::data.table(read_id=readref[1], ref_id=readref[2],
+                                                             read_sp=df_reads$species[df_reads$id==readref[1]],
+                                                             ref_sp=df_refs$species[df_refs$id==readref[2]],
+                                                             mean_coverage=mean_coverage,
+                                                             mapped_reads=mapped_reads))
+}
+
+# save the file
+fn_output <- paste0(dir_busco_read, "summary_coverage.tsv")
+data.table::fwrite(df_coverage, file=fn_output, sep="\t", quote=F, row.names=F, col.names=F)
 ```

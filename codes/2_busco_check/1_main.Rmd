@@ -14,7 +14,7 @@ params:
   codedir: "~/BusIER/codes"
   prefix: ""
   outdir: "~/busco"
-  thread: 5
+  thread: 50
   redo: TRUE
 
   # input files
@@ -32,24 +32,19 @@ params:
   exe_mafft: ""
   exe_iqtree2: ""
   exe_treeshrink: ""
-
   exe_astral: ""
 
-  # BUSCO pipeline
-  min_taxa: 4
-
+  # BUSCO analyses
   busco_lineage: ""
   busco_mode: "genome"
   type: "coordinate"
 
+  thread_busco: 50
   min_busco_depth: 10
   max_busco_depth: 40
-  include_incomplete: TRUE
 
-  outgroup: !r c("")
-
-  # BUSCO tree
   busco_tree_mode: "control"
+  outgroup: !r c("")
 ---
 
 ## Load required libraries and functions

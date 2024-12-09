@@ -79,7 +79,7 @@ for (i in 1:ngrouping) {
     ls_uq_busco <- unique(df_metadata$busco)
 
     # iterate over BUSCOs
-    ls_busco_rm <- foreach (busco = ls_uq_busco, .combine='c') %dopar% {
+    foreach (busco = ls_uq_busco) %dopar% {
         # output directories
         dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
         dir_check_busco_tree_read <- paste0(dir_check_busco_tree, "read/")
@@ -113,11 +113,7 @@ for (i in 1:ngrouping) {
                     fn_fasta_read <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".faa")
                 }
 
-                if (!file.exists(fn_fasta_read)) {
-                    return(busco)
-                }
-
-                # MSA
+                # combine FASTA sequences into one file
                 f_fasta2msa(fn_fasta_read, read_ref_id, fn_out_read)
             }
 
@@ -133,12 +129,6 @@ for (i in 1:ngrouping) {
                 read_species_name <- df_reads_ref$species[df_reads_ref$reads==df_metadata_subset$read[j]]
                 read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
 
-                # input FASTA file
-                fn_fasta_refs <- paste0(dir_busco_ref, read_ref_id, "/fasta/", busco, ".faa")
-                if (!file.exists(fn_fasta_refs)) {
-                    return(busco)
-                }
-
                 # MSA
                 f_fasta2msa(fn_fasta_refs, read_ref_id, fn_out_refs)
             }
@@ -147,14 +137,6 @@ for (i in 1:ngrouping) {
             f_mafft(fn_out_refs, fn_out_refs_aligned, "--retree 2", params$exe_mafft)
         }
     }
-
-    # # delete folders for problematic BUSCOs
-    # if (length(ls_busco_rm) > 0) {
-    #     for (busco in ls_busco_rm) {
-    #         cmd_del <- paste0("rm -r ", dir_check_tree_category, busco, "/")
-    #         system(cmd_del)
-    #     }
-    # }
 
     log4r::info(fn_logger, paste0("File created/modified: MSA for group ", i, "."))
 }
