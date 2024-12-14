@@ -9,7 +9,7 @@ nwcl <- makeCluster(nthread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over number of reference sequences
-for (i in 1:length(ls_refseq)) {
+for (i in 1:ngrouping) {
     # output directory
     dir_check_tree_category <- paste0(dir_check_tree, i, "/")
     if (!dir.exists(dir_check_tree_category)) {

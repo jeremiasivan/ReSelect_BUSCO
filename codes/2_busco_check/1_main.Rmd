@@ -45,6 +45,9 @@ params:
 
   busco_tree_mode: "control"
   outgroup: !r c("")
+
+  # misc
+  current_time: ""
 ---
 
 ## Load required libraries and functions
@@ -79,7 +82,13 @@ if (!dir.exists(logdir)) {
 }
 
 # create log file
-fn_log <- paste0(logdir, params$prefix, ".busco_check.log")
+current_time <- params$current_time
+if (current_time == "") {
+  current_time <- format(Sys.time(), "%y-%m-%d %H:%M")
+  current_time <- gsub("[: -]", "" , current_time, perl=TRUE)
+}
+
+fn_log <- paste0(logdir, current_time, ".bc.log")
 log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::default_log_layout())
 fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
 if (!file.exists(fn_log) || params$redo) {

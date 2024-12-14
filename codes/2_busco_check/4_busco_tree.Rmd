@@ -185,8 +185,8 @@ stopCluster(nwcl)
 f_write_log(fn_log=fn_log, msg=c("", "-------- BUSCO Tree Distance -------"))
 
 # output data.table
-df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), n_spmatch=numeric(), sum_genome_dist=numeric(), 
-                                    nrf=numeric(), nrf_highbs=numeric(), read_infsites=numeric(),
+df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), n_spmatch=numeric(),
+                                    nrf=numeric(), sum_genome_dist=numeric(), read_infsites=numeric(),
                                     ratio_treelen=numeric(), ratio_meanbs=numeric(), ratio_read_tiplen=numeric())
 
 # create doSNOW cluster
@@ -251,12 +251,9 @@ for (i in 1:ngrouping) {
 
         # calculate nRF
         nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
-        tree_dist_one <- f_calculate_treedist(fn_tree_one, fn_tree_two, 0)
-        tree_dist_two <- f_calculate_treedist(fn_tree_two, fn_tree_one, 0)
-        tree_dist <- (tree_dist_one$dist + tree_dist_two$dist) / 2
 
-        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), n_spmatch=n_spmatch, sum_genome_dist=genome_dist, 
-                                      nrf=nrf_dist, nrf_highbs=tree_dist, read_infsites=n_infsites,
+        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), n_spmatch=n_spmatch,
+                                      nrf=nrf_dist, sum_genome_dist=genome_dist, read_infsites=n_infsites,
                                       ratio_treelen=ratio_treelen, ratio_meanbs=ratio_meanbs, ratio_read_tiplen=ratio_read_tiplen))
     }
 
@@ -327,7 +324,7 @@ for (i in 1:ngrouping) {
     genome_tree_subset <- ape::keep.tip(genome_tree, tip=astral_tree$tip.label)
 
     # extract information
-    nrf_dist <- round(phangorn::RF.dist(genome_tree_subset, astral_tree),3)
+    nrf_dist <- f_calculate_nRF(genome_tree_subset, astral_tree)
     quartet_score <- gsub("^.*\\: ", "", system(paste("grep '^Final normalized quartet score is:'",fn_astral_logfile), intern = T))
     quartet_score <- round(as.numeric(quartet_score), 3)
 
