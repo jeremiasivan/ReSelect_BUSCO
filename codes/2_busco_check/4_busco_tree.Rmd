@@ -251,7 +251,7 @@ for (i in 1:ngrouping) {
         n_infsites <- gsub("^.* ", "", system(paste("grep '^Number of parsimony informative sites:'",fn_log_one), intern = T))
 
         # extract average bootstrap
-        read_meanbs <- f_calculate_mean_bs(fn_tree_one)
+        read_meanbs <- round(f_calculate_mean_bs(fn_tree_one), 3)
         refs_meanbs <- f_calculate_mean_bs(fn_tree_two)
         ratio_meanbs <- round(read_meanbs/refs_meanbs, 3)
 
@@ -330,7 +330,7 @@ for (i in 1:ngrouping) {
     genome_tree_subset <- ape::keep.tip(genome_tree, tip=astral_tree$tip.label)
 
     # extract information
-    nrf_dist <- f_calculate_nRF(genome_tree_subset, astral_tree)
+    nrf_dist <- round(phangorn::RF.dist(genome_tree_subset, astral_tree, normalize=T), 3)
     quartet_score <- gsub("^.*\\: ", "", system(paste("grep '^Final normalized quartet score is:'",fn_astral_logfile), intern = T))
     quartet_score <- round(as.numeric(quartet_score), 3)
 

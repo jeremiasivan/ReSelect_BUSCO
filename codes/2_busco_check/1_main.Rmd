@@ -44,6 +44,7 @@ params:
   max_busco_depth: 40
 
   busco_tree_mode: "control"
+  busco_tree_random_ref: FALSE  # only applies for busco_tree_mode == "random"
   outgroup: !r c("")
 
   # misc

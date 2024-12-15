@@ -22,6 +22,9 @@ for (i in 1:ngrouping) {
         next
     }
 
+    # extract random refs
+    ls_sampled_refs <- sample(ls_refseq, i, replace=FALSE)
+
     # iterate over BUSCOs
     ls_output <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
         # create data.table to store metadata
@@ -37,8 +40,10 @@ for (i in 1:ngrouping) {
             return(NULL)
         }
 
-        # extract random refs
-        ls_sampled_refs <- sample(ls_refseq_busco, i, replace=FALSE)
+        # randomise reference for each BUSCO
+        if (params$busco_tree_random_ref) {
+            ls_sampled_refs <- sample(ls_refseq_busco, i, replace=FALSE)
+        }
 
         # iterate through the number of runs
         for (read in ls_shortreads_busco) {
