@@ -300,7 +300,7 @@ stopCluster(nwcl)
 
 # save the file
 fn_output <- paste0(dir_readmap, "summary.tsv")
-data.table::fwrite(df_coverage, file=fn_output, sep="\t", quote=F, row.names=F, col.names=F)
+data.table::fwrite(df_coverage, file=fn_output, sep="\t", quote=F, row.names=F)
 ```
 
 ## Variant calling
