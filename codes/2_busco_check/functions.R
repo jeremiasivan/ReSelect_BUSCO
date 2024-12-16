@@ -369,88 +369,90 @@ f_calculate_nRF <- function(fn_tree_one, fn_tree_two) {
 # function: extract distance value based on the number of highly-supported branches
 f_calculate_treedist <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
     # child function to get the tips under a given node (source: chatGPT)
-    f_get_tips <- function(tree, node) {
-        descendants <- phangorn::Descendants(tree, node, type = "tips")
-        return(tree$tip.label[unlist(descendants)])
+    f_get_bootstraps <- function(tree, node, df_tree) {
+        descendants <- phangorn::Descendants(tree, node, type = "all")
+        ls_bootstrap <- df_tree$bootstrap[df_tree$node %in% c(node, descendants)]
+
+        return(ls_bootstrap)
     }
 
-    # child function to check if tips are monophyletic
-    f_is_monophyletic <- function(tips, min_bootstrap, tree) {
-        # initial check
-        is_monophyletic <- ape::is.monophyletic(tree, tips)
-        if (is_monophyletic) {
-            return(TRUE)
-        }
+    # child function to get every partition
+    f_part_num2chr <- function(input) {
+        # extract labels
+        ls_label <- attr(input, "labels")
 
-        # extract bootstrap values from the tree
-        df_node_bs <- data.frame(node = (length(tree$tip.label) + 1):(length(tree$tip.label) + tree$Nnode), 
-                                 bootstrap = as.numeric(tree$node.label))
-        df_node_bs <- na.omit(df_node_bs)
+        # iterate over the partitions
+        ls_partition <- lapply(input, function(x) {
+            # convert the numbers to characters
+            ls_species <- sapply(x, function(y) {
+                ls_label[y]
+            })
+        })
 
-        # extract the MRCA node
-        node_mrca <- ape::getMRCA(tree, tips)
-
-        # iterate over tips
-        ls_nodepath <- c()
-        for (tip in tips) {
-            tip_node <- which(tree$tip.label==tip)
-            ls_nodepath <- c(ls_nodepath, ape::nodepath(tree, tip_node, node_mrca))
-        }
-
-        # extract unique nodes
-        ls_nodepath <- unique(ls_nodepath)
-
-        # extract bootstrap values
-        ls_bootstrap_values <- df_node_bs$bootstrap[df_node_bs$node%in%c(node_mrca,ls_nodepath)]
-        if (all(ls_bootstrap_values < min_bootstrap)) {
-            return(TRUE)
-        }
-
-        return(FALSE)
+        return(ls_partition)
     }
 
     # open the trees
     gene_tree <- ape::read.tree(fn_gene_tree)
     refs_tree <- ape::read.tree(fn_refs_tree)
 
-    # extract bootstrap values and their respective nodes from gene tree (source: ChatGPT)
-    df_node_bootstrap <- data.frame(node = (length(gene_tree$tip.label) + 1):(length(gene_tree$tip.label) + gene_tree$Nnode), 
-                                    bootstrap = as.numeric(gene_tree$node.label))
-
-    # remove rows with NA bootstrap values (if any)
-    df_node_bootstrap <- na.omit(df_node_bootstrap)
-
-    # nRF value
-    nRF <- 0
+    # extract information
+    ntaxa <- length(gene_tree$tip.label)
+    RF <- 0
     n_infbranch <- 0
-    nRF_increment <- 1 / (length(gene_tree$tip.label)-3)
+
+    # extract bootstrap values and their respective nodes from gene tree (source: ChatGPT)
+    df_node_gene <- data.frame(node = (ntaxa + 1):(ntaxa + gene_tree$Nnode), bootstrap = as.numeric(gene_tree$node.label))
+    df_node_refs <- data.frame(node = (ntaxa + 1):(ntaxa + refs_tree$Nnode), bootstrap = as.numeric(refs_tree$node.label))
+
+    # update the first row with NA bootstrap value
+    gene_child_first <- gene_tree$edge[gene_tree$edge[,1]==df_node_gene$node[1], 2]
+    df_node_gene$bootstrap[1] <- df_node_gene$bootstrap[df_node_gene$node==max(gene_child_first)]
+
+    refs_child_first <- refs_tree$edge[refs_tree$edge[,1]==df_node_refs$node[1], 2]
+    df_node_refs$bootstrap[1] <- df_node_refs$bootstrap[df_node_refs$node==max(refs_child_first)]
+
+    # get partitions from gene tree
+    gene_part <- lapply(f_part_num2chr(ape::prop.part(gene_tree)), sort)
+    refs_part <- lapply(f_part_num2chr(ape::prop.part(refs_tree)), sort)
 
     # iterate over branching events with high bootstrap value
-    for (i in 1:nrow(df_node_bootstrap)) {
+    for (part in gene_part) {
+        # get mrca for gene tree
+        gene_part_mrca <- ape::getMRCA(gene_tree, part)
+        i <- which(df_node_gene$node==gene_part_mrca)
+
         # check if bootstrap value is low
-        if (df_node_bootstrap$bootstrap[i] < min_bootstrap) {
+        if (df_node_gene$bootstrap[i] < min_bootstrap) {
             next
         }
 
-        # get the child nodes (source: ChatGPT)
-        child_nodes <- gene_tree$edge[gene_tree$edge[,1] == df_node_bootstrap$node[i], 2]
+        # update value
+        n_infbranch <- n_infbranch + 1
 
-        # get the tips under each child node (source: ChatGPT)
-        group1_tips <- f_get_tips(gene_tree, child_nodes[1])
-        group2_tips <- f_get_tips(gene_tree, child_nodes[2])
+        # check if partition is present in the refs_tree
+        is_present <- FALSE
+        for (part_ref in refs_part) {
+            if (setequal(part, part_ref)) {
+                is_present <- TRUE
+            }
+        }
+        if (is_present) { next }
 
-        # check if both groups are monophyletic
-        group1_monophyletic <- f_is_monophyletic(group1_tips, min_bootstrap, refs_tree)
-        group2_monophyletic <- f_is_monophyletic(group2_tips, min_bootstrap, refs_tree)
-        if (!group1_monophyletic || !group2_monophyletic) {
-            nRF <- nRF + nRF_increment
+        # get mrca for the refs tree
+        refs_part_mrca <- ape::getMRCA(refs_tree, part)
+
+        # check if all bootstrap values are low
+        if (all(f_get_bootstraps(refs_tree, refs_part_mrca, df_node_refs) < min_bootstrap)) {
+            next
         }
 
-        n_infbranch <- n_infbranch + 1
+        # update value
+        RF <- RF + 1
     }
 
-    # return value for nRF
-    return(list(dist=round(nRF,3), n_infbranch=n_infbranch))
+    # return value for RF
+    return(list(dist=RF, n_infbranch=n_infbranch))
 }
 
 # function: extract average bootstrap value
