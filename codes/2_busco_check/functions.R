@@ -405,12 +405,22 @@ f_calculate_treedist <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
     df_node_gene <- data.frame(node = (ntaxa + 1):(ntaxa + gene_tree$Nnode), bootstrap = as.numeric(gene_tree$node.label))
     df_node_refs <- data.frame(node = (ntaxa + 1):(ntaxa + refs_tree$Nnode), bootstrap = as.numeric(refs_tree$node.label))
 
-    # update the first row with NA bootstrap value
-    gene_child_first <- gene_tree$edge[gene_tree$edge[,1]==df_node_gene$node[1], 2]
-    df_node_gene$bootstrap[1] <- df_node_gene$bootstrap[df_node_gene$node==max(gene_child_first)]
-
-    refs_child_first <- refs_tree$edge[refs_tree$edge[,1]==df_node_refs$node[1], 2]
-    df_node_refs$bootstrap[1] <- df_node_refs$bootstrap[df_node_refs$node==max(refs_child_first)]
+    # update the rows with NA bootstrap value
+    for (i in 1:nrow(df_node_gene)) {
+        if (is.na(df_node_gene$bootstrap[i])) {
+            gene_child_first <- gene_tree$edge[gene_tree$edge[,1]==df_node_gene$node[i], 2]
+            gene_child_first_bs <- df_node_gene$bootstrap[df_node_gene$node==max(gene_child_first)]
+            df_node_gene$bootstrap[i] <- ifelse(length(gene_child_first_bs)!=0, gene_child_first_bs, 100)
+        }
+    }
+    
+    for (i in 1:nrow(df_node_refs)) {
+        if (is.na(df_node_refs$bootstrap[i])) {
+            refs_child_first <- refs_tree$edge[refs_tree$edge[,1]==df_node_refs$node[i], 2]
+            refs_child_first_bs <- df_node_refs$bootstrap[df_node_refs$node==max(refs_child_first)]
+            df_node_refs$bootstrap[i] <- ifelse(length(refs_child_first_bs)!=0, refs_child_first_bs, 100)
+        }
+    }
 
     # get partitions from gene tree
     gene_part <- lapply(f_part_num2chr(ape::prop.part(gene_tree)), sort)

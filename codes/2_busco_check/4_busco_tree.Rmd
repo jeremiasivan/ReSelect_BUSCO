@@ -270,7 +270,7 @@ for (i in 1:ngrouping) {
 
         return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), n_spmatch=n_spmatch,
                                       nrf=nrf_dist, nrf2=nrf2, nrf2_highbs=nrf2_highbs,
-                                      sum_genome_dist=genome_dist, read_meanbs=read_meanbs, read_infsites=n_infsites,
+                                      sum_genome_dist=genome_dist, read_infsites=n_infsites,
                                       ratio_treelen=ratio_treelen, ratio_meanbs=ratio_meanbs, ratio_read_tiplen=ratio_read_tiplen))
     }
 
