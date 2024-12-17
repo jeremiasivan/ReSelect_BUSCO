@@ -410,7 +410,7 @@ f_calculate_treedist <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
         if (is.na(df_node_gene$bootstrap[i])) {
             gene_child_first <- gene_tree$edge[gene_tree$edge[,1]==df_node_gene$node[i], 2]
             gene_child_first_bs <- df_node_gene$bootstrap[df_node_gene$node==max(gene_child_first)]
-            df_node_gene$bootstrap[i] <- ifelse(length(gene_child_first_bs)!=0 && !is.na(gene_child_first_bs), gene_child_first_bs, 100)
+            df_node_gene$bootstrap[i] <- ifelse(length(gene_child_first_bs)!=0 && !is.na(gene_child_first_bs), gene_child_first_bs, 0)
         }
     }
     
@@ -418,7 +418,7 @@ f_calculate_treedist <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
         if (is.na(df_node_refs$bootstrap[i])) {
             refs_child_first <- refs_tree$edge[refs_tree$edge[,1]==df_node_refs$node[i], 2]
             refs_child_first_bs <- df_node_refs$bootstrap[df_node_refs$node==max(refs_child_first)]
-            df_node_refs$bootstrap[i] <- ifelse(length(refs_child_first_bs)!=0 && !is.na(refs_child_first_bs), refs_child_first_bs, 100)
+            df_node_refs$bootstrap[i] <- ifelse(length(refs_child_first_bs)!=0 && !is.na(refs_child_first_bs), refs_child_first_bs, 0)
         }
     }
 
