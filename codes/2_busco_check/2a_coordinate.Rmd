@@ -13,6 +13,9 @@ df_mapped_reads_busco <- data.table::data.table(ref=character(), read=character(
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
+# store the list of problematic BUSCOs
+ls_error_busco <- c()
+
 # iterate over short reads
 for (prefix in ls_prefix) {
     # create outdir
@@ -20,6 +23,20 @@ for (prefix in ls_prefix) {
     if (!dir.exists(dir_busco_out)) {
         dir.create(dir_busco_out, recursive=T)
     }
+
+    # output file
+    fn_read_summary <- paste0(dir_busco_out, "metadata.tsv")
+    if (file.exists(fn_read_summary) && !params$redo) {
+        # update the data.frame
+        df_read_summary <- data.table::fread(fn_read_summary)
+        df_mapped_reads_busco <- rbind(df_mapped_reads_busco, df_read_summary)
+
+        ls_error_busco <- c(ls_error_busco, df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
+        ls_error_busco <- unique(ls_error_busco)
+
+        next
+    }
+
 
     # extract short read and reference sequence IDs
     read <- unlist(strsplit(prefix, split="--"))[1]
@@ -55,6 +72,11 @@ for (prefix in ls_prefix) {
             return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=FALSE, note="File found: FASTA sequence file"))
         }
 
+        # check if BUSCO is error for other mapped reads
+        if (busco %in% ls_error_busco) {
+            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note="BUSCO is problematic for other mapped reads"))
+        }
+
         # calculate read depth
         read_coverage <- f_calculate_read_coverage(file_bam, file_busco_bed_out, params$exe_samtools)
         if (is.null(read_coverage) || is.na(read_coverage)) {
@@ -69,7 +91,10 @@ for (prefix in ls_prefix) {
 
     # update data.table
     df_mapped_reads_busco <- rbind(df_mapped_reads_busco, df_output_temp)
+    ls_error_busco <- c(ls_error_busco, df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
+    ls_error_busco <- unique(ls_error_busco)
 
+    data.table::fwrite(df_output_temp, file=fn_read_summary, sep="\t", quote=F, row.names=F)
     log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", prefix, "."))
 }
 

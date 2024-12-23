@@ -81,6 +81,9 @@ stopCluster(nwcl)
 # output data.table
 df_mapped_reads_busco <- data.table::data.table(ref=character(), read=character(), busco=character(), is_error=logical(), note=character())
 
+# store the list of problematic BUSCOs
+ls_error_busco <- c()
+
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -94,6 +97,19 @@ for (prefix in ls_prefix) {
     dir_bed <- paste0(dir_busco_read, prefix, "/bed/")
     if (!dir.exists(dir_bed)) {
         dir.create(dir_bed, recursive=T)
+    }
+
+    # output file
+    fn_read_summary <- paste0(dir_busco_read, prefix, "/metadata.tsv")
+    if (file.exists(fn_read_summary) && !params$redo) {
+        # update the data.frame
+        df_read_summary <- data.table::fread(fn_read_summary)
+        df_mapped_reads_busco <- rbind(df_mapped_reads_busco, df_read_summary)
+
+        ls_error_busco <- c(ls_error_busco, df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
+        ls_error_busco <- unique(ls_error_busco)
+
+        next
     }
 
     # directory for BUSCO alignments
@@ -115,6 +131,11 @@ for (prefix in ls_prefix) {
             return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note="File not found: GFF file"))
         }
 
+        # check if BUSCO is error for other mapped reads
+        if (busco %in% ls_error_busco) {
+            return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note="BUSCO is problematic for other mapped reads"))
+        }
+
         # run bedops gff2bed
         file_busco_bed <- paste0(dir_bed, busco, ".bed")
         cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff, ">", file_busco_bed)
@@ -132,9 +153,13 @@ for (prefix in ls_prefix) {
         }
     }
 
-
     # update data.table
     df_mapped_reads_busco <- rbind(df_mapped_reads_busco, df_output_temp)
+    ls_error_busco <- c(ls_error_busco, df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
+    ls_error_busco <- unique(ls_error_busco)
+
+    data.table::fwrite(df_output_temp, file=fn_read_summary, sep="\t", quote=F, row.names=F)
+    log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", prefix, "."))
 }
 
 stopCluster(nwcl)

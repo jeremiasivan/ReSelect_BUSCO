@@ -297,7 +297,7 @@ df_output_nrf <- df_output %>% group_by(n_ref) %>%
 
 tiff(file=fn_nrf_tiff, units="px", width=2880, height=1800)
 print(ggplot(data=df_output_nrf, aes(x=as.factor(n_ref), y=value, group=name, color=name, ymin=0, ymax=1)) +
-             geom_line(linewidth=3) +
+             geom_line(linewidth=7) +
              ggtitle("nRF Distance across Numbers of Available References") + xlab("nRF") + ylab("Number of available references") +
              theme(plot.title = element_text(hjust=0.5, size=50),
                    plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
@@ -313,7 +313,7 @@ dev.off()
 
 tiff(file=fn_genomedist_tiff, units="px", width=2880, height=1800)
 print(ggplot(data=df_output, aes(x=as.factor(n_ref), y=sum_genome_dist)) +
-             geom_boxplot(size=2, outlier.size=4) +
+             geom_boxplot(size=3, outlier.size=8) +
              ggtitle("Total PD across Numbers of Available References") + ylab("Total phylogenetic distance") + xlab("Number of available references") +
              theme(plot.title = element_text(hjust=0.5, size=50),
                    plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
