@@ -83,10 +83,17 @@ log_appender <- log4r::file_appender(fn_log, append = TRUE, layout = log4r::defa
 fn_logger <- log4r::logger(threshold = "INFO", appenders = log_appender)
 if (!file.exists(fn_log) || params$redo) {
   unlink(fn_log)
-  f_write_log(fn_log=fn_log, msg="BusIER")
+  f_write_log(fn_log=fn_log, msg="ReSelect BUSCO")
 }
 
 knitr::opts_knit$set(root.dir = currentdir)
+```
+
+```{r}
+f_write_log(fn_log=fn_log, msg=paste0("- file_refseq: ", params$file_refseq))
+f_write_log(fn_log=fn_log, msg=paste0("- file_shortreads: ", params$file_shortreads))
+f_write_log(fn_log=fn_log, msg=paste0("- file_adapters: ", params$file_adapters))
+f_write_log(fn_log=fn_log, msg=paste0("- min_read_quality: ", params$min_read_quality))
 ```
 
 ```{r child = paste0(params$codedir,"/1_data_preparation/2_download.Rmd")}

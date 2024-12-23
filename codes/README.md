@@ -12,7 +12,7 @@ In this step, we download the reference assembly and short reads from NCBI. Then
 
 | Parameters               | Definition                                                                                                                            |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `codedir`                | Directory for folder `BusIER/codes`                                                                                                   |
+| `codedir`                | Directory for folder `BusIER/codes/`                                                                                                  |
 | `prefix`                 | Prefix for output files and folder                                                                                                    | 
 | `outdir`                 | Output directory                                                                                                                      |
 | `thread`                 | Number of threads for parallelisation                                                                                                 |
@@ -21,7 +21,7 @@ In this step, we download the reference assembly and short reads from NCBI. Then
 | `file_shortreads`        | Metadata file for short reads (e.g., `BusIER/data/eucs_shortreads.txt`)                                                               |
 | `file_adapters`          | Metadata file for sequencing adapters (e.g., `BusIER/data/eucs_adapter.txt`)                                                          |
 | `exe_datasets`           | Executable for NCBI Datasets                                                                                                          |
-| `bin_sratoolkit`         | `bin` directory for SRA-Toolkit                                                                                                       |
+| `bin_sratoolkit`         | `bin/` directory for SRA-Toolkit                                                                                                      |
 | `exe_adapterremoval`     | Executable for AdapterRemoval                                                                                                         |
 | `exe_bwamem2`            | Executable for BWA-MEM2                                                                                                               |
 | `exe_samtools`           | Executable for Samtools                                                                                                               |
@@ -39,14 +39,17 @@ Running the code will create the following folders in `outdir/prefix`:
 - `short_reads/`: folder with all raw short reads
     - `filtered/`: folder with all filtered short reads from AdapterRemoval
 - `readmap/`: folder with the output of mapping (i.e., BAM, VCF, and consensus FASTA sequence)
-    - `qualimap/`: folder with the output of QualiMap for each pair of short reads and reference
+    - `qualimap/`: folder with the output of QualiMap for each mapped reads
+    - `metadata.tsv`: file with the FASTA directories of all references
+    - `summary.tsv`: file with the summary coverage for all mapped reads
+- `logs/`: folder that contains the log files for each run
 
 ### <a id="check">Checking Reference Bias on BUSCO</a>
 In this step, we run correlation analysis to check for the extent of reference bias in BUSCO and assess if it changes the BUSCO tree topology. The parameters for this step is set in `2_busco_check/1_main.Rmd`.
 
 | Parameters               | Definition                                                                                                                            |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `codedir`                | Directory for folder `BusIER/codes`                                                                                                   |
+| `codedir`                | Directory for folder `BusIER/codes/`                                                                                                  |
 | `prefix`                 | Prefix for output files and folder                                                                                                    | 
 | `outdir`                 | Output directory                                                                                                                      |
 | `thread`                 | Number of threads for parallelisation                                                                                                 |
@@ -79,13 +82,19 @@ Running the code will create the following folders in `outdir/prefix`:
 - `busco_check/`
     - `busco_refseq/`: folder with all BUSCO runs on individual reference assembly
         - `fasta/`: folder with all BUSCO sequences inferred from BUSCO GFF files. Applicable only for `type==coordinate`.
+        - `metadata.tsv`: file with the error status for each BUSCO for each reference
     - `busco_coordinate/` and/or `busco_pipeline/`
         - `short_reads/`: folder with all BUSCO sequences for all mapped reads
+            - `metadata.tsv`: file with the error status for each BUSCO for each mapped reads
         - `trees/`: folder with all BUSCO alignments and trees for reference assemblies and mapped reads
         - `summary/`: folder with summary files from correlation analyses
             - `correlation_figs/`: folder with scatter plots from the correlation analysis
+            - `prefix.cor.sumtable`: file with the results of the correlation analyses
+            - `prefix.dist.tiff`: file with the phylogenetic distances of mapped reads that come from the same species
         - `busco_tree/`: folder with output from the BUSCO tree analyses
             - `control/`, `random/`, and/or `oneref/`: folder with individual analysis across number of replicates
+                - `summary/`: folder with the summary of the BUSCO tree analyses
+                    - `summary.dist.sumtable`: file with the nRF distance and other statistics
 
 ---
-*Last update: 09 December 2024 by Jeremias Ivan*
+*Last update: 23 December 2024 by Jeremias Ivan*

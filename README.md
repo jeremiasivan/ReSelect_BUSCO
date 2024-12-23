@@ -49,8 +49,8 @@ This pipeline requires several software and R packages to run. All software have
 
     - Setting up conda environment with R
         ```
-        conda create -n busier
-        conda activate busier
+        conda create -n reselect_busco
+        conda activate reselect_busco
         ```
     -  Installing R packages
         ```
@@ -63,16 +63,16 @@ This pipeline requires several software and R packages to run. All software have
 4. **Run the code file** <br>
     For running individual steps:
     ```
-    Rscript -e "rmarkdown::render('~/SimNOW/codes/1_data_download/1_main.Rmd')"
-    Rscript -e "rmarkdown::render('~/SimNOW/codes/2_busco_check/1_main.Rmd')"
+    Rscript -e "rmarkdown::render('~/BusIER/codes/1_data_download/1_main.Rmd')"
+    Rscript -e "rmarkdown::render('~/BusIER/codes/2_busco_check/1_main.Rmd')"
     ```
 
     For running the whole pipeline:
     ```
-    Rscript ~/SimNOW/codes/run_all.R
+    Rscript ~/BusIER/codes/run_all.R
     ```
 
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `start`, but I have never tried it before. 
 
 ---
-*Last update: 04 September 2024 by Jeremias Ivan*
+*Last update: 23 December 2024 by Jeremias Ivan*
