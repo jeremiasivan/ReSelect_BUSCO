@@ -37,10 +37,13 @@ for (prefix in ls_prefix) {
         next
     }
 
-
     # extract short read and reference sequence IDs
     read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
+
+    # get average coverage
+    mean_coverage <- as.numeric(df_readmap_coverage$mean_coverage[df_readmap_coverage$read_id==read & df_readmap_coverage$ref_id==ref])
+    max_busco_depth <- 2 * mean_coverage
 
     # check input files
     file_fas <- paste0(dir_readmap, prefix, "/", prefix, ".fa")
@@ -81,10 +84,10 @@ for (prefix in ls_prefix) {
         read_coverage <- f_calculate_read_coverage(file_bam, file_busco_bed_out, params$exe_samtools)
         if (is.null(read_coverage) || is.na(read_coverage)) {
             return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note="Error: invalid coverage"))
-        } else if (read_coverage >= params$min_busco_depth && read_coverage <= params$max_busco_depth) {
+        } else if (read_coverage >= params$min_busco_depth && read_coverage <= max_busco_depth) {
             f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
             return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=FALSE, note=NA))
-        } else if (read_coverage < params$min_busco_depth || read_coverage > params$max_busco_depth) {
+        } else if (read_coverage < params$min_busco_depth || read_coverage > max_busco_depth) {
             return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note=paste("Average CDS coverage:", read_coverage)))
         }
     }

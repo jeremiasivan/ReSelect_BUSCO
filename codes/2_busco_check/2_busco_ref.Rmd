@@ -10,7 +10,9 @@ f_write_log(fn_log=fn_log,
 
 # input files
 fn_readmap_metadata <- paste0(currentdir, "/readmap/metadata.tsv")
+fn_readmap_coverage <- paste0(currentdir, "/readmap/summary.tsv")
 df_refseq_dir <- data.table::fread(fn_readmap_metadata)
+df_readmap_coverage <- data.table::fread(fn_readmap_coverage)
 
 df_refs <- data.table::fread(params$file_refseq)
 ls_refseq <- df_refs$id
