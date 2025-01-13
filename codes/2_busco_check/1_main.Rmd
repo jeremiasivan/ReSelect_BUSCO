@@ -28,7 +28,8 @@ params:
   exe_gffread: ""
   exe_gff2bed: ""
   exe_samtools: ""
-
+  exe_qualimap: ""
+  
   exe_mafft: ""
   exe_iqtree2: ""
   exe_treeshrink: ""

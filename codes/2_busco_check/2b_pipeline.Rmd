@@ -150,7 +150,6 @@ for (prefix in ls_prefix) {
         if (is.null(read_coverage) || is.na(read_coverage)) {
             return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note="Error: invalid coverage"))
         } else if (read_coverage >= params$min_busco_depth && read_coverage <= max_busco_depth) {
-            f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
             return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=FALSE, note=NA))
         } else if (read_coverage < params$min_busco_depth || read_coverage > max_busco_depth) {
             return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note=paste("Average CDS coverage:", read_coverage)))
