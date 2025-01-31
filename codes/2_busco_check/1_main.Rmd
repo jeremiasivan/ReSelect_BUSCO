@@ -29,7 +29,7 @@ params:
   exe_gff2bed: ""
   exe_samtools: ""
   exe_qualimap: ""
-  
+
   exe_mafft: ""
   exe_iqtree2: ""
   exe_treeshrink: ""
@@ -58,7 +58,7 @@ source(paste0(params$codedir, "/1_data_preparation/functions.R"))
 source(paste0(params$codedir, "/2_busco_check/functions.R"))
 
 library(doSNOW)
-library(dplyr)
+library(tidyverse)
 ```
 
 ```{r, include=FALSE}
@@ -66,7 +66,6 @@ library(dplyr)
 # install.packages("data.table")
 # install.packages("log4r")
 # install.packages("phangorn")
-# install.packages("tidyverse")
 
 # store initial system time
 sys_tic <- Sys.time()
