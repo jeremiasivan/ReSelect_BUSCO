@@ -12,14 +12,14 @@ In this step, we download the reference assembly and short reads from NCBI. Then
 
 | Parameters               | Definition                                                                                                                            |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `codedir`                | Directory for folder `BusIER/codes/`                                                                                                  |
+| `codedir`                | Directory for folder `ReSelect_BUSCO/codes/`                                                                                                  |
 | `prefix`                 | Prefix for output files and folder                                                                                                    | 
 | `outdir`                 | Output directory                                                                                                                      |
 | `thread`                 | Number of threads for parallelisation                                                                                                 |
 | `redo`                   | If `FALSE`, skip analysis if output files exist; if `TRUE`, overwrite previous results                                                |
-| `file_refseq`            | Metadata file for reference assembly (e.g., `BusIER/data/eucs_refseq.txt`)                                                            |
-| `file_shortreads`        | Metadata file for short reads (e.g., `BusIER/data/eucs_shortreads.txt`)                                                               |
-| `file_adapters`          | Metadata file for sequencing adapters (e.g., `BusIER/data/eucs_adapter.txt`)                                                          |
+| `file_refseq`            | Metadata file for reference assembly (e.g., `ReSelect_BUSCO/data/eucs_refseq.txt`)                                                            |
+| `file_shortreads`        | Metadata file for short reads (e.g., `ReSelect_BUSCO/data/eucs_shortreads.txt`)                                                               |
+| `file_adapters`          | Metadata file for sequencing adapters (e.g., `ReSelect_BUSCO/data/eucs_adapter.txt`)                                                          |
 | `exe_datasets`           | Executable for NCBI Datasets                                                                                                          |
 | `bin_sratoolkit`         | `bin/` directory for SRA-Toolkit                                                                                                      |
 | `exe_adapterremoval`     | Executable for AdapterRemoval                                                                                                         |
@@ -49,15 +49,15 @@ In this step, we run correlation analysis to check for the extent of reference b
 
 | Parameters               | Definition                                                                                                                            |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `codedir`                | Directory for folder `BusIER/codes/`                                                                                                  |
+| `codedir`                | Directory for folder `ReSelect_BUSCO/codes/`                                                                                                  |
 | `prefix`                 | Prefix for output files and folder                                                                                                    | 
 | `outdir`                 | Output directory                                                                                                                      |
 | `thread`                 | Number of threads for parallelisation                                                                                                 |
 | `redo`                   | If `FALSE`, skip analysis if output files exist; if `TRUE`, overwrite previous results                                                |
-| `file_refseq`            | Metadata file for reference assembly (e.g., `BusIER/data/eucs_refseq.txt`)                                                            |
-| `file_shortreads`        | Metadata file for short reads (e.g., `BusIER/data/eucs_shortreads.txt`)                                                               |
-| `file_genome_treefile`   | Tree file for the reference sequences (e.g., `BusIER/data/eucs.treefile`)                                                             |
-| `file_buscotree`         | Configuration file for the BUSCO tree analyses (e.g., `BusIER/data/eucs_buscotree.txt`)                                               |
+| `file_refseq`            | Metadata file for reference assembly (e.g., `ReSelect_BUSCO/data/eucs_refseq.txt`)                                                            |
+| `file_shortreads`        | Metadata file for short reads (e.g., `ReSelect_BUSCO/data/eucs_shortreads.txt`)                                                               |
+| `file_genome_treefile`   | Tree file for the reference sequences (e.g., `ReSelect_BUSCO/data/eucs.treefile`)                                                             |
+| `file_buscotree`         | Configuration file for the BUSCO tree analyses (e.g., `ReSelect_BUSCO/data/eucs_buscotree.txt`)                                               |
 | `exe_busco`              | Executable for BUSCO                                                                                                                  |
 | `exe_gffread`            | Executable for GffRead                                                                                                                |
 | `exe_gff2bed`            | Executable for Gff2Bed from BEDOPS                                                                                                    |

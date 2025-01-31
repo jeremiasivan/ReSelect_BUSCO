@@ -11,7 +11,7 @@ output:
 
 params:
   # general
-  codedir: "~/BusIER/codes"
+  codedir: "~/ReSelect_BUSCO/codes"
   prefix: ""
   outdir: "~/busco"
   thread: 50

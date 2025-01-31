@@ -1,5 +1,5 @@
 #################################
-codedir <- "~/BusIER/codes"
+codedir <- "~/ReSelect_BUSCO/codes"
 outprefix <- ""
 outdir <- "~/busco"
 thread <- 5

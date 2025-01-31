@@ -41,7 +41,7 @@ This pipeline requires several software and R packages to run. All software have
 ## <a id="genpipe">General Pipeline</a>
 1. **Clone the Git repository** <br>
     ```
-    git clone git@github.com:jeremiasivan/BusIER.git
+    git clone git@github.com:jeremiasivan/ReSelect_BUSCO.git
     ```
 
 2. **Install the prerequisites** <br>
@@ -63,13 +63,13 @@ This pipeline requires several software and R packages to run. All software have
 4. **Run the code file** <br>
     For running individual steps:
     ```
-    Rscript -e "rmarkdown::render('~/BusIER/codes/1_data_download/1_main.Rmd')"
-    Rscript -e "rmarkdown::render('~/BusIER/codes/2_busco_check/1_main.Rmd')"
+    Rscript -e "rmarkdown::render('~/ReSelect_BUSCO/codes/1_data_download/1_main.Rmd')"
+    Rscript -e "rmarkdown::render('~/ReSelect_BUSCO/codes/2_busco_check/1_main.Rmd')"
     ```
 
     For running the whole pipeline:
     ```
-    Rscript ~/BusIER/codes/run_all.R
+    Rscript ~/ReSelect_BUSCO/codes/run_all.R
     ```
 
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `start`, but I have never tried it before. 

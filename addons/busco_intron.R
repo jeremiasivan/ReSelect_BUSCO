@@ -5,7 +5,7 @@
 ###################################################################
 ######                     INPUT VARIABLES                   ######
 ###################################################################
-file_metadata <- "/home/jeremias/BusIER/addons/busco_intron_metadata.tsv"
+file_metadata <- "/home/jeremias/ReSelect_BUSCO/addons/busco_intron_metadata.tsv"
 
 dir_busco_ref <- "/data/jeremias/run_eudicots_odb10/busco_sequences/single_copy_busco_sequences/"
 dir_out <- "/data/jeremias/eucs/intron/"
