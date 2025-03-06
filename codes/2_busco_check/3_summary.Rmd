@@ -11,8 +11,21 @@ f_write_log(fn_log=fn_log,
 # load ggplot2 library
 library(ggplot2)
 
-# output directories
+# check the BUSCO extraction method
+is_not_hybpiper <- TRUE
+if (params$type == "hybpiper") {
+    is_not_hybpiper <- FALSE
+}
+
+# output directory
 dir_check_summary <- paste0(dir_busco, "summary/")
+if (!dir.exists(dir_check_summary)) {
+    dir.create(dir_check_summary, recursive=T)
+}
+```
+
+```{r, include=is_not_hybpiper, eval=is_not_hybpiper}
+# output directories
 dir_check_summary_correlation <- paste0(dir_check_summary, "correlation_figs/")
 for (read in ls_shortreads) {
     dir_check_summary_correlation_read <- paste0(dir_check_summary_correlation, read)
@@ -28,7 +41,7 @@ fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
 ```
 
-```{r check-summary-busco-update}
+```{r check-summary-busco-update, include=is_not_hybpiper, eval=is_not_hybpiper}
 # iterate over BUSCOs
 for (busco in shared_busco) {
     # check if treefile exists
@@ -51,7 +64,7 @@ if (length(shared_busco) == 0) {
 }
 ```
 
-```{r check-summary-species-map, include=FALSE}
+```{r check-summary-species-map, include=FALSE, eval=is_not_hybpiper}
 # extract representative species
 df_reads_ref <- data.table::data.table(species=character(), reads=character(), ref=character())
 
@@ -68,7 +81,7 @@ for (i in 1:nrow(df_reads_subset)) {
 ```
 
 ## Calculate phylogenetic distance between mapped reads and reference from the same taxon
-```{r check-summary-individual}
+```{r check-summary-individual, include=is_not_hybpiper, eval=is_not_hybpiper}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -113,13 +126,13 @@ print(plot + theme(plot.title = element_text(hjust=0.5, size=50),
 dev.off()
 ```
 
-```{r, out.width="100%", echo=FALSE}
+```{r, out.width="100%", echo=FALSE, include=is_not_hybpiper, eval=is_not_hybpiper}
 print(plot + theme(plot.title = element_text(face = "bold"),
                    plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm")))
 ```
 
 ## Correlation analysis on BUSCO phylogenetic distances
-```{r check-summary-correlation}
+```{r check-summary-correlation, include=is_not_hybpiper, eval=is_not_hybpiper}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -279,4 +292,68 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
 
 # save the data.frame
 data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
+```
+
+```{r check-summary-hybpiper, include=is_not_hybpiper, eval=is_not_hybpiper}
+# output file
+df_summary <- data.table::data.table(ref=character(), read=character(), species=character(), busco=character(), dist=numeric())
+fn_summary <- paste0(dir_check_summary, "summary.tsv")
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over reads
+for (read in ls_shortreads) {
+    # output file
+    fn_tiff <- paste0(dir_check_summary, read, ".tiff")
+
+    # extract species and reference ID
+    species <- df_reads$species[df_reads$id==read]
+    ref_id <- df_refs$id[df_refs$species==species]
+
+    # iterate over BUSCO
+    df_output_temp <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
+        # input file
+        fn_treefile <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
+
+        # read the treefile
+        tre <- ape::read.tree(fn_treefile)
+        
+        # calculate phylogenetic distance
+        distance_tre <- ape::cophenetic.phylo(tre)
+        dist <- distance_tre[rownames(distance_tre)==ref_id, colnames(distance_tre)==read]
+        
+        return(data.table::data.table(ref=ref_id, read=read, species=species, busco=busco, dist=dist))
+    }
+
+    # update data.table
+    df_summary <- rbind(df_summary, df_output_temp)
+
+    # visualisation
+    plot <- ggplot(df_output_temp, aes(x=dist)) +
+        geom_bar(width=1) +
+        ggtitle(paste("Distribution of", busco, "Phylogenetic Distances")) +
+        xlab("Phylogenetic Distance") + ylab("Number of BUSCO") +
+        theme(
+            plot.title=element_text(hjust = 0.5, size = 50),
+            plot.margin=margin(1.25, 1.25, 1.25, 1.25, "cm"),
+            axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
+            axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
+            axis.text.y=element_text(size=30),
+            axis.text.x=element_text(size=30),
+            legend.position="none",
+            strip.text=element_text(size = 30)
+        )
+
+    # save the plot
+    tiff(file=fn_tiff, units="px", width=1400, height=700)
+    print(plot)
+    dev.off()
+}
+
+stopCluster(nwcl)
+
+# save the data.frame
+data.table::fwrite(df_summary, file=fn_summary, sep="\t", quote=F, row.names=F)
 ```

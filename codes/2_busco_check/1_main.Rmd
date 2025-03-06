@@ -30,6 +30,8 @@ params:
   exe_samtools: ""
   exe_qualimap: ""
 
+  exe_hybpiper2: ""
+
   exe_mafft: ""
   exe_iqtree2: ""
   exe_treeshrink: ""

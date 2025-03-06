@@ -1,0 +1,147 @@
+---
+title: "Run HybPiper-based BUSCO Analysis on Mapped Reads"
+---
+
+```{r, include=FALSE}
+f_write_log(fn_log=fn_log, msg=c("", "------------ Mapped Reads ----------"))
+
+# set up variables
+is_busco_read <- FALSE
+
+ls_busco_read_done <- c()
+ls_busco_read_run <- c()
+
+# iterate over mapped sequences
+if (params$redo) {
+    ls_busco_read_run <- ls_shortreads
+} else {
+    for (read in ls_shortreads) {
+        # check if BUSCO run exists
+        dir_hybpiper_out <- paste0(dir_busco_read, read, "/")
+
+        # log file
+        file_busco_log <- list.files(dir_hybpiper_out, pattern=paste0("^", read, ".*log$"), recursive=F, full.names=F)[1]
+        if (file.exists(file_busco_log)) {
+            finish_msg <- system(paste("grep 'Finished running.*hybpiper assemble*'", file_busco_log), intern=T)
+            if (length(finish_msg) != 0) {
+                ls_busco_read_done <- c(ls_busco_read_done, paste("-", read))
+                next
+            }
+        }
+
+        # add mapped sequence to to-do-list
+        ls_busco_read_run <- c(ls_busco_read_run, read)
+    }
+}
+
+# output log file for available mapped sequence BUSCO runs
+if (length(ls_busco_read_done) > 0) {
+    ls_busco_read_done <- c(paste0("Available mapped sequence BUSCO runs (", length(ls_busco_read_done), "/", length(ls_shortreads), ")"), ls_busco_read_done, "")
+    f_write_log(fn_log=fn_log, msg=ls_busco_read_done)
+}
+
+# update variable for the next analysis
+if (length(ls_busco_read_run) > 0) {
+    is_busco_read <- TRUE
+}
+```
+
+```{r}
+# print the number of available mapped reads BUSCO in HTML document
+cat(paste0("Available mapped reads BUSCO (", length(ls_busco_read_done), "/", length(ls_shortreads), ")"))
+cat(paste("Mapped reads BUSCO to run:", length(ls_busco_read_run)))
+```
+
+```{r check-busco-hybpiper-run, include=is_busco_read, eval=is_busco_read}
+f_write_log(fn_log=fn_log, msg=paste("Running HybPiper2 with", params$thread_busco, "threads"))
+
+# iterate over reads
+for (read in ls_shortreads) {
+    # input files
+    fn_input <- paste0(dir_shortreads, "filtered/", read, ".pair*")
+
+    # run HybPiper2
+    f_hybpiper2_assemble_aa(fn_input, fn_target_gene_hybpiper, dir_busco_read, read, params$thread_busco, params$exe_hybpiper2)
+
+    log4r::info(fn_logger, paste0("HybPiper2 complete for ", read, "."))
+}
+```
+
+```{r check-busco-hybpiper-extract}
+# output data.table
+df_mapped_reads_busco <- data.table::data.table(ref=character(), read=character(), busco=character(), is_error=logical(), note=character())
+
+# store the list of problematic BUSCOs
+ls_error_busco <- c()
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over reads
+for (read in ls_shortreads) {
+    dir_hybpiper_out <- paste0(dir_busco_read, read, "/")
+    
+    # output file
+    fn_read_summary <- paste0(dir_hybpiper_out, "metadata.tsv")
+    if (file.exists(fn_read_summary) && !params$redo) {
+        # update the data.frame
+        df_read_summary <- data.table::fread(fn_read_summary)
+        df_mapped_reads_busco <- rbind(df_mapped_reads_busco, df_read_summary)
+
+        ls_error_busco <- c(ls_error_busco, df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
+        ls_error_busco <- unique(ls_error_busco)
+
+        next
+    }
+
+    # remove file extension .faa
+    busco_ids <- list.dirs(dir_hybpiper_out, full.names = F, recursive = F)
+
+    # iterate over shared BUSCOs
+    df_output_temp <- foreach (busco = busco_ids, .combine='rbind') %dopar% {
+        # input file
+        file_busco_fasta <- paste0(dir_hybpiper_out, busco, "/", busco, ".FAA")
+        if (!file.exists(file_busco_fasta)) {
+            return(data.table::data.table(ref=NA, read=read, busco=busco, is_error=TRUE, note="File not found: FAA file"))
+        }
+
+        # check if BUSCO is error for other mapped reads
+        if (busco %in% ls_error_busco) {
+            return(data.table::data.table(ref=NA, read=read, busco=busco, is_error=TRUE, note="BUSCO is problematic for other mapped reads"))
+        }
+
+        # read FASTA file
+        seq <- Biostrings::readAAStringSet(file_busco_fasta)
+        len_seq <- length(seq[[1]])
+        if (len_seq < 1) {
+            return(data.table::data.table(ref=NA, read=read, busco=busco, is_error=TRUE, note="BUSCO has zero length"))
+        }
+
+        return(data.table::data.table(ref=NA, read=read, busco=busco, is_error=FALSE, note=""))
+    }
+
+    # update data.table
+    df_mapped_reads_busco <- rbind(df_mapped_reads_busco, df_output_temp)
+    ls_error_busco <- c(ls_error_busco, df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
+    ls_error_busco <- unique(ls_error_busco)
+
+    data.table::fwrite(df_output_temp, file=fn_read_summary, sep="\t", quote=F, row.names=F)
+    log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", read, "."))
+}
+
+stopCluster(nwcl)
+
+# save the output file
+data.table::fwrite(df_mapped_reads_busco, file=fn_mapped_reads_busco, sep="\t", quote=F)
+
+# remove probelmatic BUSCOs
+ls_problematic_busco <- unique(df_mapped_reads_busco$busco[df_mapped_reads_busco$is_error])
+shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
+
+# check if shared BUSCOs found
+if (length(shared_busco) == 0) {
+    log4r::error(fn_logger, paste0("Error: no BUSCO shared between sequences. Exited."))
+    knitr::knit_exit()
+}
+```

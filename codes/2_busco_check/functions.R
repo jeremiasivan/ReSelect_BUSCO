@@ -239,6 +239,17 @@ f_fasta2msa <- function(fn_input, header, fn_out) {
     close(con)
 }
 
+# running HybPiper2
+f_hybpiper2_assemble_aa <- function(fn_input, fn_target_gene, dir_output, prefix, thread, exe_hybpiper2) {
+    cmd_hybpiper2 <- paste(exe_hybpiper2, "assemble  --diamond",
+                           "--readfiles", fn_input,
+                           "--targetfile_aa", fn_target_gene,
+                           "--prefix", prefix,
+                           "--hybpiper_output", dir_output,
+                           "--cpu", thread)
+    system(cmd_hybpiper2)
+}
+
 # function: run MAFFT
 f_mafft <- function(fn_input, fn_output, params_mafft, exe_mafft) {
     cmd_mafft <- paste(exe_mafft, params_mafft,

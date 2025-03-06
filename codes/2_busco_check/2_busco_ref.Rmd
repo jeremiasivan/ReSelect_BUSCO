@@ -30,6 +30,9 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
 } else if (params$type == "pipeline") {
     dir_busco <- paste0(currentdir, "/busco_check/busco_pipeline/")
     f_write_log(fn_log=fn_log, msg="Running pipeline-based method.")
+} else if (params$type == "hybpiper") {
+    dir_busco <- paste0(currentdir, "/busco_check/busco_hybpiper/")
+    f_write_log(fn_log=fn_log, msg="Running HybPiper2-based method.")
 } else {
     log4r::error(fn_logger, "Invalid type of BUSCO extraction method. Exited.")
     knitr::knit_exit()
@@ -45,6 +48,7 @@ lapply(list(dir_busco_lineage,dir_busco_ref,dir_busco_read,dir_busco_tree), func
 
 # output files
 fn_refs_busco <- paste0(dir_busco_ref, "metadata.tsv")
+fn_target_gene_hybpiper <- paste0(dir_busco_ref, "target_genes.fa")
 fn_mapped_reads_busco <- paste0(dir_busco_read, "metadata.tsv")
 ```
 
@@ -59,7 +63,7 @@ for (ref in 1:nrow(df_refs)) {
 
 # iterate over short reads
 for (read in 1:nrow(df_reads)) {
-    ls_species_name[df_reads$id[read]] <- df_reads$species[read]
+    ls_species_name[df_reads$id[read]] <- paste0("r_",df_reads$species[read])
 }
 ```
 
@@ -322,6 +326,28 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
                                                                    is_error=rep(FALSE, len_shared_busco),
                                                                    note=rep(NA, len_shared_busco)))
     }
+
+} else if (params$type == "hybpiper") {
+    df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), note=character())
+
+    # extract total number of BUSCO
+    len_shared_busco <- len(shared_busco)
+
+    # generate target gene FASTA file
+    for (ref in ls_refseq) {
+        # iterate over BUSCO
+        for (busco in shared_busco) {
+            # input file
+            file_busco_fasta <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".faa")
+
+            f_fasta2msa(file_busco_fasta, paste0(ref,"-",busco), fn_target_gene_hybpiper)
+        }
+
+        df_chr_busco <- rbind(df_chr_busco, data.table::data.table(ref=rep(ref, len_shared_busco),
+                                                                   busco=shared_busco,
+                                                                   is_error=rep(FALSE, len_shared_busco),
+                                                                   note=rep(NA, len_shared_busco)))
+    }
 }
 
 stopCluster(nwcl)
@@ -388,6 +414,8 @@ busco_read_dir_mid <- "/"
 if (params$type == "pipeline") {
     busco_refs_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
     busco_read_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
+} else if (params$type == "hybpiper") {
+    busco_refs_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
 }
 
 # create doSNOW cluster
@@ -423,14 +451,23 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
     # extract BUSCO alignment from short reads
     count_unavailable_prefix <- 0
-    for (read in ls_prefix) {
-        file_busco_read <- paste0(dir_busco_read, read, busco_read_dir_mid, busco, ".faa")
-        if (!file.exists(file_busco_read)) {
-            count_unavailable_prefix <- count_unavailable_prefix + 1
-            next
-        }
 
-        f_fasta2msa(file_busco_read, read, fn_out)
+    if (params$type == "hybpiper") {
+        for (read in ls_shortreads) {
+            file_busco_read <- paste0(dir_busco_read, read, "/", busco, "/", busco, ".FAA")
+            f_fasta2msa(file_busco_read, read, fn_out)
+        }
+    
+    } else {
+        for (read in ls_prefix) {
+            file_busco_read <- paste0(dir_busco_read, read, busco_read_dir_mid, busco, ".faa")
+            if (!file.exists(file_busco_read)) {
+                count_unavailable_prefix <- count_unavailable_prefix + 1
+                next
+            }
+
+            f_fasta2msa(file_busco_read, read, fn_out)
+        }
     }
 
     # align using MAFFT FFT-NS-2
