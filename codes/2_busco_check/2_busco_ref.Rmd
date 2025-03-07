@@ -209,6 +209,18 @@ if (file.exists(fn_refs_busco) && !params$redo) {
 if (length(shared_busco) == 0) {
     knitr::knit_exit()
 }
+
+# generate target genes for HybPiper
+if (params$type == "hybpiper" && (!file.exists(fn_target_gene_hybpiper) || params$redo)) {
+    for (ref in ls_refseq) {
+        # iterate over BUSCO
+        for (busco in shared_busco) {
+            # input file
+            file_busco_fasta <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".faa")
+            f_fasta2msa(file_busco_fasta, paste0(ref,"-",busco), fn_target_gene_hybpiper)
+        }
+    }
+}
 ```
 
 ```{r check-busco-extract-ref, include=is_ref_extract, eval=is_ref_extract}
@@ -329,20 +341,6 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
 }
 
 stopCluster(nwcl)
-
-# generate target genes for HybPiper
-if (params$type == "hybpiper" && (!file.exists(fn_target_gene_hybpiper) || params$redo)) {
-    for (ref in ls_refseq) {
-        # iterate over BUSCO
-        for (busco in shared_busco) {
-            # input file
-            file_busco_fasta <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".faa")
-
-            f_fasta2msa(file_busco_fasta, paste0(ref,"-",busco), fn_target_gene_hybpiper)
-        }
-    }
-}
-
 
 # save data.table
 data.table::fwrite(df_chr_busco, file=fn_refs_busco, quote=F, sep="\t")
