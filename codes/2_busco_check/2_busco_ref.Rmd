@@ -398,6 +398,8 @@ if (!is.null(df_mapped_reads_busco) && !params$redo) {
         knitr::knit_child(paste0(params$codedir,"/2_busco_check/2a_coordinate.Rmd"))
     } else if (params$type == "pipeline") {
         knitr::knit_child(paste0(params$codedir,"/2_busco_check/2b_pipeline.Rmd"))
+    } else if (params$type == "hybpiper") {
+        knitr::knit_child(paste0(params$codedir,"/2_busco_check/2c_hybpiper.Rmd"))
     }
 }
 
