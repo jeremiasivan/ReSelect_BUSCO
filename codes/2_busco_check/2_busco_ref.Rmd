@@ -313,7 +313,7 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
         log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", ref, "."))
     }
 
-} else if (params$type == "pipeline") {
+} else if (params$type == "pipeline" || params$type == "hybpiper") {
     df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), note=character())
 
     # extract total number of BUSCO
@@ -326,14 +326,12 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
                                                                    is_error=rep(FALSE, len_shared_busco),
                                                                    note=rep(NA, len_shared_busco)))
     }
+}
 
-} else if (params$type == "hybpiper") {
-    df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), note=character())
+stopCluster(nwcl)
 
-    # extract total number of BUSCO
-    len_shared_busco <- len(shared_busco)
-
-    # generate target gene FASTA file
+# generate target genes for HybPiper
+if (params$type == "hybpiper" && (!file.exists(fn_target_gene_hybpiper) || params$redo)) {
     for (ref in ls_refseq) {
         # iterate over BUSCO
         for (busco in shared_busco) {
@@ -342,15 +340,9 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
 
             f_fasta2msa(file_busco_fasta, paste0(ref,"-",busco), fn_target_gene_hybpiper)
         }
-
-        df_chr_busco <- rbind(df_chr_busco, data.table::data.table(ref=rep(ref, len_shared_busco),
-                                                                   busco=shared_busco,
-                                                                   is_error=rep(FALSE, len_shared_busco),
-                                                                   note=rep(NA, len_shared_busco)))
     }
 }
 
-stopCluster(nwcl)
 
 # save data.table
 data.table::fwrite(df_chr_busco, file=fn_refs_busco, quote=F, sep="\t")
