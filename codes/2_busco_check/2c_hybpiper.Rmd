@@ -95,13 +95,13 @@ for (read in ls_shortreads) {
         next
     }
 
-    # remove file extension .faa
+    # extract list of BUSCO
     busco_ids <- list.dirs(dir_hybpiper_out, full.names = F, recursive = F)
 
     # iterate over shared BUSCOs
     df_output_temp <- foreach (busco = busco_ids, .combine='rbind') %dopar% {
         # input file
-        file_busco_fasta <- paste0(dir_hybpiper_out, busco, "/", busco, ".FAA")
+        file_busco_fasta <- paste0(dir_hybpiper_out, busco, "/", read, "/sequences/FAA/", busco, ".FAA")
         if (!file.exists(file_busco_fasta)) {
             return(data.table::data.table(ref=NA, read=read, busco=busco, is_error=TRUE, note="File not found: FAA file"))
         }

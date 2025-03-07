@@ -446,7 +446,7 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
 
     if (params$type == "hybpiper") {
         for (read in ls_shortreads) {
-            file_busco_read <- paste0(dir_busco_read, read, "/", busco, "/", busco, ".FAA")
+            file_busco_read <- paste0(dir_busco_read, read, "/", busco, "/", read, "/sequences/FAA/", busco, ".FAA")
             f_fasta2msa(file_busco_read, read, fn_out)
         }
     
