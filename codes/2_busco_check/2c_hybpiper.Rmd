@@ -20,13 +20,11 @@ if (params$redo) {
         dir_hybpiper_out <- paste0(dir_busco_read, read, "/")
 
         # log file
-        file_busco_log <- list.files(dir_hybpiper_out, pattern=paste0("^", read, ".*log$"), recursive=F, full.names=F)[1]
-        if (file.exists(file_busco_log)) {
-            finish_msg <- system(paste("grep 'Finished running.*hybpiper assemble*'", file_busco_log), intern=T)
-            if (length(finish_msg) != 0) {
-                ls_busco_read_done <- c(ls_busco_read_done, paste("-", read))
-                next
-            }
+        file_busco_log <- list.files(dir_hybpiper_out, pattern=paste0("^", read, ".*log$"), recursive=F, full.names=F)
+        finish_msg <- system(paste("grep 'Finished running.*hybpiper assemble*'", file_busco_log[length(file_busco_log)]), intern=T)
+        if (length(finish_msg) != 0) {
+            ls_busco_read_done <- c(ls_busco_read_done, paste("-", read))
+            next
         }
 
         # add mapped sequence to to-do-list
@@ -95,15 +93,12 @@ for (read in ls_shortreads) {
         next
     }
 
-    # extract list of BUSCO
-    busco_ids <- list.dirs(dir_hybpiper_out, full.names = F, recursive = F)
-
     # iterate over shared BUSCOs
-    df_output_temp <- foreach (busco = busco_ids, .combine='rbind') %dopar% {
+    df_output_temp <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
         # input file
         file_busco_fasta <- paste0(dir_hybpiper_out, busco, "/", read, "/sequences/FAA/", busco, ".FAA")
         if (!file.exists(file_busco_fasta)) {
-            return(data.table::data.table(ref=NA, read=read, busco=busco, is_error=TRUE, note="File not found: FAA file"))
+            return(data.table::data.table(ref=NA, read=read, busco=busco, is_error=TRUE, note=paste("File not found:", file_busco_fasta)))
         }
 
         # check if BUSCO is error for other mapped reads
