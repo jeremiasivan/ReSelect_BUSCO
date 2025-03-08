@@ -69,8 +69,8 @@ stopCluster(nwcl)
 data.table::fwrite(df_summary, file=fn_summary, sep="\t", quote=F, row.names=F)
 
 # visualisation
-plot <- ggplot(df_summary, aes(x=dist, colour=read)) +
-    geom_density(linewidth=3) +
+plot <- ggplot(df_summary, aes(x=dist, colour=read, fill=read)) +
+    geom_density(aes(y=after_stat(count)), linewidth=3, alpha=0.25) +
     ggtitle(paste("Distribution of BUSCO Phylogenetic Distances")) +
     xlab("Phylogenetic Distance") + ylab("Number of BUSCO") +
     theme(
@@ -190,8 +190,8 @@ data.table::fwrite(df_busco_nrf, file=fn_nrf_summary, sep="\t", quote=F, row.nam
 # visualisation
 df_busco_nrf_long <- df_busco_nrf %>% pivot_longer(cols=-busco)
 
-plot <- ggplot(df_busco_nrf_long, aes(x=value, colour=name, xmin=0, xmax=1)) +
-    geom_density(linewidth=3) +
+plot <- ggplot(df_busco_nrf_long, aes(x=value, colour=name, fill=name, xmin=0, xmax=1)) +
+    geom_density(aes(y=after_stat(count)), linewidth=3, alpha=0.25) +
     ggtitle(paste("Distribution of BUSCO nRF Distances")) +
     xlab("nRF Distance") + ylab("Number of BUSCO") +
     theme(
