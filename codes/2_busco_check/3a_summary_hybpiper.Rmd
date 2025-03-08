@@ -69,8 +69,9 @@ stopCluster(nwcl)
 data.table::fwrite(df_summary, file=fn_summary, sep="\t", quote=F, row.names=F)
 
 # visualisation
-plot <- ggplot(df_summary, aes(x=dist, colour=read, fill=read)) +
-    geom_density(linewidth=2, alpha=0.25) +
+plot <- ggplot(df_summary, aes(x=dist, fill=read)) +
+    geom_histogram(position="dodge", bins=100) +
+    facet_wrap(~read) +
     ggtitle(paste("Distribution of BUSCO Phylogenetic Distances")) +
     xlab("Phylogenetic Distance") + ylab("Number of BUSCO") +
     theme(
@@ -80,9 +81,7 @@ plot <- ggplot(df_summary, aes(x=dist, colour=read, fill=read)) +
         axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
         axis.text.y=element_text(size=30),
         axis.text.x=element_text(size=30),
-        legend.title=element_text(size=30),
-        legend.text=element_text(size=30),
-        legend.key.size=unit(2,"cm"),
+        legend.position="none",
         strip.text=element_text(size = 30)
     )
 
