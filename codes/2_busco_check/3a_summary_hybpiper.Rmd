@@ -61,7 +61,7 @@ for (read in ls_shortreads) {
     # visualisation
     plot <- ggplot(df_output_temp, aes(x=dist)) +
         geom_bar(width=1) +
-        ggtitle(paste("Distribution of", busco, "Phylogenetic Distances")) +
+        ggtitle(paste("Distribution of BUSCO Phylogenetic Distances")) +
         xlab("Phylogenetic Distance") + ylab("Number of BUSCO") +
         theme(
             plot.title=element_text(hjust = 0.5, size = 50),
@@ -112,12 +112,12 @@ df_busco_nrf <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
     tre_read$tip.label <- sapply(tre_read$tip.label, function(x) { df_reads$species[df_reads$id==x] })
 
     # calculate nRF
-    read_tree_dist <- f_calculate_treedist(tre_read, fn_tree_two, 0)
-    refs_tree_dist <- f_calculate_treedist(tre_refs, fn_tree_one, 0)
+    read_tree_dist <- f_calculate_treedist(tre_read, tre_refs, 0)
+    refs_tree_dist <- f_calculate_treedist(tre_refs, tre_read, 0)
     nrf <- round((read_tree_dist$dist+refs_tree_dist$dist) / nrf_denominator, 3)
 
-    read_tree_dist_highbs <- f_calculate_treedist(tre_read, fn_tree_two, 95)
-    refs_tree_dist_highbs <- f_calculate_treedist(tre_refs, fn_tree_one, 95)
+    read_tree_dist_highbs <- f_calculate_treedist(tre_read, tre_refs, 95)
+    refs_tree_dist_highbs <- f_calculate_treedist(tre_refs, tre_read, 95)
     nrf_highbs <- round((read_tree_dist$dist+refs_tree_dist_highbs$dist) / nrf_denominator, 3)
 
     return(data.table::data.table(busco=busco, nrf=nrf, nrf_highbs=nrf_highbs))
