@@ -24,7 +24,8 @@ if (!dir.exists(dir_check_tree_summary)) {
 }
 
 # output files
-fn_summary <- paste0(dir_check_summary, "summary.tsv")
+fn_summary <- paste0(dir_check_summary, "dist_summary.tsv")
+fn_summary_tiff <- paste0(dir_check_summary, "dist_summary.tiff")
 fn_nrf_summary <- paste0(dir_check_tree_summary, "nrf_summary.tsv")
 fn_nrf_summary_tiff <- paste0(dir_check_tree_summary, "nrf_summary.tiff")
 ```
@@ -39,9 +40,6 @@ doSNOW::registerDoSNOW(nwcl)
 
 # iterate over reads
 for (read in ls_shortreads) {
-    # output file
-    fn_tiff <- paste0(dir_check_summary, read, ".tiff")
-
     # extract species and reference ID
     species <- df_reads$species[df_reads$id==read]
     ref_id <- df_refs$id[df_refs$species==species]
@@ -63,38 +61,41 @@ for (read in ls_shortreads) {
 
     # update data.table
     df_summary <- rbind(df_summary, df_output_temp)
-
-    # visualisation
-    plot <- ggplot(df_output_temp, aes(x=dist)) +
-        geom_bar(width=1) +
-        ggtitle(paste("Distribution of BUSCO Phylogenetic Distances")) +
-        xlab("Phylogenetic Distance") + ylab("Number of BUSCO") +
-        theme(
-            plot.title=element_text(hjust = 0.5, size = 50),
-            plot.margin=margin(1.25, 1.25, 1.25, 1.25, "cm"),
-            axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
-            axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
-            axis.text.y=element_text(size=30),
-            axis.text.x=element_text(size=30),
-            legend.position="none",
-            strip.text=element_text(size = 30)
-        )
-
-    # save the plot
-    tiff(file=fn_tiff, units="px", width=1400, height=700)
-    print(plot)
-    dev.off()
 }
 
 stopCluster(nwcl)
 
 # save the data.frame
 data.table::fwrite(df_summary, file=fn_summary, sep="\t", quote=F, row.names=F)
+
+# visualisation
+plot <- ggplot(df_summary, aes(x=dist, colour=read)) +
+    geom_density(linewidth=7) +
+    ggtitle(paste("Distribution of BUSCO Phylogenetic Distances")) +
+    xlab("Phylogenetic Distance") + ylab("Number of BUSCO") +
+    theme(
+        plot.title=element_text(hjust = 0.5, size = 50),
+        plot.margin=margin(1.25, 1.25, 1.25, 1.25, "cm"),
+        axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
+        axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
+        axis.text.y=element_text(size=30),
+        axis.text.x=element_text(size=30),
+        legend.title=element_text(size=15),
+        legend.text=element_text(size=15),
+        legend.key.size=unit(1,"cm"),
+        strip.text=element_text(size = 30)
+    )
+
+# save the plot
+tiff(file=fn_summary_tiff, units="px", width=2880, height=1800)
+print(plot)
+dev.off()
 ```
 
 ```{r check-summary-hybpiper-nrf}
 # extract reference IDs
-ls_ref_id <- df_refs$id[df_refs$species %in% df_reads$species]
+ls_read_sp <- df_reads$species[df_reads$id %in% ls_shortreads]
+ls_ref_id <- df_refs$id[df_refs$species %in% ls_read_sp]
 
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
@@ -111,7 +112,7 @@ df_busco_nrf <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
     tre_read <- ape::keep.tip(tre, ls_shortreads)
 
     # calculate the number of branches
-    nrf_denominator <- 2 * (nrow(tre_read$tip.label) - 3)
+    nrf_denominator <- 2 * (length(tre_read$tip.label) - 3)
 
     # update the tip.label
     tre_refs$tip.label <- sapply(tre_refs$tip.label, function(x) { df_refs$species[df_refs$id==x] })
@@ -143,8 +144,8 @@ data.table::fwrite(df_busco_nrf, file=fn_nrf_summary, sep="\t", quote=F, row.nam
 # visualisation
 df_busco_nrf_long <- df_busco_nrf %>% pivot_longer(cols=-busco)
 
-plot <- ggplot(df_busco_nrf_long, aes(x=value, group=name, colour=name, xmin=0, xmax=1)) +
-    geom_bar(width=1) +
+plot <- ggplot(df_busco_nrf_long, aes(x=value, colour=name, xmin=0, xmax=1)) +
+    geom_density(linewidth=7) +
     ggtitle(paste("Distribution of BUSCO nRF Distances")) +
     xlab("nRF Distance") + ylab("Number of BUSCO") +
     theme(
@@ -161,7 +162,7 @@ plot <- ggplot(df_busco_nrf_long, aes(x=value, group=name, colour=name, xmin=0, 
     )
 
 # save the plot
-tiff(file=fn_nrf_summary_tiff, units="px", width=1400, height=700)
+tiff(file=fn_nrf_summary_tiff, units="px", width=2880, height=1800)
 print(plot)
 dev.off()
 ```
