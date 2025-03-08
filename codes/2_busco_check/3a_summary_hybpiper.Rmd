@@ -11,16 +11,22 @@ f_write_log(fn_log=fn_log,
 # load ggplot2 library
 library(ggplot2)
 
-# output directory
+# output directories
 dir_check_summary <- paste0(dir_busco, "summary/")
 if (!dir.exists(dir_check_summary)) {
     dir.create(dir_check_summary, recursive=T)
 }
 
+dir_check_tree <- paste0(dir_busco, "busco_tree/")
+dir_check_tree_summary <- paste0(dir_check_tree, "summary/")
+if (!dir.exists(dir_check_tree_summary)) {
+    dir.create(dir_check_tree_summary, recursive=T)
+}
+
 # output files
 fn_summary <- paste0(dir_check_summary, "summary.tsv")
-fn_nrf_summary <- paste0(dir_check_summary, "nrf_summary.tsv")
-fn_nrf_summary_tiff <- paste0(dir_check_summary, "nrf_summary.tiff")
+fn_nrf_summary <- paste0(dir_check_tree_summary, "nrf_summary.tsv")
+fn_nrf_summary_tiff <- paste0(dir_check_tree_summary, "nrf_summary.tiff")
 ```
 
 ```{r check-summary-hybpiper}
@@ -111,13 +117,19 @@ df_busco_nrf <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
     tre_refs$tip.label <- sapply(tre_refs$tip.label, function(x) { df_refs$species[df_refs$id==x] })
     tre_read$tip.label <- sapply(tre_read$tip.label, function(x) { df_reads$species[df_reads$id==x] })
 
+    # save the trees
+    fn_tre_refs <- paste0(dir_check_tree, busco, "_refs.fa")
+    fn_tre_read <- paste0(dir_check_tree, busco, "_read.fa")
+    ape::write.tree(tre_refs, file=fn_tre_refs)
+    ape::write.tree(tre_read, file=fn_tre_read)
+
     # calculate nRF
-    read_tree_dist <- f_calculate_treedist(tre_read, tre_refs, 0)
-    refs_tree_dist <- f_calculate_treedist(tre_refs, tre_read, 0)
+    read_tree_dist <- f_calculate_treedist(fn_tre_read, fn_tre_refs, 0)
+    refs_tree_dist <- f_calculate_treedist(fn_tre_refs, fn_tre_read, 0)
     nrf <- round((read_tree_dist$dist+refs_tree_dist$dist) / nrf_denominator, 3)
 
-    read_tree_dist_highbs <- f_calculate_treedist(tre_read, tre_refs, 95)
-    refs_tree_dist_highbs <- f_calculate_treedist(tre_refs, tre_read, 95)
+    read_tree_dist_highbs <- f_calculate_treedist(fn_tre_read, fn_tre_refs, 95)
+    refs_tree_dist_highbs <- f_calculate_treedist(fn_tre_refs, fn_tre_read, 95)
     nrf_highbs <- round((read_tree_dist$dist+refs_tree_dist_highbs$dist) / nrf_denominator, 3)
 
     return(data.table::data.table(busco=busco, nrf=nrf, nrf_highbs=nrf_highbs))
