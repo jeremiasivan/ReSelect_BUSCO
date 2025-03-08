@@ -164,7 +164,7 @@ df_busco_nrf <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
     nrf_denominator <- 2 * (length(tre$tip.label) - 3)
 
     # calculate nRF
-    nrf_phangorn <- phangorn::RF.dist(fn_out_read_aligned_treefile, fn_out_refs_aligned_treefile, normalize=T)
+    nrf_phangorn <- f_calculate_nRF(fn_out_read_aligned_treefile, fn_out_refs_aligned_treefile)
 
     read_tree_dist <- f_calculate_treedist(fn_out_read_aligned_treefile, fn_out_refs_aligned_treefile, 0)
     refs_tree_dist <- f_calculate_treedist(fn_out_refs_aligned_treefile, fn_out_read_aligned_treefile, 0)
@@ -181,7 +181,7 @@ stopCluster(nwcl)
 
 # check if function works as intended
 if (setequal(df_busco_nrf$nrf, df_busco_nrf$nrf2)) {
-    df_output$nrf2 <- NULL
+    df_busco_nrf$nrf2 <- NULL
 }
 
 # save the data.frame
