@@ -20,8 +20,7 @@ if (params$redo) {
         dir_hybpiper_out <- paste0(dir_busco_read, read, "/")
 
         # log file
-        file_busco_log <- list.files(dir_hybpiper_out, pattern=paste0("^", read, ".*log$"), recursive=F, full.names=F)
-        finish_msg <- system(paste("grep 'Finished running.*hybpiper assemble*'", file_busco_log[length(file_busco_log)]), intern=T)
+        finish_msg <- system(paste0("grep 'Finished running.*hybpiper assemble' ", dir_hybpiper_out, "*.log"), intern=T)
         if (length(finish_msg) != 0) {
             ls_busco_read_done <- c(ls_busco_read_done, paste("-", read))
             next
@@ -98,7 +97,7 @@ for (read in ls_shortreads) {
         # input file
         file_busco_fasta <- paste0(dir_hybpiper_out, busco, "/", read, "/sequences/FAA/", busco, ".FAA")
         if (!file.exists(file_busco_fasta)) {
-            return(data.table::data.table(ref=NA, read=read, busco=busco, is_error=TRUE, note=paste("File not found:", file_busco_fasta)))
+            return(data.table::data.table(ref=NA, read=read, busco=busco, is_error=TRUE, note="File not found: FAA file"))
         }
 
         # check if BUSCO is error for other mapped reads
