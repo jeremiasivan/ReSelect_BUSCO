@@ -212,3 +212,48 @@ tiff(file=fn_nrf_summary_tiff, units="px", width=2880, height=1800)
 print(plot)
 dev.off()
 ```
+
+```{r check-summary-hybpiper-astral}
+f_write_log(fn_log=fn_log, msg=c("", "--------- ASTRAL BUSCO Tree --------",
+                                     "nRF Distance with Genome Tree"))
+
+# set number of threads
+nthread <- ifelse(params$thread > length(shared_busco), length(shared_busco), params$thread)
+
+# create doSNOW cluster
+nwcl <- makeCluster(nthread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over BUSCOs
+ls_trees <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    # input file
+    fn_tree <- paste0(dir_check_tree, busco, "/", busco, "_read_aligned.faa.treefile")
+    
+    return(fn_tree) 
+}
+
+# combine all BUSCO trees
+ls_trees <- paste(ls_trees, collapse=" ")
+fn_outfile <- paste0(dir_check_tree, "alltrees.tre")
+system(paste("cat", ls_trees, ">", fn_outfile))
+
+# run ASTRAL-III
+fn_astral_outfile <- paste0(dir_check_tree, "alltrees.astral.tre")
+fn_astral_logfile <- paste0(dir_check_tree, "alltrees.astral.log")
+f_astral(fn_outfile, fn_astral_outfile, fn_astral_logfile, params$exe_astral)
+
+# calculate nRF distance
+astral_tree <- ape::read.tree(fn_astral_outfile)
+genome_tree <- ape::read.tree(params$file_genome_treefile)
+genome_tree$edge.length <- ifelse(is.na(genome_tree$edge.length), 0.05, genome_tree$edge.length)
+genome_tree_subset <- ape::keep.tip(genome_tree, tip=astral_tree$tip.label)
+
+# extract information
+nrf_dist <- round(phangorn::RF.dist(genome_tree_subset, astral_tree, normalize=T), 3)
+quartet_score <- gsub("^.*\\: ", "", system(paste("grep '^Final normalized quartet score is:'",fn_astral_logfile), intern = T))
+quartet_score <- round(as.numeric(quartet_score), 3)
+
+f_write_log(fn_log=fn_log, msg=paste0("Species tree: ", nrf_dist, " (qScore: ", quartet_score, ")"))
+
+stopCluster(nwcl)
+```
