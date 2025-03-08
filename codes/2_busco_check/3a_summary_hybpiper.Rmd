@@ -70,7 +70,7 @@ data.table::fwrite(df_summary, file=fn_summary, sep="\t", quote=F, row.names=F)
 
 # visualisation
 plot <- ggplot(df_summary, aes(x=dist, colour=read)) +
-    geom_density(linewidth=7) +
+    geom_density(linewidth=3) +
     ggtitle(paste("Distribution of BUSCO Phylogenetic Distances")) +
     xlab("Phylogenetic Distance") + ylab("Number of BUSCO") +
     theme(
@@ -80,9 +80,9 @@ plot <- ggplot(df_summary, aes(x=dist, colour=read)) +
         axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
         axis.text.y=element_text(size=30),
         axis.text.x=element_text(size=30),
-        legend.title=element_text(size=15),
-        legend.text=element_text(size=15),
-        legend.key.size=unit(1,"cm"),
+        legend.title=element_text(size=30),
+        legend.text=element_text(size=30),
+        legend.key.size=unit(2,"cm"),
         strip.text=element_text(size = 30)
     )
 
@@ -145,7 +145,7 @@ data.table::fwrite(df_busco_nrf, file=fn_nrf_summary, sep="\t", quote=F, row.nam
 df_busco_nrf_long <- df_busco_nrf %>% pivot_longer(cols=-busco)
 
 plot <- ggplot(df_busco_nrf_long, aes(x=value, colour=name, xmin=0, xmax=1)) +
-    geom_density(linewidth=7) +
+    geom_density(linewidth=3) +
     ggtitle(paste("Distribution of BUSCO nRF Distances")) +
     xlab("nRF Distance") + ylab("Number of BUSCO") +
     theme(
@@ -155,9 +155,9 @@ plot <- ggplot(df_busco_nrf_long, aes(x=value, colour=name, xmin=0, xmax=1)) +
         axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
         axis.text.y=element_text(size=30),
         axis.text.x=element_text(size=30),
-        legend.title=element_text(size=15),
-        legend.text=element_text(size=15),
-        legend.key.size=unit(1,"cm"),
+        legend.title=element_text(size=30),
+        legend.text=element_text(size=30),
+        legend.key.size=unit(2,"cm"),
         strip.text=element_text(size = 30)
     )
 

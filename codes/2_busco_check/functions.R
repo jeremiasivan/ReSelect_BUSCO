@@ -404,8 +404,8 @@ f_calculate_treedist <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
     }
 
     # open the trees
-    gene_tree <- ape::read.tree(fn_gene_tree)
-    refs_tree <- ape::read.tree(fn_refs_tree)
+    gene_tree <- ape::unroot(ape::read.tree(fn_gene_tree))
+    refs_tree <- ape::unroot(ape::read.tree(fn_refs_tree))
 
     # extract information
     ntaxa <- length(gene_tree$tip.label)
