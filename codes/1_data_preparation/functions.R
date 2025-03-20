@@ -102,7 +102,8 @@ f_qualimap <- function(fn_bam, dir_output, thread, fn_gff, exe_qualimap) {
     cmd_coverage <- paste(exe_qualimap, "bamqc",
                           "-bam", fn_bam,
                           "-outdir", dir_output,
-                          "-nt", thread)
+                          "-nt", thread,
+                          "--java-mem-size=4G")
 
     if (!is.null(fn_gff)) {
         cmd_coverage <- paste(cmd_coverage, "-gff", fn_gff)
