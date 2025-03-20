@@ -44,7 +44,6 @@ type <- "coordinate"
 
 thread_busco <- 50
 min_busco_depth <- 10
-max_busco_depth <- 60
 
 outgroup <- c("Angophora","Corymbia")
 
@@ -85,7 +84,7 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                               exe_busco=exe_busco, exe_hybpiper2=exe_hybpiper2, exe_gffread=exe_gffread, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed, exe_qualimap=exe_qualimap,
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
                               busco_lineage=busco_lineage, busco_mode=busco_mode, type=type, outgroup=outgroup,
-                              thread_busco=thread_busco, min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, busco_tree_mode=busco_tree_mode, busco_tree_random_ref=busco_tree_random_ref,
+                              thread_busco=thread_busco, min_busco_depth=min_busco_depth, busco_tree_mode=busco_tree_mode, busco_tree_random_ref=busco_tree_random_ref,
                               current_time=current_time),
                   quiet=TRUE)
 

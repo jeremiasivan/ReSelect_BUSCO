@@ -71,7 +71,6 @@ In this step, we run correlation analysis to check for the extent of reference b
 | `type`                   | Method to extract BUSCOs from mapped reads. Options: coordinate or pipeline                                                           |
 | `thread_busco`           | Number of threads for BUSCO                                                                                                           |
 | `min_busco_depth`        | Minimum BUSCO depth for mapped reads                                                                                                  |
-| `max_busco_depth`        | Maximum BUSCO depth for mapped reads                                                                                                  |
 | `busco_tree_mode`        | Mode for BUSCO tree analyses. Options: control, random, or oneref                                                                     |
 | `busco_tree_random_ref`  | Randomise references for each BUSCO (optional). Only available for `busco_tree_mode==random`.                                         |
 | `outgroup`               | Outgroup(s) from the list of references (optional)                                                                                    |
