@@ -73,8 +73,30 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                               exe_busco=exe_busco, exe_gffread=exe_gffread, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed, exe_qualimap=exe_qualimap,
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
                               busco_lineage=busco_lineage, busco_mode=busco_mode, type=type, outgroup=outgroup,
-                              min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, busco_tree_mode=busco_tree_mode, busco_tree_random_ref=busco_tree_random_ref,
+                              min_busco_depth=min_busco_depth, busco_tree_mode=busco_tree_mode, busco_tree_random_ref=busco_tree_random_ref,
                               current_time=current_time),
                   quiet=TRUE)
+
+# BUSCO trees
+rmarkdown::render(input=paste0(codedir,"/3_busco_tree/1_main.Rmd"),
+                  output_file=paste0(outdir_prefix, outprefix, ".trees.html"),
+                  params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
+                              file_refseq=file_refseq, file_shortreads=file_shortreads, file_genome_treefile=file_genome_treefile, file_buscotree=file_buscotree,
+                              exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
+                              type=type, outgroup=outgroup, busco_tree_mode=busco_tree_mode, busco_tree_random_ref=busco_tree_random_ref,
+                              current_time=current_time),
+                  quiet=TRUE)
+
+# BUSCO species tree
+rmarkdown::render(input=paste0(codedir,"/4_species_tree/1_main.Rmd"),
+                  output_file=paste0(outdir_prefix, outprefix, ".sptree.html"),
+                  params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
+                              file_refseq=file_refseq, file_shortreads=file_shortreads, file_sptree_metadata=file_sptree_metadata,
+                              exe_gffread=exe_gffread, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed,
+                              exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
+                              busco_lineage=busco_lineage, min_busco_depth=min_busco_depth,
+                              current_time=current_time),
+                  quiet=TRUE)
+
 
 #################################

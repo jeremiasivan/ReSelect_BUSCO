@@ -1,5 +1,5 @@
 ---
-title: "BUSCO Trees for Reference Sequences Bias"
+title: "BUSCO Trees with Reference Bias"
 author: "Jeremias Ivan"
 date: "`r format(Sys.time(), '%d %B %Y, %H:%M%p')`"
 
