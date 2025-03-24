@@ -35,8 +35,7 @@ busco_mode <- "genome"
 type <- "coordinate"
 
 min_busco_depth <- 10
-max_busco_depth <- 60
-
+ 
 outgroup <- c("Angophora","Corymbia")
 
 # BUSCO tree

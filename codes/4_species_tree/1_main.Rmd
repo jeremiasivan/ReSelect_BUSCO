@@ -20,9 +20,9 @@ params:
   # input files
   file_refseq: ""
   file_shortreads: ""
+  file_sptree_metadata: ""
   
   # executables
-  exe_busco: ""
   exe_gffread: ""
   exe_gff2bed: ""
   exe_samtools: ""
@@ -31,16 +31,14 @@ params:
   exe_mafft: ""
   exe_iqtree2: ""
   exe_treeshrink: ""
+  exe_astral: ""
 
   # BUSCO analyses
   busco_lineage: ""
-  busco_mode: "genome"
   type: "coordinate"
 
   thread_busco: 50
   min_busco_depth: 10
-
-  outgroup: !r c("")
 
   # misc
   current_time: ""
@@ -49,7 +47,7 @@ params:
 ## Load required libraries and functions
 ```{r}
 source(paste0(params$codedir, "/1_data_preparation/functions.R"))
-source(paste0(params$codedir, "/2_busco_check/functions.R"))
+source(paste0(params$codedir, "/4_species_tree/functions.R"))
 
 library(doSNOW)
 library(tidyverse)
@@ -97,15 +95,18 @@ knitr::opts_knit$set(root.dir = currentdir)
 ```{r}
 f_write_log(fn_log=fn_log, msg=paste0("- file_refseq: ", params$file_refseq))
 f_write_log(fn_log=fn_log, msg=paste0("- file_shortreads: ", params$file_shortreads))
+f_write_log(fn_log=fn_log, msg=paste0("- file_genome_treefile: ", params$file_genome_treefile))
+f_write_log(fn_log=fn_log, msg=paste0("- file_buscotree: ", params$file_buscotree))
 
 f_write_log(fn_log=fn_log, msg=paste0("- type: ", params$type))
 f_write_log(fn_log=fn_log, msg=paste0("- min_busco_depth: ", params$min_busco_depth))
+# f_write_log(fn_log=fn_log, msg=paste0("- max_busco_depth: ", params$max_busco_depth))
+
+f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_mode: ", params$busco_tree_mode))
+f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_random_ref: ", params$busco_tree_random_ref))
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/2_busco_ref.Rmd")}
-```
-
-```{r child = paste0(params$codedir,"/2_busco_check/3_summary.Rmd")}
+```{r child = paste0(params$codedir,"/4_species_tree/2_run.Rmd")}
 ```
 
 ```{r, include=FALSE}

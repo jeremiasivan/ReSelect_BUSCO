@@ -1,0 +1,306 @@
+---
+title: "Generate Species Tree from BUSCO Trees"
+---
+
+## Check correlation between number of references and topology distance
+```{r, include=FALSE}
+f_write_log(fn_log=fn_log,
+            msg=c("", "####################################",
+                      "####  Check BUSCO Species Tree  ####",
+                      "####################################"))
+
+# check the BUSCO extraction method
+dir_busco <- ""
+if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
+    dir_busco <- paste0(currentdir, "/busco_check/busco_coordinate/")
+} else if (params$type == "pipeline") {
+    dir_busco <- paste0(currentdir, "/busco_check/busco_pipeline/")
+} else {
+    log4r::error(fn_logger, "Invalid type of BUSCO extraction method. Exited.")
+    knitr::knit_exit()
+}
+
+# list of directories
+dir_readmap <- paste0(currentdir, "/readmap/")
+dir_busco_ref <- paste0(currentdir, "/busco_check/busco_refseq/")
+dir_busco_read <- paste0(dir_busco, "short_reads/")
+dir_sptree <- paste0(dir_busco, "species_tree/")
+
+# open input files
+df_refs <- data.table::fread(params$file_refseq)
+df_reads <- data.table::fread(params$file_shortreads)
+df_sptree_metadata <- data.table::fread(params$file_sptree_metadata)
+
+df_readmap_coverage <- data.table::fread(paste0(currentdir, "/readmap/summary.tsv"))
+df_refs_busco <- data.table::fread(paste0(dir_busco_ref, "metadata.tsv"))
+df_mapped_reads_busco <- data.table::fread(paste0(dir_busco_read, "metadata.tsv"))
+```
+
+```{r, include=FALSE}
+# create a map for ID and species name
+ls_species_name <- c()
+
+# iterate over reference sequences
+for (ref in 1:nrow(df_refs)) {
+    ls_species_name[df_refs$id[ref]] <- df_refs$species[ref]
+}
+
+# iterate over short reads
+for (read in 1:nrow(df_reads)) {
+    ls_species_name[df_reads$id[read]] <- df_reads$species[read]
+}
+```
+
+```{r sptree-pairs, include=FALSE}
+# iterate over scenario
+for (i in 1:nrow(df_sptree_metadata)) {
+    # output directory
+    dir_scenario_output <- paste0(dir_sptree, df_sptree_metadata$scenario[i], "/")
+    if (!dir.exists(dir_scenario_output)) {
+        dir.create(dir_scenario_output, recursive=F)
+    }
+
+    # output file
+    fn_metadata <- paste0(dir_scenario_output, "metadata.tsv")
+    if (file.exists(fn_metadata) && !params$redo) {
+        next
+    }
+
+    # extract specific pairs
+    ls_specific_pairs <- strsplit(df_sptree_metadata$pairs[i], split=";")[[1]]
+    ls_specific_pairs <- lapply(ls, function(x) {
+        ls_pairs <- strsplit(x, split="--")[[1]]
+
+        reads_id <- df_reads$id[df_reads$species==ls_pairs[1]]
+        refs_id <- df_refs$id[df_refs$species==ls_pairs[2]]
+
+        data.frame(reads=ls_pairs[1], refs=ls_pairs[2], id=paste0(reads_id,"--",refs_id))
+    })
+    
+    # iterate over representative species
+    df_specific_pairs <- data.table::rbindlist(ls_specific_pairs)
+    for (j in 1:nrow(df_refs$species)) {
+        # skip if species already exists
+        if (df_refs$species[j] %in% df_specific_pairs$reads) {
+            next
+        }
+
+        # add species to the entry
+        df_specific_pairs <- rbind(df_specific_pairs, data.table::data.table(reads=NULL, refs=NULL, id=df_refs$id[j]))
+    }
+
+    # save the metadata file
+    data.table::fwrite(df_specific_pairs, file=fn_metadata, row.names=F, col.names=T, quote=F, sep="\t")
+}
+```
+
+```{r sptree-extract}
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over scenario
+for (i in 1:nrow(df_sptree_metadata)) {
+    # output directory
+    dir_scenario_output <- paste0(dir_sptree, df_sptree_metadata$scenario[i], "/")
+    
+    fn_metadata <- paste0(dir_scenario_output, "metadata.tsv")
+    df_specific_pairs <- data.table::fread(fn_metadata)
+
+    # output files
+    fn_busco_metadata <- paste0(dir_scenario_output, "busco_metadata.tsv")
+    df_busco_metadata <- data.table(id=character(), busco=character(), is_error=logical(), note=character())
+
+    # extract BUSCO from reference sequences
+    ls_sptree_refs <- df_specific_pairs$id[is.null(df_specific_pairs$reads)]
+    ls_sptree_read <- df_specific_pairs$id[!is.null(df_specific_pairs$reads)]
+
+    # initiate variable
+    df_refs_busco_subset <- df_refs_busco[df_refs_busco$ref %in% ls_sptree_refs]
+    df_busco_metadata <- rbind(df_busco_metadata, data.table::data.table(id=df_refs_busco_subset$ref,
+                                                                         busco=df_refs_busco_subset$busco,
+                                                                         is_error=df_refs_busco_subset$is_error,
+                                                                         note=df_refs_busco_subset$note))
+
+    shared_busco <- unique(df_refs_busco_subset$busco)
+    ls_problematic_busco <- unique(df_refs_busco_subset$busco[df_refs_busco_subset$is_error])
+    shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
+
+    # iterate over mapped reads
+    for (prefix in ls_sptree_read) {
+        # extract reads and refs
+        read <- unlist(strsplit(prefix, split="--"))[1]
+        ref <- unlist(strsplit(prefix, split="--"))[2]
+
+        # extract subset of data.frame
+        df_mapped_reads_busco_subset <- df_mapped_reads_busco[df_mapped_reads_busco$read==read & df_mapped_reads_busco$ref==ref]
+
+        # mean coverage
+        mean_coverage <- as.numeric(df_readmap_coverage$mean_coverage[df_readmap_coverage$read_id==read & df_readmap_coverage$ref_id==ref])
+        max_busco_depth <- 2 * mean_coverage
+
+        # calculate the coverage
+        df_mapped_reads_update <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
+            if (!df_mapped_reads_busco_subset$is_error[df_mapped_reads_busco_subset$busco==busco]) {
+                return(data.table::data.table(id=prefix, busco=busco, is_error=FALSE, note=NA))
+            }
+
+            # input files
+            file_fas <- paste0(dir_readmap, prefix, "/", prefix, ".fa")
+            file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
+            file_busco_gff <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".gff")
+            file_busco_bed <- paste0(dir_busco_ref, ref, "/fasta/", busco, ".bed")
+
+            file_busco_cds <- paste0(dir_busco_read, prefix, "/", busco, ".cds.faa")
+            file_busco_concat <- paste0(dir_busco_read, prefix, "/", busco, ".faa")
+
+            # check the BUSCO run type
+            if (params$type == "pipeline") {
+                file_busco_gff <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".gff")
+
+                # run bedops gff2bed
+                file_busco_bed <- paste0(dir_busco_read, prefix, "/bed/", busco, ".bed")
+                cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff, ">", file_busco_bed)
+                system(cmd_gff2bed)
+            }
+
+            read_coverage <- f_calculate_read_coverage(file_bam, file_busco_bed, params$exe_samtools)
+            if (is.null(read_coverage) || is.na(read_coverage)) {
+                return(data.table::data.table(id=prefix, busco=busco, is_error=TRUE, note="Error: invalid coverage"))
+            } else if (read_coverage >= params$min_busco_depth && read_coverage <= max_busco_depth) {
+                if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
+                    f_extract_fasta_from_gff(file_fas, file_busco_gff, file_busco_cds, file_busco_concat, params$exe_gffread)
+                }
+                return(data.table::data.table(id=prefix, busco=busco, is_error=FALSE, note=NA))
+            } else if (read_coverage < params$min_busco_depth || read_coverage > max_busco_depth) {
+                return(data.table::data.table(id=prefix, busco=busco, is_error=TRUE, note=paste("Average CDS coverage:", read_coverage)))
+            }            
+        }
+
+        df_busco_metadata <- rbind(df_busco_metadata, df_mapped_reads_update)
+    }
+
+    data.table::fwrite(df_busco_metadata, file=fn_busco_metadata, row.names=F, col.names=T, quote=F, sep="\t")
+}
+
+stopCluster(nwcl)
+```
+
+```{r sptree-alignment}
+# set up variables
+busco_refs_dir_mid <- "/fasta/"
+busco_read_dir_mid <- "/"
+if (params$type == "pipeline") {
+    busco_refs_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
+    busco_read_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
+}
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over scenario
+for (i in 1:nrow(df_sptree_metadata)) {
+    # input files
+    df_busco_metadata <- data.table::fread(paste0(dir_sptree, df_sptree_metadata$scenario[i], "/busco_metadata.tsv"))
+    df_metadata <- data.table::fread(paste0(dir_sptree, df_sptree_metadata$scenario[i], "/metadata.tsv"))
+
+    # list of BUSCO
+    shared_busco <- unique(df_busco_metadata$busco)
+    ls_problematic_busco <- unique(df_busco_metadata$busco[df_busco_metadata$is_error])
+    shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]  
+
+    # list of refs and mapped reads
+    ls_sptree_refs <- df_specific_pairs$id[is.null(df_specific_pairs$reads)]  
+    ls_sptree_read <- df_specific_pairs$id[!is.null(df_specific_pairs$reads)]
+
+    # iterate over BUSCO
+    foreach(busco = shared_busco, .combine='rbind') %dopar% {
+        # output directory
+        dir_scenario_alignment <- paste0(dir_sptree, df_sptree_metadata$scenario[i], "/alignment/", busco, "/")
+        if (!dir.exists(dir_scenario_alignment)) {
+            dir.create(dir_scenario_alignment, recursive=F)
+        }
+
+        # output file
+        fn_out <- paste0(dir_scenario_alignment, busco, ".faa")
+        fn_out_aligned <- paste0(dir_scenario_alignment, busco, "_aligned.faa")
+
+        # iterate over reference sequences
+        for (ref in ls_sptree_refs) {
+            file_busco_ref <- paste0(dir_busco_ref, ref, busco_refs_dir_mid, busco, ".faa")
+            f_fasta2msa(file_busco_ref, ref, fn_out)
+        }
+
+        # iterate over prefix
+        for (prefix in ls_sptree_read) {
+            file_busco_read <- paste0(dir_busco_read, read, busco_read_dir_mid, busco, ".faa")
+            f_fasta2msa(file_busco_read, read, fn_out)
+        }
+
+        # align using MAFFT FFT-NS-2
+        f_mafft(fn_out, fn_out_aligned, "--retree 2", params$exe_mafft)
+    }
+}
+```
+
+## Generate BUSCO trees
+```{r sptree-tree, echo=FALSE}
+f_write_log(fn_log=fn_log, msg=c("", "------------ BUSCO Trees -----------"))
+              
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over scenario
+for (i in 1:nrow(df_sptree_metadata)) {
+    dir_scenario_alignment <- paste0(dir_sptree, df_sptree_metadata$scenario[i], "/alignment/", busco, "/")
+
+    # iterate over shared BUSCOs
+    foreach (busco = shared_busco) %dopar% {
+        # output IQ-Tree2 files
+        fn_fasta <- paste0(dir_scenario_alignment, busco, "_aligned.faa")
+        fn_treefile <- paste0(dir_scenario_alignment, busco, "_aligned.faa.treefile")
+        if (!file.exists(fn_treefile) || params$redo) {
+            # run IQ-Tree2
+            f_iqtree2(fn_fasta, params$exe_iqtree2)
+        }
+
+        # change the ID into species name
+        fn_treefile_species <- paste0(dir_output, busco, "_aligned.fa.treefile.species")
+        if (!file.exists(fn_treefile_species) || params$redo) {
+            f_tips_to_species(fn_treefile, fn_treefile_species, ls_species_name)
+        }
+    }
+
+    # iterate over BUSCOs
+    ls_trees <- foreach (busco = ls_uq_busco, .combine='c') %dopar% {
+        # input file
+        fn_tree <- paste0(dir_scenario_alignment, bbusco, "_aligned.faa.treefile")
+        
+        # check if file exists
+        if (!file.exists(fn_tree)) {
+            return(NULL)
+        } else {
+            return(fn_tree)
+        }      
+    }
+
+    ls_trees <- paste(ls_trees, collapse=" ")
+
+    # combine all BUSCO trees
+    fn_outfile <- paste0(dir_scenario_alignment, "alltrees.tre")
+    system(paste("cat", ls_trees, ">", fn_outfile))
+
+    # run ASTRAL-III
+    fn_astral_outfile <- paste0(dir_scenario_alignment, "alltrees.astral.tre")
+    fn_astral_logfile <- paste0(dir_scenario_alignment, "alltrees.astral.log")
+    f_astral(fn_outfile, fn_astral_outfile, fn_astral_logfile, params$exe_astral)
+    
+    # convert tips to species name
+    fn_astral_sp_outfile <- paste0(dir_scenario_alignment, "alltrees.astral.sp.tre")
+    f_tips_to_species(fn_astral_outfile, fn_astral_sp_outfile, ls_species_name)
+}
+
+stopCluster(nwcl)
+```
