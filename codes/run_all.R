@@ -43,6 +43,16 @@ file_buscotree <- paste0(codedir, "/../data/eucs_buscotree.txt")
 file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
 busco_tree_mode <- "random"
 busco_tree_random_ref <- TRUE
+
+# BUSCO species tree
+file_sptree_metadata <- paste0(codedir, "/../data/eucs_sptree_metadata.txt")
+
+# number of threads
+thread_adapterremoval <- 10
+thread_bwamem2 <- 50
+thread_samtools <- 10
+thread_qualimap <- 50
+thread_busco <- 50
 #################################
 
 # extract current time
@@ -62,6 +72,7 @@ rmarkdown::render(input=paste0(codedir,"/1_data_preparation/1_main.Rmd"),
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters,
                               exe_datasets=exe_datasets, bin_sratoolkit=bin_sratoolkit,
                               exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools, exe_qualimap=exe_qualimap,
+                              thread_adapterremoval=thread_adapterremoval, thread_bwamem2=thread_bwamem2, thread_samtools=thread_samtools, thread_qualimap=thread_qualimap,
                               current_time=current_time),
                   quiet=TRUE)
 
@@ -74,7 +85,7 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
                               busco_lineage=busco_lineage, busco_mode=busco_mode, type=type, outgroup=outgroup,
                               min_busco_depth=min_busco_depth, busco_tree_mode=busco_tree_mode, busco_tree_random_ref=busco_tree_random_ref,
-                              current_time=current_time),
+                              thread_busco=thread_busco, current_time=current_time),
                   quiet=TRUE)
 
 # BUSCO trees
