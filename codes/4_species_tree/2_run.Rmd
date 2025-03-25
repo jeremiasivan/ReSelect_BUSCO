@@ -62,7 +62,7 @@ for (i in 1:nrow(df_sptree_metadata)) {
     # output directory
     dir_scenario_output <- paste0(dir_sptree, df_sptree_metadata$scenario[i], "/")
     if (!dir.exists(dir_scenario_output)) {
-        dir.create(dir_scenario_output, recursive=F)
+        dir.create(dir_scenario_output, recursive=T)
     }
 
     # output file
@@ -73,7 +73,7 @@ for (i in 1:nrow(df_sptree_metadata)) {
 
     # extract specific pairs
     ls_specific_pairs <- strsplit(df_sptree_metadata$pairs[i], split=";")[[1]]
-    ls_specific_pairs <- lapply(ls, function(x) {
+    ls_specific_pairs <- lapply(ls_specific_pairs, function(x) {
         ls_pairs <- strsplit(x, split="--")[[1]]
 
         reads_id <- df_reads$id[df_reads$species==ls_pairs[1]]
@@ -84,14 +84,14 @@ for (i in 1:nrow(df_sptree_metadata)) {
     
     # iterate over representative species
     df_specific_pairs <- data.table::rbindlist(ls_specific_pairs)
-    for (j in 1:nrow(df_refs$species)) {
+    for (j in 1:nrow(df_refs)) {
         # skip if species already exists
         if (df_refs$species[j] %in% df_specific_pairs$reads) {
             next
         }
 
         # add species to the entry
-        df_specific_pairs <- rbind(df_specific_pairs, data.table::data.table(reads=NULL, refs=NULL, id=df_refs$id[j]))
+        df_specific_pairs <- rbind(df_specific_pairs, data.table::data.table(reads=NA, refs=NA, id=df_refs$id[j]))
     }
 
     # save the metadata file
@@ -121,8 +121,8 @@ for (i in 1:nrow(df_sptree_metadata)) {
     }
 
     # extract BUSCO from reference sequences
-    ls_sptree_refs <- df_specific_pairs$id[is.null(df_specific_pairs$reads)]
-    ls_sptree_read <- df_specific_pairs$id[!is.null(df_specific_pairs$reads)]
+    ls_sptree_refs <- df_specific_pairs$id[is.na(df_specific_pairs$reads)]
+    ls_sptree_read <- df_specific_pairs$id[!is.na(df_specific_pairs$reads)]
 
     # initiate variable
     df_refs_busco_subset <- df_refs_busco[df_refs_busco$ref %in% ls_sptree_refs]
@@ -228,8 +228,8 @@ for (i in 1:nrow(df_sptree_metadata)) {
     shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]  
 
     # list of refs and mapped reads
-    ls_sptree_refs <- df_specific_pairs$id[is.null(df_specific_pairs$reads)]  
-    ls_sptree_read <- df_specific_pairs$id[!is.null(df_specific_pairs$reads)]
+    ls_sptree_refs <- df_specific_pairs$id[is.na(df_specific_pairs$reads)]  
+    ls_sptree_read <- df_specific_pairs$id[!is.na(df_specific_pairs$reads)]
 
     # iterate over BUSCO
     foreach(busco = shared_busco, .combine='rbind') %dopar% {
