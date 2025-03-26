@@ -123,7 +123,7 @@ for (i in 1:nrow(df_sptree_metadata)) {
 
     # extract BUSCO from reference sequences
     ls_sptree_refs <- df_specific_pairs$id[df_specific_pairs$reads==""]
-    ls_sptree_read <- df_specific_pairs$id[!df_specific_pairs$reads==""]
+    ls_sptree_read <- df_specific_pairs$id[df_specific_pairs$reads!=""]
 
     # initiate variable
     df_refs_busco_subset <- df_refs_busco[df_refs_busco$ref %in% ls_sptree_refs]
@@ -154,8 +154,14 @@ for (i in 1:nrow(df_sptree_metadata)) {
 
         # iterate over BUSCO
         df_mapped_reads_update <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
-            # skip if FASTA is not problematic
-            if (!df_mapped_reads_busco_subset$is_error[df_mapped_reads_busco_subset$busco==busco]) {
+            # skip if the BUSCO entry is problematic
+            df_subset_busco <- df_mapped_reads_busco_subset[df_mapped_reads_busco_subset$busco==busco,]
+            if (nrow(df_subset_busco) != 1) {
+                return(data.table::data.table(id=prefix, busco=busco, is_error=TRUE, note=paste("Invalid", busco, "entry for", prefix)))
+            }
+
+            # skip if BUSCO is not problematic
+            if (!df_subset_busco$is_error[1]) {
                 return(data.table::data.table(id=prefix, busco=busco, is_error=FALSE, note=NA))
             }
 
@@ -251,7 +257,7 @@ for (i in 1:nrow(df_sptree_metadata)) {
 
     # list of refs and mapped reads
     ls_sptree_refs <- df_specific_pairs$id[df_specific_pairs$reads==""]  
-    ls_sptree_read <- df_specific_pairs$id[!df_specific_pairs$reads==""]
+    ls_sptree_read <- df_specific_pairs$id[df_specific_pairs$reads!=""]
 
     # iterate over BUSCO
     foreach(busco = shared_busco, .combine='rbind') %dopar% {
