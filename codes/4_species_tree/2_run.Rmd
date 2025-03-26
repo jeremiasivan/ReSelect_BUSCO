@@ -76,6 +76,7 @@ for (i in 1:nrow(df_sptree_metadata)) {
     ls_specific_pairs <- lapply(ls_specific_pairs, function(x) {
         ls_pairs <- strsplit(x, split="--")[[1]]
 
+        # extract reads and reference IDs
         reads_id <- df_reads$id[df_reads$species==ls_pairs[1]]
         refs_id <- df_refs$id[df_refs$species==ls_pairs[2]]
 
@@ -91,7 +92,7 @@ for (i in 1:nrow(df_sptree_metadata)) {
         }
 
         # add species to the entry
-        df_specific_pairs <- rbind(df_specific_pairs, data.table::data.table(reads=NA, refs=NA, id=df_refs$id[j]))
+        df_specific_pairs <- rbind(df_specific_pairs, data.table::data.table(reads=NA, refs=df_refs$species[j], id=df_refs$id[j]))
     }
 
     # save the metadata file
@@ -114,15 +115,15 @@ for (i in 1:nrow(df_sptree_metadata)) {
     df_specific_pairs <- data.table::fread(fn_metadata)
 
     # output files
-    df_busco_metadata <- data.table(id=character(), busco=character(), is_error=logical(), note=character())
+    df_busco_metadata <- data.table::data.table(id=character(), busco=character(), is_error=logical(), note=character())
     fn_busco_metadata <- paste0(dir_scenario_output, "busco_metadata.tsv")
     if (file.exists(fn_busco_metadata) && !params$redo) {
         next
     }
 
     # extract BUSCO from reference sequences
-    ls_sptree_refs <- df_specific_pairs$id[is.na(df_specific_pairs$reads)]
-    ls_sptree_read <- df_specific_pairs$id[!is.na(df_specific_pairs$reads)]
+    ls_sptree_refs <- df_specific_pairs$id[df_specific_pairs$reads==""]
+    ls_sptree_read <- df_specific_pairs$id[!df_specific_pairs$reads==""]
 
     # initiate variable
     df_refs_busco_subset <- df_refs_busco[df_refs_busco$ref %in% ls_sptree_refs]
@@ -135,6 +136,8 @@ for (i in 1:nrow(df_sptree_metadata)) {
     shared_busco <- unique(df_refs_busco_subset$busco)
     ls_problematic_busco <- unique(df_refs_busco_subset$busco[df_refs_busco_subset$is_error])
     shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
+
+    f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO that are shared between references: ", length(shared_busco), ".")))
 
     # iterate over mapped reads
     for (prefix in ls_sptree_read) {
@@ -225,11 +228,13 @@ for (i in 1:nrow(df_sptree_metadata)) {
     # list of BUSCO
     shared_busco <- unique(df_busco_metadata$busco)
     ls_problematic_busco <- unique(df_busco_metadata$busco[df_busco_metadata$is_error])
-    shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]  
+    shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
+
+    f_write_log(fn_log=fn_log, msg=c("", paste0("Final number of BUSCO that are shared: ", length(shared_busco), ".")))
 
     # list of refs and mapped reads
-    ls_sptree_refs <- df_specific_pairs$id[is.na(df_specific_pairs$reads)]  
-    ls_sptree_read <- df_specific_pairs$id[!is.na(df_specific_pairs$reads)]
+    ls_sptree_refs <- df_specific_pairs$id[df_specific_pairs$reads==""]  
+    ls_sptree_read <- df_specific_pairs$id[!df_specific_pairs$reads==""]
 
     # iterate over BUSCO
     foreach(busco = shared_busco, .combine='rbind') %dopar% {
@@ -279,10 +284,10 @@ doSNOW::registerDoSNOW(nwcl)
 
 # iterate over scenario
 for (i in 1:nrow(df_sptree_metadata)) {
-    dir_scenario_alignment <- paste0(dir_sptree, df_sptree_metadata$scenario[i], "/alignment/", busco, "/")
-
     # iterate over shared BUSCOs
     foreach (busco = shared_busco) %dopar% {
+        dir_scenario_alignment <- paste0(dir_sptree, df_sptree_metadata$scenario[i], "/alignment/", busco, "/")
+        
         # output IQ-Tree2 files
         fn_fasta <- paste0(dir_scenario_alignment, busco, "_aligned.faa")
         fn_treefile <- paste0(dir_scenario_alignment, busco, "_aligned.faa.treefile")
