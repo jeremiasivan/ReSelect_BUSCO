@@ -145,26 +145,12 @@ for (i in 1:nrow(df_sptree_metadata)) {
         read <- unlist(strsplit(prefix, split="--"))[1]
         ref <- unlist(strsplit(prefix, split="--"))[2]
 
-        # extract subset of data.frame
-        df_mapped_reads_busco_subset <- df_mapped_reads_busco[df_mapped_reads_busco$read==read & df_mapped_reads_busco$ref==ref]
-
         # mean coverage
         mean_coverage <- as.numeric(df_readmap_coverage$mean_coverage[df_readmap_coverage$read_id==read & df_readmap_coverage$ref_id==ref])
         max_busco_depth <- 2 * mean_coverage
 
         # iterate over BUSCO
         df_mapped_reads_update <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
-            # skip if the BUSCO entry is problematic
-            df_subset_busco <- df_mapped_reads_busco_subset[df_mapped_reads_busco_subset$busco==busco,]
-            if (nrow(df_subset_busco) != 1) {
-                return(data.table::data.table(id=prefix, busco=busco, is_error=TRUE, note=paste("Invalid", busco, "entry for", prefix)))
-            }
-
-            # skip if BUSCO is not problematic
-            if (!df_subset_busco$is_error[1]) {
-                return(data.table::data.table(id=prefix, busco=busco, is_error=FALSE, note=NA))
-            }
-
             # input files
             file_fas <- paste0(dir_readmap, prefix, "/", prefix, ".fa")
             file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
@@ -245,7 +231,7 @@ doSNOW::registerDoSNOW(nwcl)
 for (i in 1:nrow(df_sptree_metadata)) {
     # input files
     dir_scenario_output <- paste0(dir_sptree, df_sptree_metadata$scenario[i], "/")
-    df_metadata <- data.table::fread(paste0(dir_scenario_output, "metadata.tsv"))
+    df_specific_pairs <- data.table::fread(paste0(dir_scenario_output, "metadata.tsv"))
     df_busco_metadata <- data.table::fread(paste0(dir_scenario_output, "busco_metadata.tsv"))
 
     # list of BUSCO
@@ -260,11 +246,11 @@ for (i in 1:nrow(df_sptree_metadata)) {
     ls_sptree_read <- df_specific_pairs$id[df_specific_pairs$reads!=""]
 
     # iterate over BUSCO
-    foreach(busco = shared_busco, .combine='rbind') %dopar% {
+    foreach(busco = shared_busco) %dopar% {
         # output directory
         dir_scenario_alignment <- paste0(dir_scenario_output, "alignment/", busco, "/")
         if (!dir.exists(dir_scenario_alignment)) {
-            dir.create(dir_scenario_alignment, recursive=F)
+            dir.create(dir_scenario_alignment, recursive=T)
         }
 
         # output files
@@ -285,8 +271,8 @@ for (i in 1:nrow(df_sptree_metadata)) {
 
         # iterate over prefix
         for (prefix in ls_sptree_read) {
-            file_busco_read <- paste0(dir_busco_read, read, busco_read_dir_mid, busco, ".faa")
-            f_fasta2msa(file_busco_read, read, fn_out)
+            file_busco_read <- paste0(dir_busco_read, prefix, busco_read_dir_mid, busco, ".faa")
+            f_fasta2msa(file_busco_read, prefix, fn_out)
         }
 
         # align using MAFFT FFT-NS-2
@@ -307,9 +293,15 @@ doSNOW::registerDoSNOW(nwcl)
 
 # iterate over scenario
 for (i in 1:nrow(df_sptree_metadata)) {
+    # output directory
+    dir_scenario_output <- paste0(dir_sptree, df_sptree_metadata$scenario[i], "/")
+
+    # update list of BUSCO
+    shared_busco <- list.dirs(paste0(dir_scenario_output, "alignment/"), full.names=F, recursive=F)
+
     # iterate over shared BUSCOs
-    foreach (busco = shared_busco) %dopar% {
-        dir_scenario_alignment <- paste0(dir_sptree, df_sptree_metadata$scenario[i], "/alignment/", busco, "/")
+    ls_trees <- foreach (busco = shared_busco, .combine='c') %dopar% {
+        dir_scenario_alignment <- paste0(dir_scenario_output, "/alignment/", busco, "/")
         
         # output IQ-Tree2 files
         fn_fasta <- paste0(dir_scenario_alignment, busco, "_aligned.faa")
@@ -324,34 +316,23 @@ for (i in 1:nrow(df_sptree_metadata)) {
         if (!file.exists(fn_treefile_species) || params$redo) {
             f_tips_to_species(fn_treefile, fn_treefile_species, ls_species_name)
         }
-    }
 
-    # iterate over BUSCOs
-    ls_trees <- foreach (busco = shared_busco, .combine='c') %dopar% {
-        # input file
-        fn_tree <- paste0(dir_scenario_alignment, busco, "_aligned.faa.treefile")
-        
-        # check if file exists
-        if (!file.exists(fn_tree)) {
-            return(NULL)
-        } else {
-            return(fn_tree)
-        }      
+        return(fn_treefile)
     }
 
     ls_trees <- paste(ls_trees, collapse=" ")
 
     # combine all BUSCO trees
-    fn_outfile <- paste0(dir_scenario_alignment, "alltrees.tre")
+    fn_outfile <- paste0(dir_scenario_output, "alltrees.tre")
     system(paste("cat", ls_trees, ">", fn_outfile))
 
     # run ASTRAL-III
-    fn_astral_outfile <- paste0(dir_scenario_alignment, "alltrees.astral.tre")
-    fn_astral_logfile <- paste0(dir_scenario_alignment, "alltrees.astral.log")
+    fn_astral_outfile <- paste0(dir_scenario_output, "alltrees.astral.tre")
+    fn_astral_logfile <- paste0(dir_scenario_output, "alltrees.astral.log")
     f_astral(fn_outfile, fn_astral_outfile, fn_astral_logfile, params$exe_astral)
     
     # convert tips to species name
-    fn_astral_sp_outfile <- paste0(dir_scenario_alignment, "alltrees.astral.sp.tre")
+    fn_astral_sp_outfile <- paste0(dir_scenario_output, "alltrees.astral.sp.tre")
     f_tips_to_species(fn_astral_outfile, fn_astral_sp_outfile, ls_species_name)
 }
 
