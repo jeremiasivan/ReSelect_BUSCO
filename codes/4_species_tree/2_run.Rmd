@@ -312,7 +312,7 @@ for (i in 1:nrow(df_sptree_metadata)) {
         }
 
         # change the ID into species name
-        fn_treefile_species <- paste0(dir_output, busco, "_aligned.fa.treefile.species")
+        fn_treefile_species <- paste0(dir_scenario_alignment, busco, "_aligned.faa.treefile.species")
         if (!file.exists(fn_treefile_species) || params$redo) {
             f_tips_to_species(fn_treefile, fn_treefile_species, ls_species_name)
         }
