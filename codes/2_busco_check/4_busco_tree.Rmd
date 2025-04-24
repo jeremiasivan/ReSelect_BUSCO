@@ -16,7 +16,7 @@ if (params$busco_tree_mode == "control" && file.exists(params$file_buscotree)) {
 } else if (params$busco_tree_mode == "oneref") {
     dir_check_tree <- paste0(dir_check_tree, "oneref/")
 } else {
-    dir_check_tree <- paste0(dir_check_tree, "random/")
+    dir_check_tree <- paste0(dir_check_tree, "random_", tolower(params$busco_tree_random_ref), "/")
 }
 
 dir_check_tree_summary <- paste0(dir_check_tree, "summary/")

@@ -30,6 +30,8 @@ params:
   exe_samtools: ""
   exe_qualimap: ""
 
+  exe_hybpiper2: ""
+
   exe_mafft: ""
   exe_iqtree2: ""
   exe_treeshrink: ""
@@ -42,7 +44,6 @@ params:
 
   thread_busco: 50
   min_busco_depth: 10
-  max_busco_depth: 40
 
   busco_tree_mode: "control"
   busco_tree_random_ref: FALSE  # only applies for busco_tree_mode == "random"
@@ -108,7 +109,6 @@ f_write_log(fn_log=fn_log, msg=paste0("- file_buscotree: ", params$file_buscotre
 
 f_write_log(fn_log=fn_log, msg=paste0("- type: ", params$type))
 f_write_log(fn_log=fn_log, msg=paste0("- min_busco_depth: ", params$min_busco_depth))
-# f_write_log(fn_log=fn_log, msg=paste0("- max_busco_depth: ", params$max_busco_depth))
 
 f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_mode: ", params$busco_tree_mode))
 f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_random_ref: ", params$busco_tree_random_ref))
@@ -117,10 +117,13 @@ f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_random_ref: ", params$busco_
 ```{r child = paste0(params$codedir,"/2_busco_check/2_busco_ref.Rmd")}
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/3_summary.Rmd")}
-```
-
-```{r child = paste0(params$codedir,"/2_busco_check/4_busco_tree.Rmd")}
+```{r}
+if (params$type != "hybpiper") {
+  knitr::knit_child(paste0(params$codedir,"/2_busco_check/3_summary.Rmd"))
+  knitr::knit_child(paste0(params$codedir,"/2_busco_check/4_busco_tree.Rmd"))
+} else {
+  knitr::knit_child(paste0(params$codedir,"/2_busco_check/3a_summary_hybpiper.Rmd"))
+}
 ```
 
 ```{r, include=FALSE}

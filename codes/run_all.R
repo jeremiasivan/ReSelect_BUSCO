@@ -13,29 +13,37 @@ file_adapters <- paste0(codedir, "/../data/eucs_adapter.txt")
 exe_datasets <- "datasets"
 bin_sratoolkit <- "sratoolkit/bin/"
 
-# BUSCO check
 exe_adapterremoval <- "AdapterRemoval"
 exe_bwamem2 <- "bwa-mem2"
 exe_samtools <- "samtools"
 exe_bcftools <- "bcftools"
 exe_qualimap <- "qualimap"
 
+min_read_quality <- 25
+
+thread_adapterremoval <- 10
+thread_bwamem2 <- 50
+thread_samtools <- 10
+thread_qualimap <- 50
+
+# BUSCO check
 exe_gffread <- "gffread"
 exe_gff2bed <- "bedops/bin/gff2bed"
 
 exe_busco <- "busco"
-exe_iqtree2 <- "iqtree2"
-exe_mafft <- "mafft"
-exe_treeshrink <- "treeshrink"
+exe_hybpiper2 <- ""
 
+exe_mafft <- "mafft"
+exe_iqtree2 <- "iqtree2"
+exe_treeshrink <- "treeshrink"
 exe_astral <- "astral.jar"
 
 busco_lineage <- "eudicots_odb10"
 busco_mode <- "genome"
 type <- "coordinate"
 
+thread_busco <- 50
 min_busco_depth <- 10
-max_busco_depth <- 60
 
 outgroup <- c("Angophora","Corymbia")
 
@@ -63,6 +71,8 @@ rmarkdown::render(input=paste0(codedir,"/1_data_preparation/1_main.Rmd"),
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters,
                               exe_datasets=exe_datasets, bin_sratoolkit=bin_sratoolkit,
                               exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools, exe_qualimap=exe_qualimap,
+                              min_read_quality=min_read_quality,
+                              thread_adapterremoval=thread_adapterremoval, thread_bwamem2=thread_bwamem2, thread_samtools=thread_samtools, thread_qualimap=thread_qualimap,
                               current_time=current_time),
                   quiet=TRUE)
 
@@ -71,10 +81,10 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, outprefix, ".check.html"),
                   params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_genome_treefile=file_genome_treefile, file_buscotree=file_buscotree,
-                              exe_busco=exe_busco, exe_gffread=exe_gffread, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed, exe_qualimap=exe_qualimap,
+                              exe_busco=exe_busco, exe_hybpiper2=exe_hybpiper2, exe_gffread=exe_gffread, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed, exe_qualimap=exe_qualimap,
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
                               busco_lineage=busco_lineage, busco_mode=busco_mode, type=type, outgroup=outgroup,
-                              min_busco_depth=min_busco_depth, max_busco_depth=max_busco_depth, busco_tree_mode=busco_tree_mode, busco_tree_random_ref=busco_tree_random_ref,
+                              thread_busco=thread_busco, min_busco_depth=min_busco_depth, busco_tree_mode=busco_tree_mode, busco_tree_random_ref=busco_tree_random_ref,
                               current_time=current_time),
                   quiet=TRUE)
 

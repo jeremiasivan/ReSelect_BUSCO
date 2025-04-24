@@ -1,0 +1,259 @@
+---
+title: "Summarise BUSCO Trees"
+---
+
+```{r check-summary-setup, include=FALSE}
+f_write_log(fn_log=fn_log,
+            msg=c("", "####################################",
+                      "####           Summary          ####",
+                      "####################################"))
+
+# load ggplot2 library
+library(ggplot2)
+
+# output directories
+dir_check_summary <- paste0(dir_busco, "summary/")
+if (!dir.exists(dir_check_summary)) {
+    dir.create(dir_check_summary, recursive=T)
+}
+
+dir_check_tree <- paste0(dir_busco, "busco_tree/")
+dir_check_tree_summary <- paste0(dir_check_tree, "summary/")
+if (!dir.exists(dir_check_tree_summary)) {
+    dir.create(dir_check_tree_summary, recursive=T)
+}
+
+# output files
+fn_summary <- paste0(dir_check_summary, "dist_summary.tsv")
+fn_summary_tiff <- paste0(dir_check_summary, "dist_summary.tiff")
+fn_nrf_summary <- paste0(dir_check_tree_summary, "nrf_summary.tsv")
+fn_nrf_summary_tiff <- paste0(dir_check_tree_summary, "nrf_summary.tiff")
+```
+
+```{r check-summary-hybpiper}
+# output data.frame
+df_summary <- data.table::data.table(ref=character(), read=character(), species=character(), busco=character(), dist=numeric())
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over reads
+for (read in ls_shortreads) {
+    # extract species and reference ID
+    species <- df_reads$species[df_reads$id==read]
+    ref_id <- df_refs$id[df_refs$species==species]
+
+    # iterate over BUSCO
+    df_output_temp <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
+        # input file
+        fn_treefile <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
+
+        # read the treefile
+        tre <- ape::read.tree(fn_treefile)
+        
+        # calculate phylogenetic distance
+        distance_tre <- ape::cophenetic.phylo(tre)
+        dist <- distance_tre[rownames(distance_tre)==ref_id, colnames(distance_tre)==read]
+        
+        return(data.table::data.table(ref=ref_id, read=read, species=species, busco=busco, dist=dist))
+    }
+
+    # update data.table
+    df_summary <- rbind(df_summary, df_output_temp)
+}
+
+stopCluster(nwcl)
+
+# save the data.frame
+data.table::fwrite(df_summary, file=fn_summary, sep="\t", quote=F, row.names=F)
+
+# visualisation
+plot <- ggplot(df_summary, aes(x=dist, fill=read)) +
+    geom_histogram(position="dodge", bins=100) +
+    facet_wrap(~read) +
+    ggtitle(paste("Distribution of BUSCO Phylogenetic Distances")) +
+    xlab("Phylogenetic Distance") + ylab("Number of BUSCO") +
+    theme(
+        plot.title=element_text(hjust = 0.5, size = 50),
+        plot.margin=margin(1.25, 1.25, 1.25, 1.25, "cm"),
+        axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
+        axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
+        axis.text.y=element_text(size=30),
+        axis.text.x=element_text(size=30),
+        legend.position="none",
+        strip.text=element_text(size = 30)
+    )
+
+# save the plot
+tiff(file=fn_summary_tiff, units="px", width=2880, height=1800)
+print(plot)
+dev.off()
+```
+
+```{r check-summary-hybpiper-nrf}
+# extract reference IDs
+ls_read_sp <- df_reads$species[df_reads$id %in% ls_shortreads]
+ls_ref_id <- df_refs$id[df_refs$species %in% ls_read_sp]
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over BUSCO
+df_busco_nrf <- foreach(busco = shared_busco, .combine='rbind') %dopar% {
+    # output directory
+    dir_output_busco <- paste0(dir_check_tree, busco, "/")
+    if (!dir.exists(dir_output_busco)) {
+        dir.create(dir_output_busco, recursive=T)
+    }
+
+    # output files
+    fn_out_read <- paste0(dir_output_busco, busco, "_read.faa")
+    fn_out_refs <- paste0(dir_output_busco, busco, "_refs.faa")
+    fn_out_read_aligned <- paste0(dir_output_busco, busco, "_read_aligned.faa")
+    fn_out_refs_aligned <- paste0(dir_output_busco, busco, "_refs_aligned.faa")
+    fn_out_read_aligned_treefile <- paste0(fn_out_read_aligned, ".treefile")
+    fn_out_refs_aligned_treefile <- paste0(fn_out_refs_aligned, ".treefile")
+
+    # extract BUSCO from mapped reads
+    if (!all(file.exists(fn_out_read_aligned, fn_out_read_aligned_treefile)) || params$redo) {
+        # iterate over mapped reads
+        for (read in ls_shortreads) {
+            # extract species name
+            read_sp <- df_reads$species[df_reads$id==read]
+
+            # input FASTA file
+            fn_fasta_read <- paste0(dir_busco_read, read, "/", busco, "/", read, "/sequences/FAA/", busco, ".FAA")
+
+            # combine FASTA sequences into one file
+            f_fasta2msa(fn_fasta_read, read_sp, fn_out_read)
+        }
+
+        # align using MAFFT FFT-NS-2
+        f_mafft(fn_out_read, fn_out_read_aligned, "--retree 2", params$exe_mafft)
+
+        # run IQ-TREE2
+        f_iqtree2(fn_out_read_aligned, params$exe_iqtree2)
+    }
+
+    # extract BUSCO from reference sequences
+    if (!all(file.exists(fn_out_refs_aligned, fn_out_refs_aligned_treefile)) || params$redo) {
+        # iterate over references
+        for (ref in ls_ref_id) {
+            # extract species name
+            refs_sp <- df_refs$species[df_refs$id==ref]
+
+            # input FASTA file
+            fn_fasta_refs <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".faa")
+
+            # combine FASTA sequences into one file
+            f_fasta2msa(fn_fasta_refs, refs_sp, fn_out_refs)
+        }
+
+        # align using MAFFT FFT-NS-2
+        f_mafft(fn_out_refs, fn_out_refs_aligned, "--retree 2", params$exe_mafft)
+
+        # run IQ-TREE2
+        f_iqtree2(fn_out_refs_aligned, params$exe_iqtree2)
+    }
+
+    # read the treefile
+    tre <- ape::read.tree(fn_out_read_aligned_treefile)
+    nrf_denominator <- 2 * (length(tre$tip.label) - 3)
+
+    # calculate nRF
+    nrf_phangorn <- f_calculate_nRF(fn_out_read_aligned_treefile, fn_out_refs_aligned_treefile)
+
+    read_tree_dist <- f_calculate_treedist(fn_out_read_aligned_treefile, fn_out_refs_aligned_treefile, 0)
+    refs_tree_dist <- f_calculate_treedist(fn_out_refs_aligned_treefile, fn_out_read_aligned_treefile, 0)
+    nrf <- round((read_tree_dist$dist+refs_tree_dist$dist) / nrf_denominator, 3)
+
+    read_tree_dist_highbs <- f_calculate_treedist(fn_out_read_aligned_treefile, fn_out_refs_aligned_treefile, 95)
+    refs_tree_dist_highbs <- f_calculate_treedist(fn_out_refs_aligned_treefile, fn_out_read_aligned_treefile, 95)
+    nrf_highbs <- round((read_tree_dist$dist+refs_tree_dist_highbs$dist) / nrf_denominator, 3)
+
+    return(data.table::data.table(busco=busco, nrf=nrf_phangorn, nrf2=nrf, nrf_highbs=nrf_highbs))
+}
+
+stopCluster(nwcl)
+
+# check if function works as intended
+if (setequal(df_busco_nrf$nrf, df_busco_nrf$nrf2)) {
+    df_busco_nrf$nrf2 <- NULL
+}
+
+# save the data.frame
+data.table::fwrite(df_busco_nrf, file=fn_nrf_summary, sep="\t", quote=F, row.names=F)
+
+# visualisation
+df_busco_nrf_long <- df_busco_nrf %>% pivot_longer(cols=-busco)
+
+plot <- ggplot(df_busco_nrf_long, aes(x=value, colour=name, fill=name, xmin=0, xmax=1)) +
+    geom_histogram(binwidth=0.083, position="dodge", size=3, alpha=0.25) +
+    facet_wrap(~name) +
+    ggtitle(paste("Distribution of BUSCO nRF Distances")) +
+    xlab("nRF Distance") + ylab("Number of BUSCO") +
+    theme(
+        plot.title=element_text(hjust = 0.5, size = 50),
+        plot.margin=margin(1.25, 1.25, 1.25, 1.25, "cm"),
+        axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
+        axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
+        axis.text.y=element_text(size=30),
+        axis.text.x=element_text(size=30),
+        legend.title=element_text(size=30),
+        legend.text=element_text(size=30),
+        legend.key.size=unit(2,"cm"),
+        strip.text=element_text(size = 30)
+    )
+
+# save the plot
+tiff(file=fn_nrf_summary_tiff, units="px", width=2880, height=1800)
+print(plot)
+dev.off()
+```
+
+```{r check-summary-hybpiper-astral}
+f_write_log(fn_log=fn_log, msg=c("", "--------- ASTRAL BUSCO Tree --------",
+                                     "nRF Distance with Genome Tree"))
+
+# set number of threads
+nthread <- ifelse(params$thread > length(shared_busco), length(shared_busco), params$thread)
+
+# create doSNOW cluster
+nwcl <- makeCluster(nthread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over BUSCOs
+ls_trees <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    # input file
+    fn_tree <- paste0(dir_check_tree, busco, "/", busco, "_read_aligned.faa.treefile")
+    
+    return(fn_tree) 
+}
+
+# combine all BUSCO trees
+ls_trees <- paste(ls_trees, collapse=" ")
+fn_outfile <- paste0(dir_check_tree, "alltrees.tre")
+system(paste("cat", ls_trees, ">", fn_outfile))
+
+# run ASTRAL-III
+fn_astral_outfile <- paste0(dir_check_tree, "alltrees.astral.tre")
+fn_astral_logfile <- paste0(dir_check_tree, "alltrees.astral.log")
+f_astral(fn_outfile, fn_astral_outfile, fn_astral_logfile, params$exe_astral)
+
+# calculate nRF distance
+astral_tree <- ape::read.tree(fn_astral_outfile)
+genome_tree <- ape::read.tree(params$file_genome_treefile)
+genome_tree$edge.length <- ifelse(is.na(genome_tree$edge.length), 0.05, genome_tree$edge.length)
+genome_tree_subset <- ape::keep.tip(genome_tree, tip=astral_tree$tip.label)
+
+# extract information
+nrf_dist <- round(phangorn::RF.dist(genome_tree_subset, astral_tree, normalize=T), 3)
+quartet_score <- gsub("^.*\\: ", "", system(paste("grep '^Final normalized quartet score is:'",fn_astral_logfile), intern = T))
+quartet_score <- round(as.numeric(quartet_score), 3)
+
+f_write_log(fn_log=fn_log, msg=paste0("Species tree: ", nrf_dist, " (qScore: ", quartet_score, ")"))
+
+stopCluster(nwcl)
+```
