@@ -3,12 +3,60 @@ title: "Calculate nRF on BUSCO Trees"
 ---
 
 ## Check correlation between number of references and topology distance
-```{r check-busco-tree-setup, include=FALSE}
+```{r, include=FALSE}
 f_write_log(fn_log=fn_log,
             msg=c("", "####################################",
                       "####      Check BUSCO Trees     ####",
                       "####################################"))
 
+# check the BUSCO extraction method
+dir_busco <- ""
+if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
+    dir_busco <- paste0(currentdir, "/busco_check/busco_coordinate/")
+    f_write_log(fn_log=fn_log, msg="Running coordinate-based method.")
+} else if (params$type == "pipeline") {
+    dir_busco <- paste0(currentdir, "/busco_check/busco_pipeline/")
+    f_write_log(fn_log=fn_log, msg="Running pipeline-based method.")
+} else {
+    log4r::error(fn_logger, "Invalid type of BUSCO extraction method. Exited.")
+    knitr::knit_exit()
+}
+
+# open input files
+df_refs <- data.table::fread(params$file_refseq)
+df_reads <- data.table::fread(params$file_shortreads)
+
+# extract representative species
+df_reads_ref <- data.table::data.table(species=character(), reads=character(), ref=character())
+
+df_reads_subset <- df_reads[df_reads$is_check,]
+for (i in 1:nrow(df_reads_subset)) {
+    species_name <- df_reads_subset$species[i]
+
+    # extract reference ID
+    ref_id <- df_refs$id[df_refs$species == species_name]
+
+    # update data.frame
+    df_reads_ref <- rbind(df_reads_ref, data.table::data.table(species=species_name, reads=df_reads_subset$id[i], ref=ref_id))
+}
+```
+
+```{r, include=FALSE}
+# create a map for ID and species name
+ls_species_name <- c()
+
+# iterate over reference sequences
+for (ref in 1:nrow(df_refs)) {
+    ls_species_name[df_refs$id[ref]] <- df_refs$species[ref]
+}
+
+# iterate over short reads
+for (read in 1:nrow(df_reads)) {
+    ls_species_name[df_reads$id[read]] <- df_reads$species[read]
+}
+```
+
+```{r check-busco-tree-setup, include=FALSE}
 # output directory
 dir_check_tree <- paste0(dir_busco, "busco_tree/")
 if (params$busco_tree_mode == "control" && file.exists(params$file_buscotree)) {
@@ -49,11 +97,11 @@ nthread <- ifelse(params$thread > length(shared_busco), length(shared_busco), pa
 # check if analysis done according to input file or random
 ngrouping <- length(ls_refseq)
 if (params$busco_tree_mode == "control" && file.exists(params$file_buscotree)) {
-    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4b_control.Rmd"))
+    knitr::knit_child(paste0(params$codedir,"/3_busco_tree/2b_control.Rmd"))
 } else if (params$busco_tree_mode == "oneref") {
-    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4c_oneref.Rmd"))
+    knitr::knit_child(paste0(params$codedir,"/3_busco_tree/2c_oneref.Rmd"))
 } else {
-    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4a_random.Rmd"))
+    knitr::knit_child(paste0(params$codedir,"/3_busco_tree/2a_random.Rmd"))
 }
 ```
 
