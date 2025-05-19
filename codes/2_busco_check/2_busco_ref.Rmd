@@ -20,6 +20,9 @@ ls_refseq <- df_refs$id
 df_reads <- data.table::fread(params$file_shortreads)
 ls_shortreads <- df_reads$id[df_reads$is_check]
 
+# list of prefix
+ls_prefix <- as.vector(outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--")))
+
 # output directories
 dir_busco <- ""
 
@@ -35,6 +38,7 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
     knitr::knit_exit()
 }
 
+dir_readmap <- paste0(currentdir, "/readmap/")
 dir_busco_lineage <- paste0(currentdir, "/busco_lineage/")
 dir_busco_ref <- paste0(currentdir, "/busco_check/busco_refseq/")
 
@@ -313,7 +317,7 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
     df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), note=character())
 
     # extract total number of BUSCO
-    len_shared_busco <- len(shared_busco)
+    len_shared_busco <- length(shared_busco)
 
     # iterate over references
     for (ref in ls_refseq) {

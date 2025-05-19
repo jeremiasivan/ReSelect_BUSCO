@@ -50,3 +50,6 @@ rsconnect/
 
 # Temporary
 *.DS_Store
+
+addons/
+notes.txt
