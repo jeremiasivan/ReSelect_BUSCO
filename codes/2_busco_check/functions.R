@@ -246,6 +246,15 @@ f_mafft <- function(fn_input, fn_output, params_mafft, exe_mafft) {
     system(cmd_mafft)
 }
 
+# function: run TrimAl
+f_trimal <- function(fn_input, fn_output, params_trimal, exe_trimal) {
+    cmd_trimal <- paste(exe_trimal,
+                        "-in", fn_input,
+                        "-out", fn_output,
+                        params_trimal)
+    system(cmd_trimal)
+}
+
 # function: run IQ-Tree 2
 f_iqtree2 <- function(fn_input, exe_iqtree2) {
     cmd_iqtree2 <- paste(exe_iqtree2,

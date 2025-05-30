@@ -31,6 +31,7 @@ params:
   exe_qualimap: ""
 
   exe_mafft: ""
+  exe_trimal: ""
   exe_iqtree2: ""
   exe_treeshrink: ""
   exe_astral: ""

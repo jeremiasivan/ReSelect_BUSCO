@@ -24,6 +24,7 @@ for (read in ls_shortreads) {
 # output files
 fn_prefix <- paste0(dir_check_summary, params$prefix)
 fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
+fn_cor_summary_trimal <- paste0(fn_prefix, ".cor_trimal.sumtable")
 
 fn_dist_tiff <- paste0(dir_check_summary, params$prefix, ".dist.tiff")
 ```
@@ -277,6 +278,126 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
     return(read_out)
 }
 
+stopCluster(nwcl)
+
 # save the data.frame
 data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
+```
+
+## Redo the Analyses for TrimAl Alignments
+```{r check-summary-individual-trimal}
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over BUSCOs
+df_output_trimal <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
+    library(ggplot2)
+
+    # output variables
+    read_out <- data.table::data.table(busco=character(), read=character(),
+                                       lm_r2=numeric(), lm_slope=numeric(), lm_p=numeric(), spearman_rho=numeric(), spearman_p=numeric(),
+                                       lm_r2_noout=numeric(), lm_slope_noout=numeric(), lm_p_noout=numeric(), spearman_rho_noout=numeric(), spearman_p_noout=numeric())
+
+    # input treefiles
+    fn_tree <- paste0(dir_busco_tree, busco, "/trimal/", busco, "_aligned.fa.treefile")
+
+    # read trees
+    tre_original <- ape::read.tree(fn_tree)
+    tre_original_tips <- tre_original$tip.label
+
+    # update list of mapped reads
+    ls_prefix_available <- ls_prefix[ls_prefix %in% tre_original_tips]
+    ls_shortreads_available <- sapply(ls_prefix_available, function(x) {
+        strsplit(x, split="--")[[1]][1]
+    })
+    ls_shortreads_available <- unique(ls_shortreads_available)
+
+    # calculate phylogenetic distance
+    distance_tre <- ape::cophenetic.phylo(tre_original)
+
+    # iterate over short reads
+    for (read in ls_shortreads_available) {
+        # temporary data.table
+        temp_df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric(), grouping=character())
+
+        # extract taxa list
+        read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
+        read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
+
+        # extract available available reference sequences
+        ls_refseq_available <- grep(paste0("^",read), tre_original_tips, value=T)
+        ls_refseq_available <- sapply(ls_refseq_available, function(x) {
+            strsplit(x, split="--")[[1]][2]
+        })
+
+        # iterate over reference sequence
+        for (ref in ls_refseq_available) {
+            # check if prefix if filtered out by TreeShrink
+            prefix <- paste0(read,"--",ref)
+
+            # calculate distance for reference
+            ref_dist <- 0
+            if (read_ref_id != ref) {
+                ref_dist <- distance_tre[rownames(distance_tre)==read_ref_id, colnames(distance_tre)==ref]
+            }
+
+            # calculate distance for short reads
+            read_dist <- distance_tre[rownames(distance_tre)==read_ref_id, colnames(distance_tre)==prefix]
+
+            # update data.frame
+            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read_species_name,
+                                                                       ref=df_refs$species[df_refs$id==ref],
+                                                                       ref_dist=ref_dist,
+                                                                       read_dist=read_dist,
+                                                                       grouping=df_refs$grouping[df_refs$id==ref]))
+        }
+
+        # check if all values are NULL or NAs
+        if (f_all_null_or_na(temp_df_dist$ref_dist) || f_all_null_or_na(temp_df_dist$read_dist)) {
+            next
+        }
+
+        # run linear model with outgroup
+        lm <- lm(read_dist~ref_dist, data=temp_df_dist_filtered)
+        lm_statistics <- f_extract_summary_lm(lm)
+        sp_statistics <- f_spearman_test(temp_df_dist_filtered$read_dist, temp_df_dist_filtered$ref_dist)
+
+        # subset data.frame
+        temp_df_dist_filtered_noout <- temp_df_dist[!temp_df_dist$grouping %in% params$outgroup,]
+
+        # linear model without outgroup
+        lm_statistics_noout <- list(rsquared=NULL, slope=NULL, pvalue=NULL)
+        sp_statistics_noout <- list(rho=NULL, pvalue=NULL)
+
+        if (nrow(temp_df_dist_filtered_noout) > 0 && !f_all_null_or_na(temp_df_dist_filtered_noout$ref_dist) && !f_all_null_or_na(temp_df_dist_filtered_noout$read_dist)) {
+            # run linear model without outgroup
+            lm_noout <- lm(read_dist~ref_dist, data=temp_df_dist_filtered_noout)
+            lm_statistics_noout <- f_extract_summary_lm(lm_noout)
+            sp_statistics_noout <- f_spearman_test(temp_df_dist_filtered_noout$read_dist, temp_df_dist_filtered_noout$ref_dist)
+        }
+
+        # update data.frame
+        read_out <- rbind(read_out, data.table::data.table(busco=busco,
+                                                           read=read,
+                                                           lm_r2=lm_statistics$rsquared,
+                                                           lm_slope=lm_statistics$slope,
+                                                           lm_p=lm_statistics$pvalue,
+                                                           spearman_rho=sp_statistics$rho,
+                                                           spearman_p=sp_statistics$pvalue,
+                                                           lm_r2_noout=lm_statistics_noout$rsquared,
+                                                           lm_slope_noout=lm_statistics_noout$slope,
+                                                           lm_p_noout=lm_statistics_noout$pvalue,
+                                                           spearman_rho_noout=sp_statistics_noout$rho,
+                                                           spearman_p_noout=sp_statistics_noout$pvalue
+                                                           ))
+    }
+
+    return(read_out)
+}
+
+stopCluster(nwcl)
+
+# save the data.frame
+data.table::fwrite(df_output_trimal, file=fn_cor_summary_trimal, sep="\t", quote=F, row.names=F)
 ```
