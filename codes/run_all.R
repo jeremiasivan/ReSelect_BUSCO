@@ -26,6 +26,7 @@ exe_gff2bed <- "bedops/bin/gff2bed"
 exe_busco <- "busco"
 exe_iqtree2 <- "iqtree2"
 exe_mafft <- "mafft"
+exe_trimal <- "trimal"
 exe_treeshrink <- "treeshrink"
 
 exe_astral <- "astral.jar"
@@ -71,7 +72,7 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                   params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_genome_treefile=file_genome_treefile, file_buscotree=file_buscotree,
                               exe_busco=exe_busco, exe_gffread=exe_gffread, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed, exe_qualimap=exe_qualimap,
-                              exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
+                              exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_trimal=exe_trimal, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
                               busco_lineage=busco_lineage, busco_mode=busco_mode, type=type, outgroup=outgroup,
                               min_busco_depth=min_busco_depth, busco_tree_mode=busco_tree_mode, busco_tree_random_ref=busco_tree_random_ref,
                               current_time=current_time),

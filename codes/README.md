@@ -63,6 +63,7 @@ In this step, we run correlation analysis to check for the extent of reference b
 | `exe_gff2bed`            | Executable for Gff2Bed from BEDOPS                                                                                                    |
 | `exe_samtools`           | Executable for Samtools                                                                                                               |
 | `exe_mafft`              | Executable for MAFFT                                                                                                                  |
+| `exe_trimal`             | Executable for TrimAl                                                                                                                 |
 | `exe_iqtree2`            | Executable for IQ-TREE 2                                                                                                              |
 | `exe_treeshrink`         | Executable for TreeShrink                                                                                                             |
 | `exe_astral`             | Executable for ASTRAL                                                                                                                 |
