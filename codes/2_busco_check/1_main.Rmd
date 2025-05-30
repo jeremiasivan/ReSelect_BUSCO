@@ -42,7 +42,6 @@ params:
 
   thread_busco: 50
   min_busco_depth: 10
-  max_busco_depth: 40
 
   busco_tree_mode: "control"
   busco_tree_random_ref: FALSE  # only applies for busco_tree_mode == "random"
@@ -108,7 +107,6 @@ f_write_log(fn_log=fn_log, msg=paste0("- file_buscotree: ", params$file_buscotre
 
 f_write_log(fn_log=fn_log, msg=paste0("- type: ", params$type))
 f_write_log(fn_log=fn_log, msg=paste0("- min_busco_depth: ", params$min_busco_depth))
-# f_write_log(fn_log=fn_log, msg=paste0("- max_busco_depth: ", params$max_busco_depth))
 
 f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_mode: ", params$busco_tree_mode))
 f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_random_ref: ", params$busco_tree_random_ref))
