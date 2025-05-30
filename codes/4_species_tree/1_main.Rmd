@@ -1,5 +1,5 @@
 ---
-title: "BUSCO Check for Reference Sequences Bias"
+title: "BUSCO Species Tree with Reference Bias"
 author: "Jeremias Ivan"
 date: "`r format(Sys.time(), '%d %B %Y, %H:%M%p')`"
 
@@ -20,27 +20,23 @@ params:
   # input files
   file_refseq: ""
   file_shortreads: ""
+  file_sptree_metadata: ""
   
   # executables
-  exe_busco: ""
   exe_gffread: ""
   exe_gff2bed: ""
   exe_samtools: ""
-  exe_qualimap: ""
 
   exe_mafft: ""
   exe_iqtree2: ""
   exe_treeshrink: ""
+  exe_astral: ""
 
   # BUSCO analyses
   busco_lineage: ""
-  busco_mode: "genome"
   type: "coordinate"
 
-  thread_busco: 50
   min_busco_depth: 10
-
-  outgroup: !r c("")
 
   # misc
   current_time: ""
@@ -56,10 +52,8 @@ library(tidyverse)
 ```
 
 ```{r, include=FALSE}
-# install.packages("Biostrings")
 # install.packages("data.table")
 # install.packages("log4r")
-# install.packages("phangorn")
 
 # store initial system time
 sys_tic <- Sys.time()
@@ -97,15 +91,13 @@ knitr::opts_knit$set(root.dir = currentdir)
 ```{r}
 f_write_log(fn_log=fn_log, msg=paste0("- file_refseq: ", params$file_refseq))
 f_write_log(fn_log=fn_log, msg=paste0("- file_shortreads: ", params$file_shortreads))
+f_write_log(fn_log=fn_log, msg=paste0("- file_sptree_metadata: ", params$file_sptree_metadata))
 
 f_write_log(fn_log=fn_log, msg=paste0("- type: ", params$type))
 f_write_log(fn_log=fn_log, msg=paste0("- min_busco_depth: ", params$min_busco_depth))
 ```
 
-```{r child = paste0(params$codedir,"/2_busco_check/2_busco_ref.Rmd")}
-```
-
-```{r child = paste0(params$codedir,"/2_busco_check/3_summary.Rmd")}
+```{r child = paste0(params$codedir,"/4_species_tree/2_run.Rmd")}
 ```
 
 ```{r, include=FALSE}
