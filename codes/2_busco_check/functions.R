@@ -239,6 +239,17 @@ f_fasta2msa <- function(fn_input, header, fn_out) {
     close(con)
 }
 
+# running HybPiper2
+f_hybpiper2_assemble_aa <- function(fn_input, fn_target_gene, dir_output, prefix, thread, exe_hybpiper2) {
+    cmd_hybpiper2 <- paste(exe_hybpiper2, "assemble  --diamond",
+                           "--readfiles", fn_input,
+                           "--targetfile_aa", fn_target_gene,
+                           "--prefix", prefix,
+                           "--hybpiper_output", dir_output,
+                           "--cpu", thread)
+    system(cmd_hybpiper2)
+}
+
 # function: run MAFFT
 f_mafft <- function(fn_input, fn_output, params_mafft, exe_mafft) {
     cmd_mafft <- paste(exe_mafft, params_mafft,
@@ -425,6 +436,10 @@ f_calculate_treedist <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
     # get partitions from gene tree
     gene_part <- lapply(f_part_num2chr(ape::prop.part(gene_tree)), sort)
     refs_part <- lapply(f_part_num2chr(ape::prop.part(refs_tree)), sort)
+    refs_part_complement <- lapply(refs_part, function(x){
+        ls_complement <- refs_tree$tip.label[!refs_tree$tip.label %in% x]
+        ls_complement
+    })
 
     # iterate over branching events with high bootstrap value
     for (part in gene_part) {
@@ -442,7 +457,7 @@ f_calculate_treedist <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
 
         # check if partition is present in the refs_tree
         is_present <- FALSE
-        for (part_ref in refs_part) {
+        for (part_ref in c(refs_part, refs_part_complement)) {
             if (setequal(part, part_ref)) {
                 is_present <- TRUE
             }

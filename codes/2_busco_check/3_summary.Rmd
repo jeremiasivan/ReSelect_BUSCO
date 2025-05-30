@@ -11,8 +11,15 @@ f_write_log(fn_log=fn_log,
 # load ggplot2 library
 library(ggplot2)
 
-# output directories
+# output directory
 dir_check_summary <- paste0(dir_busco, "summary/")
+if (!dir.exists(dir_check_summary)) {
+    dir.create(dir_check_summary, recursive=T)
+}
+```
+
+```{r}
+# output directories
 dir_check_summary_correlation <- paste0(dir_check_summary, "correlation_figs/")
 for (read in ls_shortreads) {
     dir_check_summary_correlation_read <- paste0(dir_check_summary_correlation, read)
