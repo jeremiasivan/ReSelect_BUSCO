@@ -212,9 +212,9 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
         }
 
         # run linear model with outgroup
-        lm <- lm(read_dist~ref_dist, data=temp_df_dist_filtered)
+        lm <- lm(read_dist~ref_dist, data=temp_df_dist)
         lm_statistics <- f_extract_summary_lm(lm)
-        sp_statistics <- f_spearman_test(temp_df_dist_filtered$read_dist, temp_df_dist_filtered$ref_dist)
+        sp_statistics <- f_spearman_test(temp_df_dist$read_dist, temp_df_dist$ref_dist)
 
         # visualisation
         fn_busco_tiff <- paste0(dir_temp_fig, busco, ".tiff")
@@ -300,7 +300,7 @@ df_output_trimal <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
                                        lm_r2_noout=numeric(), lm_slope_noout=numeric(), lm_p_noout=numeric(), spearman_rho_noout=numeric(), spearman_p_noout=numeric())
 
     # input treefiles
-    fn_tree <- paste0(dir_busco_tree, busco, "/trimal/", busco, "_aligned.fa.treefile")
+    fn_tree <- paste0(dir_busco_tree, busco, "/trimal/", busco, "_aligned_trimal.fa.treefile")
 
     # read trees
     tre_original <- ape::read.tree(fn_tree)
@@ -359,9 +359,9 @@ df_output_trimal <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
         }
 
         # run linear model with outgroup
-        lm <- lm(read_dist~ref_dist, data=temp_df_dist_filtered)
+        lm <- lm(read_dist~ref_dist, data=temp_df_dist)
         lm_statistics <- f_extract_summary_lm(lm)
-        sp_statistics <- f_spearman_test(temp_df_dist_filtered$read_dist, temp_df_dist_filtered$ref_dist)
+        sp_statistics <- f_spearman_test(temp_df_dist$read_dist, temp_df_dist$ref_dist)
 
         # subset data.frame
         temp_df_dist_filtered_noout <- temp_df_dist[!temp_df_dist$grouping %in% params$outgroup,]

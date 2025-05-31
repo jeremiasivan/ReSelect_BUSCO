@@ -542,7 +542,7 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     }
     
     # output MSA file
-    fn_out_aligned <- paste0(dir_output, busco, "_aligned.fa")
+    fn_out_aligned <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa")
     fn_out_trimal <- paste0(dir_output, busco, "_aligned_trimal.fa")
     if (file.exists(fn_out_trimal) && !params$redo) {
         # check if file is not empty
@@ -555,14 +555,14 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     f_trimal(fn_out_aligned, fn_out_trimal, "-automated1", params$exe_trimal)
 
     # run IQ-TREE2
-    fn_treefile <- paste0(dir_output, busco, "_aligned.fa.treefile")
+    fn_treefile <- paste0(dir_output, busco, "_aligned_trimal.fa.treefile")
     if (!file.exists(fn_treefile) || params$redo) {
         # run IQ-Tree2
         f_iqtree2(fn_out_trimal, params$exe_iqtree2)
     }
 
     # change the ID into species name
-    fn_treefile_species <- paste0(dir_output, busco, "_aligned.fa.treefile.species")
+    fn_treefile_species <- paste0(dir_output, busco, "_aligned_trimal.fa.treefile.species")
     if (!file.exists(fn_treefile_species) || params$redo) {
         f_tips_to_species(fn_treefile, fn_treefile_species, ls_species_name)
     }
