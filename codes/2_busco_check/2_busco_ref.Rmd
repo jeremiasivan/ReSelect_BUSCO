@@ -15,10 +15,12 @@ df_refseq_dir <- data.table::fread(fn_readmap_metadata)
 df_readmap_coverage <- data.table::fread(fn_readmap_coverage)
 
 df_refs <- data.table::fread(params$file_refseq)
-ls_refseq <- df_refs$id
+ls_refseq <- df_refs$species
+ls_refseq <- gsub("\\.", "_", ls_refseq)
 
 df_reads <- data.table::fread(params$file_shortreads)
-ls_shortreads <- df_reads$id[df_reads$is_check]
+ls_shortreads <- df_reads$species[df_reads$is_check]
+ls_shortreads <- gsub("\\.", "_", ls_shortreads)
 
 # list of prefix
 ls_prefix <- as.vector(outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--")))
@@ -27,10 +29,10 @@ ls_prefix <- as.vector(outer(ls_shortreads, ls_refseq, FUN = function(x, y) past
 dir_busco <- ""
 
 # check the BUSCO extraction method
-if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
+if (params$type == "coordinate") {
     dir_busco <- paste0(currentdir, "/busco_check/busco_coordinate/")
     f_write_log(fn_log=fn_log, msg="Running coordinate-based method.")
-} else if (params$type == "pipeline") {
+} else if (params$type == "pipeline" || params$type == "" || is.null(params$type)) {
     dir_busco <- paste0(currentdir, "/busco_check/busco_pipeline/")
     f_write_log(fn_log=fn_log, msg="Running pipeline-based method.")
 } else {
@@ -50,21 +52,6 @@ lapply(list(dir_busco_lineage,dir_busco_ref,dir_busco_read,dir_busco_tree), func
 # output files
 fn_refs_busco <- paste0(dir_busco_ref, "metadata.tsv")
 fn_mapped_reads_busco <- paste0(dir_busco_read, "metadata.tsv")
-```
-
-```{r busco-check-species-map, include=FALSE}
-# create a map for ID and species name
-ls_species_name <- c()
-
-# iterate over reference sequences
-for (ref in 1:nrow(df_refs)) {
-    ls_species_name[df_refs$id[ref]] <- df_refs$species[ref]
-}
-
-# iterate over short reads
-for (read in 1:nrow(df_reads)) {
-    ls_species_name[df_reads$id[read]] <- df_reads$species[read]
-}
 ```
 
 ## Download BUSCO lineage dataset
@@ -220,7 +207,7 @@ nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # check the BUSCO extraction method
-if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
+if (params$type == "coordinate") {
     # iterate over reference sequences
     for (ref in ls_refseq) {
         # directory for BUSCO alignments
@@ -313,7 +300,7 @@ if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
         log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", ref, "."))
     }
 
-} else if (params$type == "pipeline") {
+} else if (params$type == "pipeline" || params$type == "" || is.null(params$type)) {
     df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), note=character())
 
     # extract total number of BUSCO
@@ -372,9 +359,9 @@ if (!is.null(df_mapped_reads_busco) && !params$redo) {
 
 } else {
     # run BUSCO extraction for mapped reads
-    if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
+    if (params$type == "coordinate") {
         knitr::knit_child(paste0(params$codedir,"/2_busco_check/2a_coordinate.Rmd"))
-    } else if (params$type == "pipeline") {
+    } else if (params$type == "pipeline" || params$type == "" || is.null(params$type)) {
         knitr::knit_child(paste0(params$codedir,"/2_busco_check/2b_pipeline.Rmd"))
     }
 }
@@ -480,12 +467,6 @@ foreach (busco = shared_busco) %dopar% {
         # run IQ-Tree2
         f_iqtree2(fn_fasta, params$exe_iqtree2)
     }
-
-    # change the ID into species name
-    fn_treefile_species <- paste0(dir_output, busco, "_aligned.fa.treefile.species")
-    if (!file.exists(fn_treefile_species) || params$redo) {
-        f_tips_to_species(fn_treefile, fn_treefile_species, ls_species_name)
-    }
 }
 
 stopCluster(nwcl)
@@ -515,12 +496,6 @@ foreach (busco = shared_busco) %dopar% {
     if (!file.exists(fn_treeshrink_tree) || params$redo) {
         # run TreeShrink
         f_treeshrink(fn_treefile, prefix, dir_output, params$exe_treeshrink)
-    }
-
-    # change the ID into species name
-    fn_treefile_species <- paste0(dir_output, prefix, ".treefile.species")
-    if (!file.exists(fn_treefile_species) || params$redo) {
-        f_tips_to_species(fn_treeshrink_tree, fn_treefile_species, ls_species_name)
     }
 }
 
@@ -559,12 +534,6 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     if (!file.exists(fn_treefile) || params$redo) {
         # run IQ-Tree2
         f_iqtree2(fn_out_trimal, params$exe_iqtree2)
-    }
-
-    # change the ID into species name
-    fn_treefile_species <- paste0(dir_output, busco, "_aligned_trimal.fa.treefile.species")
-    if (!file.exists(fn_treefile_species) || params$redo) {
-        f_tips_to_species(fn_treefile, fn_treefile_species, ls_species_name)
     }
 }
 

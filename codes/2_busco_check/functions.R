@@ -273,20 +273,6 @@ f_treeshrink <- function(fn_input, prefix, dir_output, exe_treeshrink) {
     system(cmd_treeshrink)
 }
 
-# function: change tips from accesion ID to species name
-f_tips_to_species <- function(fn_treefile, fn_treefile_species, ls_species_name) {
-    # read input file
-    tre <- readLines(fn_treefile)
-
-    # iterate over tips
-    for (id in names(ls_species_name)) {
-        tre <- gsub(id, ls_species_name[id], tre)
-    }
-
-    # save the file
-    writeLines(tre, con=fn_treefile_species)
-}
-
 # function: change tips from species name to accesion ID for reference sequences
 f_ref_tips_to_id <- function(fn_treefile, df_refs) {
     # read input file

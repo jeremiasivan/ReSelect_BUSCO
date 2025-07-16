@@ -20,8 +20,6 @@ params:
   # input files
   file_refseq: ""
   file_shortreads: ""
-  file_genome_treefile: ""
-  file_buscotree: ""
   
   # executables
   exe_busco: ""
@@ -44,9 +42,10 @@ params:
   thread_busco: 50
   min_busco_depth: 10
 
-  busco_tree_mode: "control"
-  busco_tree_random_ref: FALSE  # only applies for busco_tree_mode == "random"
   outgroup: !r c("")
+
+  # calculate pairwise distance
+  focal_species: ""
 
   # misc
   current_time: ""
@@ -117,9 +116,6 @@ f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_random_ref: ", params$busco_
 ```
 
 ```{r child = paste0(params$codedir,"/2_busco_check/3_summary.Rmd")}
-```
-
-```{r child = paste0(params$codedir,"/2_busco_check/4_busco_tree.Rmd")}
 ```
 
 ```{r, include=FALSE}

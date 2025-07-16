@@ -166,9 +166,10 @@ for (prefix in ls_prefix) {
     mapped_reads <- as.numeric(strsplit(mapped_reads, split="%")[[1]][1])
 
     # update the data.table
-    df_coverage <- rbind(df_coverage, data.table::data.table(read_id=readref[1], ref_id=readref[2],
-                                                             read_sp=df_reads$species[df_reads$id==readref[1]],
-                                                             ref_sp=df_refs$species[df_refs$id==readref[2]],
+    df_coverage <- rbind(df_coverage, data.table::data.table(read_id=df_refs$id[df_refs$species==readref[1]],
+                                                             ref_id=df_refs$id[df_refs$species==readref[2]],
+                                                             read_sp=readref[1],
+                                                             ref_sp=readref[2],
                                                              mean_coverage=mean_coverage,
                                                              mapped_reads=mapped_reads))
 }
