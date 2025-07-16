@@ -31,7 +31,8 @@ f_write_log(fn_log=fn_log,
             msg=c("", "------------ Reference Sequences -----------"))
 
 # initiate variable to store list of reference sequences
-ls_refseq <- df_refs$id
+ls_refseq <- df_refs$species
+ls_refseq <- gsub("\\.", "_", ls_refseq)
 is_refseq_available <- FALSE
 
 ls_refseq_available <- NULL
@@ -48,7 +49,8 @@ if (length(ls_refseq) == 0 || is.null(ls_refseq)) {
     ls_refseq_download <- ls_refseq
   } else {
     for (ref in ls_refseq) {
-      dir_output_fna <- paste0(dir_refseq, "/", ref, "/ncbi_dataset/data/", ref, "/")
+      ref_id <- df_refs$id[df_refs$species==ref]
+      dir_output_fna <- paste0(dir_refseq, "/", ref, "/ncbi_dataset/data/", ref_id, "/")
 
       # check if file exists
       if (length(list.files(dir_output_fna, pattern="*.fna$", recursive=F)) > 0) {
@@ -98,7 +100,8 @@ foreach (ref = ls_refseq_download) %dopar% {
     unlink(file_output_zip)
 
     # download the reference sequence
-    f_refseq_download(params$exe_datasets, ref, file_output_zip)
+    ref_id <- df_refs$id[df_refs$species==ref]
+    f_refseq_download(params$exe_datasets, ref_id, file_output_zip)
 
     # check if folder exists
     dir_output <- paste0(dir_refseq, ref, "/")
@@ -121,7 +124,8 @@ f_write_log(fn_log=fn_log,
             msg=c("", "---------------- Short Reads ---------------"))
 
 # initiate variable to store list of reference sequences
-ls_shortreads <- df_reads$id[df_reads$is_check]
+ls_shortreads <- df_reads$species[df_reads$is_check]
+ls_shortreads <- gsub("\\.", "_", ls_shortreads)
 is_shortreads_available <- FALSE
 
 ls_reads_available <- NULL
@@ -182,7 +186,9 @@ doSNOW::registerDoSNOW(nwcl)
 # iterate through short reads
 foreach (read = ls_reads_download) %dopar% {
     # download the short reads
-    f_shortreads_download(params$bin_sratoolkit, read, dir_shortreads)
+    reads_id <- df_reads$id[df_reads$species==read]
+    f_shortreads_download(params$bin_sratoolkit, reads_id, dir_shortreads)
+    
     log4r::info(fn_logger, paste0("File downloaded: FASTQ alignment for ", read, "."))
 }
 

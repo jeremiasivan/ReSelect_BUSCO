@@ -38,7 +38,8 @@ if (params$redo) {
 } else {
     for (read in ls_shortreads) {
         # check if output file exists
-        file_fastq <- paste0(dir_shortreads_filtered, read, ".pair1.truncated")
+        reads_id <- df_reads$id[df_reads$species==read]
+        file_fastq <- paste0(dir_shortreads_filtered, reads_id, ".pair1.truncated")
         if (file.exists(file_fastq)) {
             ls_shortread_done <- c(ls_shortread_done, paste("-", read))
             next
@@ -86,8 +87,10 @@ foreach (read = ls_shortread_qc) %dopar% {
 
     # extract FASTQ files
     dir_reads <- paste0(dir_shortreads, read, "/fastq/")
-    fn_fastq_one <- paste0(dir_reads, read, "_1.fastq")
-    fn_fastq_two <- paste0(dir_reads, read, "_2.fastq")
+    
+    reads_id <- df_reads$id[df_reads$species==read]
+    fn_fastq_one <- paste0(dir_reads, reads_id, "_1.fastq")
+    fn_fastq_two <- paste0(dir_reads, reads_id, "_2.fastq")
     
     # check the forward FASTQ file
     if (!file.exists(fn_fastq_one)) {
@@ -116,10 +119,11 @@ df_refseq_dir <- data.frame(id=character(), dir=character())
 # iterate over reference sequence
 for (ref in ls_refseq) {
     # extract reference sequence
-    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref, "/")
-    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
+    ref_id <- df_refs$id[df_refs$species==ref]
+    dir_ref <- paste0(dir_refseq, ref, "/ncbi_dataset/data/", ref_id, "/")
 
     # check if there are multiple reference sequences
+    file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
     if (length(file_ref) > 1) {
         file_ref <- file_ref[1]
         log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
@@ -206,17 +210,20 @@ foreach (prefix = ls_readmap_run) %dopar% {
     read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
+    ref_id <- df_refs$id[df_refs$species==ref]
+    reads_id <- df_reads$id[df_reads$species==read]
+
     # extract reference file location
     file_ref <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
     # extract FASTQ file
-    file_fastq_one <- paste0(dir_shortreads_filtered, read, ".pair1.truncated")
+    file_fastq_one <- paste0(dir_shortreads_filtered, reads_id, ".pair1.truncated")
     if (!file.exists(file_fastq_one)) {
         log4r::warn(fn_logger, paste0("File not found: filtered FASTQ file for ", read, ". Skipped."))
         return(NULL)
     }
 
-    file_fastq_two <- paste0(dir_shortreads_filtered, read, ".pair2.truncated")
+    file_fastq_two <- paste0(dir_shortreads_filtered, reads_id, ".pair2.truncated")
     if (!file.exists(file_fastq_two)) {
         file_fastq_two <- NULL
     }
