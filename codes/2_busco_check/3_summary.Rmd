@@ -1,5 +1,5 @@
 ---
-title: "Summarise BUSCO Trees"
+title: "Summarise BUSCO Alignments and Trees"
 ---
 
 ```{r check-summary-setup, include=FALSE}

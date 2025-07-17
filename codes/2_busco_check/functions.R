@@ -273,19 +273,6 @@ f_treeshrink <- function(fn_input, prefix, dir_output, exe_treeshrink) {
     system(cmd_treeshrink)
 }
 
-# function: change tips from species name to accesion ID for reference sequences
-f_ref_tips_to_id <- function(fn_treefile, df_refs) {
-    # read input file
-    tre <- readLines(fn_treefile)
-
-    # iterate over tips
-    for (i in 1:nrow(df_refs)) {
-        tre <- gsub(df_refs$species[i], df_refs$id[i], tre)
-    }
-
-    return(tre)
-}
-
 # function: extract R2 and p-value
 f_extract_summary_lm <- function(lm_result) {
     # extract R2
@@ -308,7 +295,7 @@ f_extract_summary_lm <- function(lm_result) {
     return(list(rsquared=rsquared, pvalue=pvalue, slope=slope))
 }
 
-# function: run Spearman correlatio test
+# function: run Spearman correlation test
 f_spearman_test <- function(x, y) {
     corr <- cor.test(x, y, method='spearman')
 
@@ -469,6 +456,11 @@ f_calculate_mean_bs <- function(fn_tree) {
     mean_bs <- mean(as.numeric(tree$node.label[tree$node.label!=""]))
 
     return(mean_bs)
+}
+
+# function: extract mapped reads from a tree
+f_extract_trees <- function(ls_busco, read, fn_output) {
+    
 }
 
 # function: run ASTRAL-III 

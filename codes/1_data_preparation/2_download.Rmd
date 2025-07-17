@@ -22,7 +22,10 @@ if (!dir.exists(dir_shortreads)) {
 
 # open input files
 df_refs <- data.table::fread(params$file_refseq)
+df_refs$species <- gsub("\\.","_",df_refs$species)
+
 df_reads <- data.table::fread(params$file_shortreads)
+df_reads$species <- gsub("\\.","_",df_reads$species)
 ```
 
 ## Download reference genome FASTA alignments from NCBI
@@ -32,7 +35,6 @@ f_write_log(fn_log=fn_log,
 
 # initiate variable to store list of reference sequences
 ls_refseq <- df_refs$species
-ls_refseq <- gsub("\\.", "_", ls_refseq)
 is_refseq_available <- FALSE
 
 ls_refseq_available <- NULL
@@ -125,7 +127,6 @@ f_write_log(fn_log=fn_log,
 
 # initiate variable to store list of reference sequences
 ls_shortreads <- df_reads$species[df_reads$is_check]
-ls_shortreads <- gsub("\\.", "_", ls_shortreads)
 is_shortreads_available <- FALSE
 
 ls_reads_available <- NULL
