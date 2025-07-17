@@ -489,20 +489,42 @@ f_astral <- function(fn_input, fn_output, fn_log, exe_astral) {
     system(cmd_astral)
 }
 
-# calculating sCF and gCF
-f_calculate_cf <- function(fn_all_trees, fn_sp_tree, dir_fasta, thread, exe_iqtree2) {
+# function: calculate sCF and gCF
+f_calculate_cf <- function(fn_all_trees, fn_sp_tree, dir_fasta, dir_output, thread, exe_iqtree2) {
     # calculate gCF
     cmd_gcf <- paste(exe_iqtree2,
                      "-t", fn_sp_tree,
                      "--gcf", fn_all_trees,
-                     "-T", thread)
+                     "-T", thread,
+                     "--prefix", paste0(dir_output, "/gcf"))
     system(cmd_gcf)
 
     # calculate sCF
     cmd_scf <- paste(exe_iqtree2,
-                     "-te", fn_sp_tree,
+                     "-te", paste0(dir_output, "/gcf.cf.tree"),
                      "-p", dir_fasta,
                      "--scfl 100",
-                     "-T", thread)
+                     "-T", thread,
+                     "--prefix", paste0(dir_output, "/scf"))
     system(cmd_scf)
+}
+
+# function: extract support values
+f_extract_branch_supports <- function(fn_input, ls_header) {
+    # open trees
+    tre <- ape::read.tree(fn_input)
+    tre_mrca <- ape::getMRCA(tre_astral, ls_header)
+    tre_supp <- tre$node.label[tre_mrca - length(tre$tip.label)]
+    tre_supp <- gsub("'\\[", "", tre_supp)
+    tre_supp <- gsub("\\]'", "", tre_supp)
+    tre_supp <- strsplit(tre_supp, split=";")[[1]]
+
+    # extract support values
+    supp_pairs <- strsplit(tre_supp, "=")
+    supp_pairs <- setNames(
+        lapply(supp_pairs, function(x) as.numeric(x[2])),
+        sapply(supp_pairs, function(x) x[1])
+    )
+
+    return(supp_pairs)
 }

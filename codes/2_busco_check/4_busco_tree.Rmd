@@ -22,7 +22,7 @@ fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
 fn_cf_summary <- paste0(fn_prefix, ".cf.sumtable")
 ```
 
-```{r}
+```{r check-btree-run}
 # open the input data.frame
 df_cor_summary <- data.table::fread(fn_cor_summary)
 
@@ -37,27 +37,27 @@ for (read is ls_shortreads) {
     # iterate over sets of BUSCO
     for (condition in c("all", "bias", "nonbias")) {
         # create output directories
-        dir_output_read_condition <- paste0(dir_output_read, condition, "/")
-        dir_output_read_condition_fasta <- paste0(dir_output_read_condition, "alignment/")
-        dir_output_read_condition_trees <- paste0(dir_output_read_condition, "trees/")
-        if (!all(dir.exists(dir_output_read_condition_fasta, dir_output_read_condition_trees))) {
-            dir.create(dir_output_read_condition_fasta, recursive=T)
-            dir.create(dir_output_read_condition_trees, recursive=T)
+        dir_output_condition <- paste0(dir_output_read, condition, "/")
+        dir_output_condition_fasta <- paste0(dir_output_condition, "alignment/")
+        dir_output_condition_trees <- paste0(dir_output_condition, "trees/")
+        if (!all(dir.exists(dir_output_condition_fasta, dir_output_condition_trees))) {
+            dir.create(dir_output_condition_fasta, recursive=T)
+            dir.create(dir_output_condition_trees, recursive=T)
         }
 
         # list BUSCO
-        ls_busco_condition <- df_cor_summary$busco
+        ls_busco_condition <- df_cor_subset$busco
         if (condition == "bias") {
-            ls_busco_condition <- df_cor_summary$busco[df_cor_summary$lm_p<0.05 | df_cor_summary$spearman_p<0.05,]
+            ls_busco_condition <- df_cor_subset$busco[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05,]
         } else if (condition == "nonbias") {
-            ls_busco_condition <- df_cor_summary$busco[df_cor_summary$lm_p>=0.05 & df_cor_summary$spearman_p>=0.05,]
+            ls_busco_condition <- df_cor_subset$busco[df_cor_subset$lm_p>=0.05 & df_cor_subset$spearman_p>=0.05,]
         }
 
         # output files
-        fn_busco_condition_prefix <- paste0(dir_output_read_condition_trees, "all_busco")
+        fn_busco_condition_prefix <- paste0(dir_output_condition_trees, "all_busco")
         fn_busco_condition_treefile <- paste0(fn_busco_condition_prefix, ".treefile")
-        fn_busco_condition_astral_treefile <- paste0(dir_output_read_condition_trees, "astral.treefile")
-        fn_busco_condition_astral_log <- paste0(dir_output_read_condition_trees, "astral.log")
+        fn_busco_condition_astral_treefile <- paste0(dir_output_condition_trees, "astral.treefile")
+        fn_busco_condition_astral_log <- paste0(dir_output_condition_trees, "astral.log")
 
         # create doSNOW cluster
         nwcl <- makeCluster(params$thread)
@@ -67,7 +67,7 @@ for (read is ls_shortreads) {
         foreach(busco = ls_busco_condition) %dopar% {
             # extract alignment
             fn_input <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa")
-            fn_output <- paste0(dir_output_read_condition_fasta, busco, ".fa")
+            fn_output <- paste0(dir_output_condition_fasta, busco, ".fa")
 
             # extract headers
             ls_prefix_subset <- ls_prefix[grepl(paste0("^",read), ls_prefix)]
@@ -79,20 +79,20 @@ for (read is ls_shortreads) {
         stopCluster(nwcl)
 
         # run IQ-TREE2
-        f_window_tree(dir_output_read_condition_fasta, fn_busco_condition_prefix, params$thread, params$exe_iqtree2)
+        f_window_tree(dir_output_condition_fasta, fn_busco_condition_prefix, params$thread, params$exe_iqtree2)
 
         # run ASTRAL
         f_astral(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, fn_busco_condition_astral_log, params$exe_astral)
 
         # calculate sCF and gCF
-        f_calculate_cf(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, dir_output_condition_fasta, params$thread, params$exe_iqtree2)
+        f_calculate_cf(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, dir_output_condition_fasta, dir_output_condition_trees, params$thread, params$exe_iqtree2)
 
         # iterate over reference sequences
-        dir_output_read_condition_ref <- paste0(dir_output_read_condition, "per_reference/")
+        dir_output_condition_ref <- paste0(dir_output_condition, "per_reference/")
         for (ref in ls_refseq) {
-            dir_output_perref <- paste0(dir_output_read_condition_ref, ref, "/")
-            dir_output_perref_fasta <- paste0(dir_output_read_condition, "alignment/")
-            dir_output_perref_trees <- paste0(dir_output_read_condition, "trees/")
+            dir_output_perref <- paste0(dir_output_condition_ref, ref, "/")
+            dir_output_perref_fasta <- paste0(dir_output_perref, "alignment/")
+            dir_output_perref_trees <- paste0(dir_output_perref, "trees/")
             if (!dir.exists(dir_output_perref)) {
                 dir.create(dir_output_perref, recursive=T)
             }
@@ -111,7 +111,7 @@ for (read is ls_shortreads) {
             foreach(busco = ls_busco_condition) %dopar% {
                 # extract alignment
                 fn_input <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa")
-                fn_output <- paste0(dir_output_read_condition_fasta, busco, ".fa")
+                fn_output <- paste0(dir_output_perref_fasta, busco, ".fa")
 
                 # extract headers
                 ls_header <- c(ls_refseq, paste0(read,"--",ref))
@@ -128,8 +128,67 @@ for (read is ls_shortreads) {
             f_astral(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, fn_busco_perref_astral_log, params$exe_astral)
 
             # calculate sCF and gCF
-            f_calculate_cf(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, dir_output_perref_fasta, params$thread, params$exe_iqtree2)
+            f_calculate_cf(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, dir_output_perref_fasta, dir_output_perref_trees, params$thread, params$exe_iqtree2)
         }
     }    
 }
+```
+
+```{r check-btree-summary, eval=FALSE}
+# output data.frame
+df_output <- data.table::data.table()
+
+# iterate over short-reads
+for (read is ls_shortreads) {
+    # output directory
+    dir_output_read <- paste0(dir_buscotree, read, "/")
+
+    # subset the data.frame
+    df_cor_subset <- df_cor_summary[df_cor_summary$read==read,]
+
+    # iterate over sets of BUSCO
+    for (condition in c("all", "bias", "nonbias")) {
+        # output directories
+        dir_output_condition <- paste0(dir_output_read, condition, "/")
+        dir_output_condition_trees <- paste0(dir_output_condition, "trees/")
+
+        # list BUSCO
+        ls_busco_condition <- df_cor_subset$busco
+        if (condition == "bias") {
+            ls_busco_condition <- df_cor_subset$busco[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05,]
+        } else if (condition == "nonbias") {
+            ls_busco_condition <- df_cor_subset$busco[df_cor_subset$lm_p>=0.05 & df_cor_subset$spearman_p>=0.05,]
+        }
+
+        # input files
+        fn_scf_treefile <- paste0(dir_output_condition_trees, "scf.cf.tree")
+
+        # extract headers
+        ls_prefix_subset <- ls_prefix[grepl(paste0("^",read), ls_prefix)]
+
+        # update data.frame
+        ls_output <- c(list(reads=read, refs="all", condition=condition, n_busco=length(ls_busco_condition)),
+                       f_extract_branch_supports(fn_scf_treefile, ls_prefix_subset))
+        df_output <- rbind(df_output, as.data.frame(ls_output))
+
+        # iterate over references
+        dir_output_condition_ref <- paste0(dir_output_condition, "per_reference/")
+        for (ref in ls_refseq) {
+            # output directories
+            dir_output_perref <- paste0(dir_output_condition_ref, ref, "/")
+            dir_output_perref_trees <- paste0(dir_output_perref, "trees/")
+
+            # input files
+            fn_scf_treefile <- paste0(dir_output_perref_trees, "scf.cf.tree")
+
+            # update data.frame
+            ls_output <- c(list(reads=read, refs=ref, condition=condition, n_busco=length(ls_busco_condition)),
+                           f_extract_branch_supports(fn_scf_treefile, paste0(read,"--",ref)))
+            df_output <- rbind(df_output, as.data.frame(ls_output))
+        }   
+    }
+}
+
+# save data.table
+data.table::fwrite(df_output, file=fn_cf_summary, sep="\t", quote=F)
 ```
