@@ -118,6 +118,9 @@ f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_random_ref: ", params$busco_
 ```{r child = paste0(params$codedir,"/2_busco_check/3_summary.Rmd")}
 ```
 
+```{r child = paste0(params$codedir,"/2_busco_check/4_busco_tree.Rmd")}
+```
+
 ```{r, include=FALSE}
 # store final system time
 sys_toc <- Sys.time()

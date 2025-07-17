@@ -458,9 +458,26 @@ f_calculate_mean_bs <- function(fn_tree) {
     return(mean_bs)
 }
 
-# function: extract mapped reads from a tree
-f_extract_trees <- function(ls_busco, read, fn_output) {
-    
+# function: extract mapped reads from an alignment
+f_extract_fasta <- function(fn_input, ls_header, fn_output) {
+    # open alignment
+    seq <- Biostrings::readAAStringSet(fn_input)
+
+    # extract reference sequences and mapped reads
+    seq_subset <- seq[names(seq)%in%ls_header]
+
+    # save the file
+    Biostrings::writeXStringSet(seq_subset, filepath=fn_output)
+}
+
+# function: generate window trees
+f_window_tree <- function(dir_aln, prefix, thread, dir_iqtree2) {
+    iqtree_cmd <- paste(dir_iqtree2,
+                        "-S", dir_aln,
+                        "-pre", prefix,
+                        "-T", thread,
+                        "--quiet -redo")
+    system(iqtree_cmd)
 }
 
 # function: run ASTRAL-III 
@@ -470,4 +487,22 @@ f_astral <- function(fn_input, fn_output, fn_log, exe_astral) {
                     "-o", fn_output,
                     "-t 2 2>", fn_log)
     system(cmd_astral)
+}
+
+# calculating sCF and gCF
+f_calculate_cf <- function(fn_all_trees, fn_sp_tree, dir_fasta, thread, exe_iqtree2) {
+    # calculate gCF
+    cmd_gcf <- paste(exe_iqtree2,
+                     "-t", fn_sp_tree,
+                     "--gcf", fn_all_trees,
+                     "-T", thread)
+    system(cmd_gcf)
+
+    # calculate sCF
+    cmd_scf <- paste(exe_iqtree2,
+                     "-te", fn_sp_tree,
+                     "-p", dir_fasta,
+                     "--scfl 100",
+                     "-T", thread)
+    system(cmd_scf)
 }
