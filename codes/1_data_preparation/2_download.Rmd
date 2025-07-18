@@ -132,7 +132,7 @@ if (length(ls_shortreads) == 0 || is.null(ls_shortreads)) {
     ls_reads_download <- ls_shortreads
   } else {
     for (read in ls_shortreads) {
-      dir_output_fastq <- paste0(dir_shortreads, read, "/fastq/")
+      dir_output_fastq <- paste0(dir_shortreads, read, "/")
 
       # check if file exists
       if (length(list.files(dir_output_fastq, pattern="*.fastq$", recursive=F)) > 0) {
