@@ -83,18 +83,8 @@ cat("Reference sequences to be downloaded: ", length(ls_refseq_download))
 ```
 
 ```{r download-refseq, include=is_refseq_available, eval=is_refseq_available}
-# update number of thread
-nthread <- params$thread
-if (nthread > length(ls_refseq_download)) {
-  nthread <- length(ls_refseq_download)
-}
-
-# create doSNOW cluster
-nwcl <- makeCluster(nthread)
-doSNOW::registerDoSNOW(nwcl)
-
 # iterate through reference sequences
-foreach (ref = ls_refseq_download) %dopar% {
+for (ref in ls_refseq_download) {
     # output file
     file_output_zip <- paste0(dir_refseq, ref, ".zip")
     
@@ -118,8 +108,6 @@ foreach (ref = ls_refseq_download) %dopar% {
 
     log4r::info(fn_logger, paste0("File downloaded: genome alignment for ", ref, "."))
 }
-
-stopCluster(nwcl)
 ```
 ## Download short reads FASTQ alignments from NCBI
 ```{r, include=FALSE}
