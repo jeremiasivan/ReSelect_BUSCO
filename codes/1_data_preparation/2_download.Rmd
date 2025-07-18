@@ -104,6 +104,7 @@ foreach (ref = ls_refseq_download) %dopar% {
     # download the reference sequence
     ref_id <- df_refs$id[df_refs$species==ref]
     f_refseq_download(params$exe_datasets, ref_id, file_output_zip)
+    log4r::info(fn_logger, ref_id)
 
     # check if folder exists
     dir_output <- paste0(dir_refseq, ref, "/")
@@ -188,7 +189,7 @@ doSNOW::registerDoSNOW(nwcl)
 foreach (read = ls_reads_download) %dopar% {
     # download the short reads
     reads_id <- df_reads$id[df_reads$species==read]
-    f_shortreads_download(params$bin_sratoolkit, reads_id, dir_shortreads)
+    f_shortreads_download(params$bin_sratoolkit, reads_id, read, dir_shortreads)
     
     log4r::info(fn_logger, paste0("File downloaded: FASTQ alignment for ", read, "."))
 }
