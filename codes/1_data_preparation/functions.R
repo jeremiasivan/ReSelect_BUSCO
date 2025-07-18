@@ -21,18 +21,16 @@ f_shortreads_download <- function(dir_sratoolkit, accession, read, dir_output) {
     cmd_download <- paste(exe_prefetch, "--output-directory", dir_output, accession)
     system(cmd_download)
 
-    # output SRA file
-    file_sra <- paste0(dir_output,"/",read,"/",accession,".sra")
-    
-    # create fastq folder
-    dir_fastq <- paste0(dir_output,"/",read,"/fastq/")
-    if (!dir.exists(dir_fastq)) {
-        dir.create(dir_fastq, recursive=T)
-    }
+    # copy SRA file
+    dir_output_sra_init <- paste0(dir_output, "/", accession, "/")
+    dir_output_sra <- paste0(dir_output, "/", read, "/")
+    file_sra <- paste0(dir_output_sra, accession, ".sra")
+
+    system(paste("mv", dir_output_sra_init, dir_output_sra))
 
     # download fastq files
     exe_fastqdump <- paste0(dir_sratoolkit,"/fastq-dump")
-    cmd_fastq <- paste(exe_fastqdump, "--outdir", dir_fastq, "--split-files", file_sra)
+    cmd_fastq <- paste(exe_fastqdump, "--outdir", dir_output_sra, "--split-files", file_sra)
     system(cmd_fastq)
 }
 

@@ -86,7 +86,7 @@ foreach (read = ls_shortread_qc) %dopar% {
     prefix <- paste0(dir_shortreads_filtered, read)
 
     # extract FASTQ files
-    dir_reads <- paste0(dir_shortreads, read, "/fastq/")
+    dir_reads <- paste0(dir_shortreads, read, "/")
     
     reads_id <- df_reads$id[df_reads$species==read]
     fn_fastq_one <- paste0(dir_reads, reads_id, "_1.fastq")
