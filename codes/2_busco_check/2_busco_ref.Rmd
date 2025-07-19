@@ -30,8 +30,8 @@ dir_busco <- ""
 
 # check the BUSCO extraction method
 if (params$type == "coordinate") {
-    dir_busco <- paste0(currentdir, "/busco_check/busco_coordinate/")
-    f_write_log(fn_log=fn_log, msg="Running coordinate-based method.")
+    log4r::error(fn_logger, "Coordinate-based method is not fixed. Exited.")
+    knitr::knit_exit()
 } else if (params$type == "pipeline" || params$type == "" || is.null(params$type)) {
     dir_busco <- paste0(currentdir, "/busco_check/busco_pipeline/")
     f_write_log(fn_log=fn_log, msg="Running pipeline-based method.")

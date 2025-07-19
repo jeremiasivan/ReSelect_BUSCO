@@ -120,6 +120,7 @@ f_variant_calling <- function(prefix, dir_output, thread, refseq, exe_bcftools) 
     nthread <- paste("--threads", thread)
 
     # run bcftools mpileup
+    # for coordinate-based method: "bcftools view --threads 10 -V indels -i 'QUAL>15 & MQ>30' "
     cmd_bcftools <- paste(exe_bcftools, "mpileup", nthread, "-Ou -f", refseq, fn_bam, "|",      # generate genotype likelihoods at each position with coverage
                           exe_bcftools, "call", nthread, "-Ou -mv |",                           # variant calling with default settings (-m) and output only variant sites (-v)
                           exe_bcftools, "view", nthread, "-V indels -i 'QUAL>15 & MQ>30' |",    # filter out variants with low quality score
