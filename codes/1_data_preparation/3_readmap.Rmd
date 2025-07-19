@@ -38,8 +38,7 @@ if (params$redo) {
 } else {
     for (read in ls_shortreads) {
         # check if output file exists
-        reads_id <- df_reads$id[df_reads$species==read]
-        file_fastq <- paste0(dir_shortreads_filtered, reads_id, ".pair1.truncated")
+        file_fastq <- paste0(dir_shortreads_filtered, read, ".pair1.truncated")
         if (file.exists(file_fastq)) {
             ls_shortread_done <- c(ls_shortread_done, paste("-", read))
             next
@@ -210,20 +209,17 @@ foreach (prefix = ls_readmap_run) %dopar% {
     read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
-    ref_id <- df_refs$id[df_refs$species==ref]
-    reads_id <- df_reads$id[df_reads$species==read]
-
     # extract reference file location
     file_ref <- df_refseq_dir$dir[df_refseq_dir$id==ref]
 
     # extract FASTQ file
-    file_fastq_one <- paste0(dir_shortreads_filtered, reads_id, ".pair1.truncated")
+    file_fastq_one <- paste0(dir_shortreads_filtered, read, ".pair1.truncated")
     if (!file.exists(file_fastq_one)) {
         log4r::warn(fn_logger, paste0("File not found: filtered FASTQ file for ", read, ". Skipped."))
         return(NULL)
     }
 
-    file_fastq_two <- paste0(dir_shortreads_filtered, reads_id, ".pair2.truncated")
+    file_fastq_two <- paste0(dir_shortreads_filtered, read, ".pair2.truncated")
     if (!file.exists(file_fastq_two)) {
         file_fastq_two <- NULL
     }
