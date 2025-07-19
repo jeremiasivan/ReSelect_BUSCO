@@ -79,7 +79,7 @@ for (read is ls_shortreads) {
         stopCluster(nwcl)
 
         # run IQ-TREE2
-        f_window_tree(dir_output_condition_fasta, fn_busco_condition_prefix, params$thread, params$exe_iqtree2)
+        f_multiple_tree(dir_output_condition_fasta, fn_busco_condition_prefix, params$thread, params$exe_iqtree2)
 
         # run ASTRAL
         f_astral(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, fn_busco_condition_astral_log, params$exe_astral)
@@ -122,7 +122,7 @@ for (read is ls_shortreads) {
             stopCluster(nwcl)
 
             # run IQ-TREE2
-            f_window_tree(dir_output_perref_fasta, fn_busco_perref_prefix, params$thread, params$exe_iqtree2)
+            f_multiple_tree(dir_output_perref_fasta, fn_busco_perref_prefix, params$thread, params$exe_iqtree2)
 
             # run ASTRAL
             f_astral(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, fn_busco_perref_astral_log, params$exe_astral)

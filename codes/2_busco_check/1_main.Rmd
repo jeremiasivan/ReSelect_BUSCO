@@ -23,7 +23,6 @@ params:
   
   # executables
   exe_busco: ""
-  exe_gffread: ""
   exe_gff2bed: ""
   exe_samtools: ""
   exe_qualimap: ""
@@ -37,17 +36,14 @@ params:
   # BUSCO analyses
   busco_lineage: ""
   busco_mode: "genome"
-  type: "coordinate"
 
   thread_busco: 50
   min_busco_depth: 10
 
+  # optional
   outgroup: !r c("")
-
-  # calculate pairwise distance
   focal_species: ""
 
-  # misc
   current_time: ""
 ---
 
@@ -102,14 +98,9 @@ knitr::opts_knit$set(root.dir = currentdir)
 ```{r}
 f_write_log(fn_log=fn_log, msg=paste0("- file_refseq: ", params$file_refseq))
 f_write_log(fn_log=fn_log, msg=paste0("- file_shortreads: ", params$file_shortreads))
-f_write_log(fn_log=fn_log, msg=paste0("- file_genome_treefile: ", params$file_genome_treefile))
-f_write_log(fn_log=fn_log, msg=paste0("- file_buscotree: ", params$file_buscotree))
 
-f_write_log(fn_log=fn_log, msg=paste0("- type: ", params$type))
 f_write_log(fn_log=fn_log, msg=paste0("- min_busco_depth: ", params$min_busco_depth))
-
-f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_mode: ", params$busco_tree_mode))
-f_write_log(fn_log=fn_log, msg=paste0("- busco_tree_random_ref: ", params$busco_tree_random_ref))
+f_write_log(fn_log=fn_log, msg=paste0("- focal_species: ", params$focal_species))
 ```
 
 ```{r child = paste0(params$codedir,"/2_busco_check/2_busco_ref.Rmd")}

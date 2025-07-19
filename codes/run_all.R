@@ -20,7 +20,6 @@ exe_samtools <- "samtools"
 exe_bcftools <- "bcftools"
 exe_qualimap <- "qualimap"
 
-exe_gffread <- "gffread"
 exe_gff2bed <- "bedops/bin/gff2bed"
 
 exe_busco <- "busco"
@@ -33,7 +32,6 @@ exe_astral <- "astral.jar"
 
 busco_lineage <- "eudicots_odb10"
 busco_mode <- "genome"
-type <- "coordinate"
 
 min_busco_depth <- 10
 
@@ -67,9 +65,9 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, outprefix, ".check.html"),
                   params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               file_refseq=file_refseq, file_shortreads=file_shortreads,
-                              exe_busco=exe_busco, exe_gffread=exe_gffread, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed, exe_qualimap=exe_qualimap,
+                              exe_busco=exe_busco, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed, exe_qualimap=exe_qualimap,
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_trimal=exe_trimal, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
-                              busco_lineage=busco_lineage, busco_mode=busco_mode, type=type, outgroup=outgroup,
+                              busco_lineage=busco_lineage, busco_mode=busco_mode, outgroup=outgroup,
                               min_busco_depth=min_busco_depth, focal_species=focal_species,
                               current_time=current_time),
                   quiet=TRUE)

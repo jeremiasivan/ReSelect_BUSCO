@@ -1,15 +1,13 @@
 # This script aims to visualise proportion of biased BUSCO for each set of short reads
 # Written by: Jeremias Ivan
-# Last updated: 23 May 2025
+# Last updated: 19 July 2025
 
 library(tidyverse)
 
 df_metadata <- data.table:::fread("~/BusIER/data/eucs_shortreads.txt")
 dfpipe <- data.table::fread("prefix.cor_pipeline.sumtable")
-dfcoor <- data.table::fread("prefix.cor_coordinate.sumtable")
 
 pipe_ln_busco <- length(unique(dfpipe$busco))
-coor_ln_busco <- length(unique(dfcoor$busco))
 
 dfpipe_bias <- dfpipe %>%
   group_by(read) %>%
@@ -29,25 +27,7 @@ dfpipe_bias_noout <- dfpipe %>%
   summarise(n=n()/pipe_ln_busco*100) %>%
   mutate(method="pipe_noout")
 
-dfcoor_bias <- dfcoor %>%
-  group_by(read) %>%
-  filter(lm_p < 0.05 | spearman_p < 0.05) %>%
-  mutate(note=ifelse(lm_p < 0.05 & spearman_p >= 0.05, "lm",
-                     ifelse(lm_p < 0.05 & spearman_p < 0.05, "both", "sp"))) %>%
-  group_by(read, note) %>%
-  summarise(n=n()/coor_ln_busco*100) %>%
-  mutate(method="coor")
-
-dfcoor_bias_noout <- dfcoor %>%
-  group_by(read) %>%
-  filter(lm_p_noout < 0.05 | spearman_p_noout < 0.05) %>%
-  mutate(note=ifelse(lm_p_noout < 0.05 & spearman_p_noout >= 0.05, "lm",
-                     ifelse(lm_p_noout < 0.05 & spearman_p_noout < 0.05, "both", "sp"))) %>%
-  group_by(read, note) %>%
-  summarise(n=n()/coor_ln_busco*100) %>%
-  mutate(method="coor_nobias")
-
-df_bias <- rbind(dfpipe_bias, dfcoor_bias, dfpipe_bias_noout, dfcoor_bias_noout)
+df_bias <- rbind(dfpipe_bias, dfpipe_bias_noout)
 df_bias$read <- sapply(df_bias$read, function(x) {
   name <- df_metadata$species[df_metadata$id==x]
   gsub("\\.", ". ", name)
