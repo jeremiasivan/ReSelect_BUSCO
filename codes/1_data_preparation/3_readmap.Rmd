@@ -292,7 +292,7 @@ df_coverage <- foreach (prefix = ls_prefix, .combine='rbind') %dopar% {
     readref <- strsplit(prefix, split="--")[[1]]
 
     return(data.table::data.table(read_id=df_reads$id[df_reads$species==readref[1]],
-                                  ref_id=df_reads$id[df_reads$species==readref[2]],
+                                  ref_id=df_refs$id[df_refs$species==readref[2]],
                                   read_sp=readref[1],
                                   ref_sp=readref[2],
                                   mean_coverage=mean_coverage,

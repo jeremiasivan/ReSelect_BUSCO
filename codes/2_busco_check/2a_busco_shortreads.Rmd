@@ -225,7 +225,7 @@ for (prefix in ls_prefix) {
     mapped_reads <- as.numeric(strsplit(mapped_reads, split="%")[[1]][1])
 
     # update the data.table
-    df_coverage <- rbind(df_coverage, data.table::data.table(read_id=df_refs$id[df_refs$species==readref[1]],
+    df_coverage <- rbind(df_coverage, data.table::data.table(read_id=df_reads$id[df_reads$species==readref[1]],
                                                              ref_id=df_refs$id[df_refs$species==readref[2]],
                                                              read_sp=readref[1],
                                                              ref_sp=readref[2],
