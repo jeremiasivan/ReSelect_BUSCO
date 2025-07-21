@@ -291,10 +291,10 @@ df_coverage <- foreach (prefix = ls_prefix, .combine='rbind') %dopar% {
     # extract reference and reads
     readref <- strsplit(prefix, split="--")[[1]]
 
-    return(data.table::data.table(read_id=readref[1],
-                                  ref_id=readref[2],
-                                  read_sp=df_reads$species[df_reads$id==readref[1]],
-                                  ref_sp=df_refs$species[df_refs$id==readref[2]],
+    return(data.table::data.table(read_id=df_reads$id[df_reads$species==readref[1]],
+                                  ref_id=df_reads$id[df_reads$species==readref[2]],
+                                  read_sp=readref[1],
+                                  ref_sp=readref[2],
                                   mean_coverage=mean_coverage,
                                   mapped_reads=mapped_reads))
 }

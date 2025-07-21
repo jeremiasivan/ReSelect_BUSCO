@@ -50,7 +50,8 @@ f_qc_short_reads <- function(fastq_one, fastq_two, fn_adapters, prefix, min_qual
 
     # set the minimum quality score and merge overlapping reads
     cmd_qc <- paste(cmd_qc, "--basename", prefix,
-                    "--trimqualities --trimns --minquality", min_quality)
+                    "--trimqualities --trimns --minquality", min_quality,
+                    "--threads", thread)
     
     # run AdapterRemoval to get prefix.collapsed.truncated
     system(cmd_qc)
