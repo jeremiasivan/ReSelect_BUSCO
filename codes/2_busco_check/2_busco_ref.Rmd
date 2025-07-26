@@ -211,12 +211,8 @@ f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering pro
 ## Convert individual BUSCO alignments into MSA
 ```{r check-busco-msa}
 # set up variables
-busco_refs_dir_mid <- "/fasta/"
-busco_read_dir_mid <- "/"
-if (params$type == "pipeline") {
-    busco_refs_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
-    busco_read_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
-}
+busco_refs_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
+busco_read_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
 
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
