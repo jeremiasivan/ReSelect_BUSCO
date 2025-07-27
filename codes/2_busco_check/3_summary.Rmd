@@ -200,7 +200,7 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
             read_dist <- distance_tre[rownames(distance_tre)==focal_sp, colnames(distance_tre)==prefix]
 
             # update data.frame
-            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read_species_name,
+            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read,
                                                                        ref=ref,
                                                                        ref_dist=ref_dist,
                                                                        read_dist=read_dist,
@@ -350,7 +350,7 @@ df_output_trimal <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
             read_dist <- distance_tre[rownames(distance_tre)==focal_sp, colnames(distance_tre)==prefix]
 
             # update data.frame
-            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read_species_name,
+            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read,
                                                                        ref=ref,
                                                                        ref_dist=ref_dist,
                                                                        read_dist=read_dist,
