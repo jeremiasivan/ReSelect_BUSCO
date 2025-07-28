@@ -90,9 +90,7 @@ for (read in ls_shortreads) {
             dir_output_perref <- paste0(dir_output_condition_ref, ref, "/")
             dir_output_perref_fasta <- paste0(dir_output_perref, "alignment/")
             dir_output_perref_trees <- paste0(dir_output_perref, "trees/")
-            if (!dir.exists(dir_output_perref)) {
-                dir.create(dir_output_perref, recursive=T)
-            }
+            lapply(list(dir_output_perref_fasta,dir_output_perref_trees), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
             # output files
             fn_busco_perref_prefix <- paste0(dir_output_perref_trees, "all_busco")
