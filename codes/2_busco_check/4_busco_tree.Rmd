@@ -27,7 +27,7 @@ fn_cf_summary <- paste0(fn_prefix, ".cf.sumtable")
 df_cor_summary <- data.table::fread(fn_cor_summary)
 
 # iterate over short-reads
-for (read is ls_shortreads) {
+for (read in ls_shortreads) {
     # output directory
     dir_output_read <- paste0(dir_buscotree, read, "/")
 
@@ -139,7 +139,7 @@ for (read is ls_shortreads) {
 df_output <- data.table::data.table()
 
 # iterate over short-reads
-for (read is ls_shortreads) {
+for (read in ls_shortreads) {
     # output directory
     dir_output_read <- paste0(dir_buscotree, read, "/")
 
