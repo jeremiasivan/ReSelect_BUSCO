@@ -40,10 +40,7 @@ for (read in ls_shortreads) {
         dir_output_condition <- paste0(dir_output_read, condition, "/")
         dir_output_condition_fasta <- paste0(dir_output_condition, "alignment/")
         dir_output_condition_trees <- paste0(dir_output_condition, "trees/")
-        if (!all(dir.exists(dir_output_condition_fasta, dir_output_condition_trees))) {
-            dir.create(dir_output_condition_fasta, recursive=T)
-            dir.create(dir_output_condition_trees, recursive=T)
-        }
+        lapply(list(dir_output_condition_fasta,dir_output_condition_trees), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
         # list BUSCO
         ls_busco_condition <- df_cor_subset$busco
