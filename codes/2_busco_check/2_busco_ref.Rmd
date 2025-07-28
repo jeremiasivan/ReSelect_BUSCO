@@ -315,6 +315,9 @@ doSNOW::registerDoSNOW(nwcl)
 # iterate over shared BUSCOs
 foreach (busco = shared_busco) %dopar% {
     dir_output <- paste0(dir_busco_tree, busco, "/treeshrink/")
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
+    }
 
     # input file
     fn_treefile <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
