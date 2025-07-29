@@ -53,8 +53,14 @@ for (read in ls_shortreads) {
         # output files
         fn_busco_condition_prefix <- paste0(dir_output_condition_trees, "all_busco")
         fn_busco_condition_treefile <- paste0(fn_busco_condition_prefix, ".treefile")
+        
         fn_busco_condition_astral_treefile <- paste0(dir_output_condition_trees, "astral.treefile")
         fn_busco_condition_astral_log <- paste0(dir_output_condition_trees, "astral.log")
+        fn_busco_condition_gcf_treefile <- paste0(dir_output_condition_trees, "gcf.cf.tree")
+        fn_busco_condition_scf_treefile <- paste0(dir_output_condition_trees, "scf.cf.tree")
+        if (all(file.exists(fn_busco_condition_astral_treefile, fn_busco_condition_gcf_treefile, fn_busco_condition_scf_treefile))) {
+            next
+        }
 
         # create doSNOW cluster
         nwcl <- makeCluster(params$thread)
@@ -65,6 +71,9 @@ for (read in ls_shortreads) {
             # extract alignment
             fn_input <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa")
             fn_output <- paste0(dir_output_condition_fasta, busco, ".fa")
+            if (file.exists(fn_output)) {
+                return(NULL)
+            }
 
             # extract headers
             ls_prefix_subset <- ls_prefix[grepl(paste0("^",read), ls_prefix)]
@@ -83,9 +92,20 @@ for (read in ls_shortreads) {
 
         # calculate sCF and gCF
         f_calculate_cf(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, dir_output_condition_fasta, dir_output_condition_trees, params$thread, params$exe_iqtree2)
+    }    
+}
+
+# iterate over shortreads
+for (read in ls_shortreads) {
+    # subset the data.frame
+    df_cor_subset <- df_cor_summary[df_cor_summary$read==read,]
+
+    # iterate over sets of BUSCO
+    for (condition in c("all", "bias", "nonbias")) {
+        # create output directories
+        dir_output_condition_ref <- paste0(dir_buscotree, read, "/", condition, "/per_reference/")
 
         # iterate over reference sequences
-        dir_output_condition_ref <- paste0(dir_output_condition, "per_reference/")
         for (ref in ls_refseq) {
             dir_output_perref <- paste0(dir_output_condition_ref, ref, "/")
             dir_output_perref_fasta <- paste0(dir_output_perref, "alignment/")
@@ -95,8 +115,14 @@ for (read in ls_shortreads) {
             # output files
             fn_busco_perref_prefix <- paste0(dir_output_perref_trees, "all_busco")
             fn_busco_perref_treefile <- paste0(fn_busco_perref_prefix, ".treefile")
+            
             fn_busco_perref_astral_treefile <- paste0(dir_output_perref_trees, "astral.treefile")
             fn_busco_perref_astral_log <- paste0(dir_output_perref_trees, "astral.log")
+            fn_busco_perref_gcf_treefile <- paste0(dir_output_condition_trees, "gcf.cf.tree")
+            fn_busco_perref_scf_treefile <- paste0(dir_output_condition_trees, "scf.cf.tree")
+            if (all(file.exists(fn_busco_perref_astral_treefile, fn_busco_perref_gcf_treefile, fn_busco_perref_scf_treefile))) {
+                next
+            }
 
             # create doSNOW cluster
             nwcl <- makeCluster(params$thread)
@@ -107,6 +133,9 @@ for (read in ls_shortreads) {
                 # extract alignment
                 fn_input <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa")
                 fn_output <- paste0(dir_output_perref_fasta, busco, ".fa")
+                if (file.exists(fn_output)) {
+                    return(NULL)
+                }
 
                 # extract headers
                 ls_header <- c(ls_refseq, paste0(read,"--",ref))
@@ -125,7 +154,7 @@ for (read in ls_shortreads) {
             # calculate sCF and gCF
             f_calculate_cf(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, dir_output_perref_fasta, dir_output_perref_trees, params$thread, params$exe_iqtree2)
         }
-    }    
+    }
 }
 ```
 
