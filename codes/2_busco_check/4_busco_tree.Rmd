@@ -105,6 +105,14 @@ for (read in ls_shortreads) {
         # create output directories
         dir_output_condition_ref <- paste0(dir_buscotree, read, "/", condition, "/per_reference/")
 
+        # list BUSCO
+        ls_busco_condition <- df_cor_subset$busco
+        if (condition == "bias") {
+            ls_busco_condition <- df_cor_subset$busco[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05,]
+        } else if (condition == "nonbias") {
+            ls_busco_condition <- df_cor_subset$busco[df_cor_subset$lm_p>=0.05 & df_cor_subset$spearman_p>=0.05,]
+        }
+
         # iterate over reference sequences
         for (ref in ls_refseq) {
             dir_output_perref <- paste0(dir_output_condition_ref, ref, "/")
