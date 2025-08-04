@@ -85,7 +85,7 @@ f_iqtree2 <- function(fn_input, exe_iqtree2) {
 
 # function: run TreeShrink
 f_treeshrink <- function(fn_input, prefix, dir_output, exe_treeshrink) {
-    cmd_treeshrink <- paste("python", exe_treeshrink,
+    cmd_treeshrink <- paste(exe_treeshrink,
                             "-t", fn_input,
                             "-O", prefix,
                             "-o", dir_output)
@@ -164,7 +164,7 @@ f_calculate_cf <- function(fn_all_trees, fn_sp_tree, dir_fasta, dir_output, thre
 
     # calculate sCF
     cmd_scf <- paste(exe_iqtree2,
-                     "-te", paste0(dir_output, "/gcf.cf.tree"),
+                     "-te", fn_sp_tree,
                      "-p", dir_fasta,
                      "--scfl 100",
                      "-T", thread,

@@ -26,7 +26,7 @@ exe_busco <- "busco"
 exe_iqtree2 <- "iqtree2"
 exe_mafft <- "mafft"
 exe_trimal <- "trimal"
-exe_treeshrink <- "treeshrink"
+exe_treeshrink <- "run_treeshrink"
 
 exe_astral <- "astral.jar"
 

@@ -18,7 +18,6 @@ This pipeline requires several software and R packages to run. All software have
 | BUSCO                   | <a href="https://busco.ezlab.org">Link</a>                            |
 | BWA-MEM2                | <a href="https://github.com/bwa-mem2/bwa-mem2">Link</a>               |
 | Gff2Bed (BEDOPS)        | <a href="https://bedops.readthedocs.io/en/latest/index.html">Link</a> |
-| GffRead                 | <a href="https://github.com/gpertea/gffread">Link</a>                 |
 | IQ-TREE2                | <a href="http://www.iqtree.org">Link</a>                              |
 | MAFFT                   | <a href="https://mafft.cbrc.jp/alignment/software/">Link</a>          |
 | NCBI Datasets           | <a href="https://github.com/ncbi/datasets">Link</a>                   |
@@ -63,7 +62,7 @@ This pipeline requires several software and R packages to run. All software have
 4. **Run the code file** <br>
     For running individual steps:
     ```
-    Rscript -e "rmarkdown::render('~/ReSelect_BUSCO/codes/1_data_download/1_main.Rmd')"
+    Rscript -e "rmarkdown::render('~/ReSelect_BUSCO/codes/1_data_preparation/1_main.Rmd')"
     Rscript -e "rmarkdown::render('~/ReSelect_BUSCO/codes/2_busco_check/1_main.Rmd')"
     ```
 
@@ -75,4 +74,4 @@ This pipeline requires several software and R packages to run. All software have
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `start`, but I have never tried it before. 
 
 ---
-*Last update: 19 May 2025 by Jeremias Ivan*
+*Last update: 05 August 2025 by Jeremias Ivan*
