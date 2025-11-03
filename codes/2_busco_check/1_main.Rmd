@@ -40,6 +40,9 @@ params:
   thread_busco: 50
   min_busco_depth: 10
 
+  is_astral_constrained: FALSE
+  file_genome_treefile: ""
+
   # optional
   outgroup: !r c("")
   focal_species: ""

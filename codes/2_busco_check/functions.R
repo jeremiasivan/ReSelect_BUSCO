@@ -152,6 +152,16 @@ f_astral <- function(fn_input, fn_output, fn_log, exe_astral) {
     system(cmd_astral)
 }
 
+# function: run ASTRAL-III (constrained)
+f_astral_constrained <- function(fn_input, fn_output, fn_log, fn_sptree, exe_astral) {
+    cmd_astral <- paste("java -jar", exe_astral,
+                    "-i", fn_input,
+                    "-j", fn_sptree,
+                    "-o", fn_output,
+                    "-t 2 2>", fn_log)
+    system(cmd_astral)
+}
+
 # function: calculate sCF and gCF
 f_calculate_cf <- function(fn_all_trees, fn_sp_tree, dir_fasta, dir_output, thread, exe_iqtree2) {
     # calculate gCF

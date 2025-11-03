@@ -33,6 +33,9 @@ exe_astral <- "astral.jar"
 busco_lineage <- "eudicots_odb10"
 busco_mode <- "genome"
 
+is_astral_constrained <- FALSE
+file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
+
 min_busco_depth <- 10
 
 outgroup <- c("Angophora","Corymbia")
@@ -68,6 +71,7 @@ rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                               exe_busco=exe_busco, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed, exe_qualimap=exe_qualimap,
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_trimal=exe_trimal, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
                               busco_lineage=busco_lineage, busco_mode=busco_mode, outgroup=outgroup,
+                              is_astral_constrained=is_astral_constrained, file_genome_treefile=file_genome_treefile,
                               min_busco_depth=min_busco_depth, focal_species=focal_species,
                               current_time=current_time),
                   quiet=TRUE)

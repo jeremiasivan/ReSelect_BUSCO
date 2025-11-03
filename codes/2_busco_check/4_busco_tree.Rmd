@@ -10,6 +10,10 @@ f_write_log(fn_log=fn_log,
 
 # output directories
 dir_buscotree <- paste0(dir_busco, "busco_tree/")
+if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+    dir_buscotree <- paste0(dir_busco, "busco_tree_constrained/")
+}
+
 if (!dir.exists(dir_buscotree)) {
     dir.create(dir_buscotree, recursive=T)
 }
@@ -86,10 +90,24 @@ for (read in ls_shortreads) {
 
         # run IQ-TREE2
         f_multiple_tree(dir_output_condition_fasta, fn_busco_condition_prefix, params$thread, params$exe_iqtree2)
+        alltre_temp <- ape::read.tree(fn_busco_condition_treefile)
+        alltre_temp <- alltre_temp[[1]]
 
         # run ASTRAL
-        f_astral(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, fn_busco_condition_astral_log, params$exe_astral)
+        if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+            fn_sptree <- paste0(dir_output_condition_trees, "sptree.treefile")
+            
+            # open species tree
+            sptree <- ape::read.tree(params$file_genome_treefile)
+            sptree <- ape::drop.tip(sptree, tip=sptree$tip.label[!sptree$tip.label%in%alltre_temp$tip.label])
+            ape::write.tree(sptree, file=fn_sptree)
 
+            f_astral_constrained(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, fn_busco_condition_astral_log, fn_sptree, params$exe_astral)
+
+        } else {
+            f_astral(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, fn_busco_condition_astral_log, params$exe_astral)
+        }
+        
         # calculate sCF and gCF
         f_calculate_cf(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, dir_output_condition_fasta, dir_output_condition_trees, params$thread, params$exe_iqtree2)
     }    
@@ -155,9 +173,23 @@ for (read in ls_shortreads) {
 
             # run IQ-TREE2
             f_multiple_tree(dir_output_perref_fasta, fn_busco_perref_prefix, params$thread, params$exe_iqtree2)
+            alltre_temp <- ape::read.tree(fn_busco_perref_treefile)
+            alltre_temp <- alltre_temp[[1]]
 
             # run ASTRAL
-            f_astral(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, fn_busco_perref_astral_log, params$exe_astral)
+            if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+                fn_sptree <- paste0(dir_output_perref_trees, "sptree.treefile")
+                
+                # open species tree
+                sptree <- ape::read.tree(params$file_genome_treefile)
+                sptree <- ape::drop.tip(sptree, tip=sptree$tip.label[!sptree$tip.label%in%alltre_temp$tip.label])
+                ape::write.tree(sptree, file=fn_sptree)
+
+                f_astral_constrained(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, fn_busco_perref_astral_log, fn_sptree, params$exe_astral)
+
+            } else {
+                f_astral(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, fn_busco_perref_astral_log, params$exe_astral)
+            }
 
             # calculate sCF and gCF
             f_calculate_cf(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, dir_output_perref_fasta, dir_output_perref_trees, params$thread, params$exe_iqtree2)
