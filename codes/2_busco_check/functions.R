@@ -21,133 +21,6 @@ f_run_busco <- function(fn_fasta, lineage, prefix, dir_output, mode, thread, exe
     system(cmd_busco)
 }
 
-# function: extract coordinates from FASTA header
-f_extract_coordinates <- function(fasta_header, busco, prefix) {
-    # remove > sign
-    no_header <- unlist(strsplit(fasta_header, split=">"))[2]
-    ls_header <- unlist(strsplit(no_header, split=":"))
-    ls_coordinates <- unlist(strsplit(ls_header[2], split="-"))
-
-    seq_name <- ls_header[1]
-    first_coordinate <- as.numeric(ls_coordinates[1]) + 1
-    second_coordinate <- as.numeric(ls_coordinates[2]) + 1
-
-    # set the start and stop coordinates
-    strand <- "+"
-    start_coordinate <- NULL
-    stop_coordinate <- NULL
-
-    if (first_coordinate < second_coordinate) {
-        start_coordinate <- first_coordinate
-        stop_coordinate <- second_coordinate
-    } else if (first_coordinate > second_coordinate) {
-        start_coordinate <- second_coordinate
-        stop_coordinate <- first_coordinate
-        strand <- "-"
-    } else {
-        return(list(errmsg=paste0("Error: ", busco, " coordinates for ", prefix, ". Skipped.")))
-    }
-
-    return(list(seqname=seq_name, start=start_coordinate, stop=stop_coordinate, strand=strand))
-}
-
-# function: generate GFF file
-f_create_gff <- function(coordinates, busco, fn_out) {
-    df_gff <- data.table::data.table(
-        seqname=coordinates$seqname,
-        source="Metaeuk",
-        feature="CDS",
-        start=coordinates$start+1,
-        end=coordinates$stop+1,
-        score=".",
-        strand=coordinates$strand,
-        frame=".",
-        attribute=paste0("ID=",busco,"_CDS_0")
-    )
-
-    # save the new GFF file
-    data.table::fwrite(df_gff, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
-}
-
-# function: manipulate and save GFF file
-f_manipulate_gff <- function(fn_input, coordinates, busco, prefix, fn_out) {
-    # create a child function to check if CDS comes from multiple genes
-    f_check_cds_target_id <- function(df_gff) {
-        # extract attributes
-        ls_attribute <- df_gff$attribute
-        ls_target_id <- sapply(ls_attribute, function(x){
-            stringr::str_match(x, "Target_ID=([^;]+)")[2]
-        })
-
-        if (length(unique(ls_target_id)) != 1) {
-            # extract the most common target ID
-            tb_target_id <- table(ls_target_id)
-            target_id <- names(tb_target_id[tb_target_id==max(tb_target_id)])[1]
-
-            # extract the GFF entries
-            df_gff_filter <- df_gff[grepl(target_id, df_gff$attribute),]
-            return(df_gff_filter)
-        }
-
-        return(df_gff)
-    }
-
-    # read GFF file
-    df_gff <- data.table::fread(fn_input, header=FALSE, select=1:9)
-    data.table::setnames(df_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
-
-    # convert attribute to match with gffread naming convention
-    df_gff$attribute <- gsub("TCS_ID", "ID", df_gff$attribute)
-
-    # extract relevant GFF entry
-    df_gff <- df_gff[df_gff$seqname==coordinates$seqname & df_gff$strand==coordinates$strand]
-    if (nrow(df_gff) == 0) {
-        return(list(errmsg=paste0("Error: ", busco, " GFF entry is not found for ", prefix, ". Skipped.")))
-    }
-
-    # extract the respective gene index
-    gene_idx <- which(df_gff$feature == "gene" & df_gff$start == coordinates$start & df_gff$end == coordinates$stop)
-    if (length(gene_idx) != 1) {
-        # extract all CDS based on the coordinates
-        df_gff_cds <- df_gff[df_gff$feature=="CDS" & df_gff$start>=coordinates$start & df_gff$end<=coordinates$stop]
-        if (nrow(df_gff_cds) == 0) {
-            return(list(errmsg=paste("Error:", busco, "for", prefix, "has invalid CDS coordinates. Skipped.")))
-        }
-
-        # remove entry with length == 1
-        df_gff_cds <- df_gff_cds[abs(df_gff_cds$start-df_gff_cds$end)!=1,]
-
-        # remove multiple genes
-        df_gff_cds <- f_check_cds_target_id(df_gff_cds)
-
-        # save the new GFF file
-        data.table::fwrite(df_gff_cds, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
-        return(list(warnmsg=paste("Warn:", busco, "GFF file for", prefix, "is based on CDS coordinates.")))
-    }
-
-    # extract all gene indices
-    ls_gene_idx <- which(df_gff$feature == "gene")
-    entry_idx <- match(gene_idx, ls_gene_idx)
-    
-    # subset the GFF table
-    df_gff_subset <- NULL
-    if (entry_idx == length(ls_gene_idx)) {
-        df_gff_subset <- df_gff[gene_idx:nrow(df_gff)]
-    } else {
-        df_gff_subset <- df_gff[gene_idx:ls_gene_idx[entry_idx+1]-1]
-    }
-    
-    # remove entry with length == 1
-    df_gff_subset <- df_gff_subset[abs(df_gff_subset$start-df_gff_subset$end)!=1,]
-
-    # remove multiple genes
-    df_gff_subset <- f_check_cds_target_id(df_gff_subset)
-
-    # save the new GFF file
-    df_gff_subset_cds <- df_gff_subset[df_gff_subset$feature=="CDS",]
-    data.table::fwrite(df_gff_subset_cds, file=fn_out, sep="\t", quote=F, row.names=F, col.names=F)
-}
-
 # function: check coverage
 f_calculate_read_coverage <- function(fn_bam, fn_bed, exe_samtools) {
     # retrieve average coverage
@@ -159,60 +32,6 @@ f_calculate_read_coverage <- function(fn_bam, fn_bed, exe_samtools) {
 
     # return average coverage
     return(round(mean(as.numeric(ls_coverage)),3))
-}
-
-# function: extract all BUSCO alignments from GFF
-f_extract_fasta_from_gff <- function(fn_input, fn_gff, fn_cds_out, fn_concat_out, exe_gffread){
-    # run gffread
-    cmd_gffread <- paste(exe_gffread, "-g", fn_input, "-y", fn_cds_out, fn_gff)
-    system(cmd_gffread)
-
-    # open the CDS sequences
-    all_cds <- Biostrings::readAAStringSet(fn_cds_out)
-    all_headers <- stringr::str_sort(names(all_cds), numeric=T)
-    
-    # concat all CDS sequences
-    header <- ""
-    seq <- ""
-    for (i in all_headers) {
-        ls_header <- unlist(strsplit(i, split="\\|"))
-    
-        if (header == "") {
-            header <- paste0(header, ls_header[length(ls_header)])
-        } else {
-            header <- paste0(header, "|", ls_header[length(ls_header)])
-        }
-        
-        seq <- paste0(seq, all_cds[[i]])
-    }
-     
-    # save the concatenated FASTA in a file
-    concat_cds <- Biostrings::AAStringSet(seq)
-    names(concat_cds) <- header
-    Biostrings::writeXStringSet(concat_cds, filepath=fn_concat_out)
-}
-
-# function: compare two FASTA files
-f_compare_fasta <- function(fn_fasta_one, fn_fasta_two) {
-    # open the two FASTA files
-    fasta_one <- Biostrings::readAAStringSet(fn_fasta_one)
-    fasta_two <- Biostrings::readAAStringSet(fn_fasta_two)
-
-    # check if there is only one sequence
-    header_one <- names(fasta_one)
-    header_two <- names(fasta_two)
-
-    if (length(header_one) != 1 || length(header_two) != 1) {
-        return(list(errmsg="Non-identical header"))
-    }
-
-    # compare if the two are equal
-    is_identical <- identical(fasta_one[[header_one]], fasta_two[[header_two]])
-    if (is_identical) {
-        return(list(is_identical=TRUE))
-    }
-
-    return(list(is_identical=FALSE))
 }
 
 # function: combine individual FASTA as MSA
@@ -266,38 +85,11 @@ f_iqtree2 <- function(fn_input, exe_iqtree2) {
 
 # function: run TreeShrink
 f_treeshrink <- function(fn_input, prefix, dir_output, exe_treeshrink) {
-    cmd_treeshrink <- paste("python", exe_treeshrink,
+    cmd_treeshrink <- paste(exe_treeshrink,
                             "-t", fn_input,
                             "-O", prefix,
                             "-o", dir_output)
     system(cmd_treeshrink)
-}
-
-# function: change tips from accesion ID to species name
-f_tips_to_species <- function(fn_treefile, fn_treefile_species, ls_species_name) {
-    # read input file
-    tre <- readLines(fn_treefile)
-
-    # iterate over tips
-    for (id in names(ls_species_name)) {
-        tre <- gsub(id, ls_species_name[id], tre)
-    }
-
-    # save the file
-    writeLines(tre, con=fn_treefile_species)
-}
-
-# function: change tips from species name to accesion ID for reference sequences
-f_ref_tips_to_id <- function(fn_treefile, df_refs) {
-    # read input file
-    tre <- readLines(fn_treefile)
-
-    # iterate over tips
-    for (i in 1:nrow(df_refs)) {
-        tre <- gsub(df_refs$species[i], df_refs$id[i], tre)
-    }
-
-    return(tre)
 }
 
 # function: extract R2 and p-value
@@ -322,167 +114,33 @@ f_extract_summary_lm <- function(lm_result) {
     return(list(rsquared=rsquared, pvalue=pvalue, slope=slope))
 }
 
-# function: run Spearman correlatio test
+# function: run Spearman correlation test
 f_spearman_test <- function(x, y) {
     corr <- cor.test(x, y, method='spearman')
 
     return(list(rho=round(corr$estimate, 3), pvalue=round(corr$p.value, 3)))
 }
 
-# function: check the closest reference given reads
-f_check_closest_ref <- function(dist_matrix, species_read, ls_species_ref) {
-    # initiate variables
-    closest_ref <- ls_species_ref[1]
-    closest_ref_dist <- dist_matrix[rownames(dist_matrix) == species_read, colnames(dist_matrix) == ls_species_ref[1]]
+# function: extract mapped reads from an alignment
+f_extract_fasta <- function(fn_input, ls_header, fn_output) {
+    # open alignment
+    seq <- Biostrings::readAAStringSet(fn_input)
 
-    # return the closest reference if there is only one reference
-    len_ls_species_ref <- length(ls_species_ref)
-    if (len_ls_species_ref == 1) {
-        return (list(ref=closest_ref, dist=round(closest_ref_dist, 3)))
-    }
+    # extract reference sequences and mapped reads
+    seq_subset <- seq[names(seq)%in%ls_header]
 
-    # iterate over reference sequence
-    for (ref in ls_species_ref[2:len_ls_species_ref]) {
-        # check the phylogenetic distance
-        ref_dist <- dist_matrix[rownames(dist_matrix) == species_read, colnames(dist_matrix) == ref]
-
-        # update the closest reference is distance is smaller
-        if (ref_dist < closest_ref_dist) {
-            closest_ref <- ref
-            closest_ref_dist <- ref_dist
-        }
-    }
-
-    # return the closest reference
-    return (list(ref=closest_ref, dist=round(closest_ref_dist, 3)))
+    # save the file
+    Biostrings::writeXStringSet(seq_subset, filepath=fn_output)
 }
 
-# function: collapse branch with low bootstrap value [NOT USED]
-f_collapse_branch <- function(fn_tree, bootstrap, fn_out, exe_nwed) {
-    newick_cmd <- paste0(exe_nwed, " ", fn_tree, " 'i & b<", bootstrap, "' o > ", fn_out)
-    system(newick_cmd)
-}
-
-# function: calculate normalised RF distance between two trees
-f_calculate_nRF <- function(fn_tree_one, fn_tree_two) {
-    # open the two treefiles
-    tree_one <- ape::read.tree(fn_tree_one)
-    tree_two <- ape::read.tree(fn_tree_two)
-
-    # calculate nRF
-    nrf_dist <- phangorn::RF.dist(tree_one, tree_two, normalize=T)
-
-    return(round(nrf_dist,3))
-}
-
-# function: extract distance value based on the number of highly-supported branches
-f_calculate_treedist <- function(fn_gene_tree, fn_refs_tree, min_bootstrap) {
-    # child function to get the tips under a given node (source: chatGPT)
-    f_get_bootstraps <- function(tree, node, df_tree) {
-        descendants <- phangorn::Descendants(tree, node, type = "all")
-        ls_bootstrap <- df_tree$bootstrap[df_tree$node %in% c(node, descendants)]
-
-        return(ls_bootstrap)
-    }
-
-    # child function to get every partition
-    f_part_num2chr <- function(input) {
-        # extract labels
-        ls_label <- attr(input, "labels")
-
-        # iterate over the partitions
-        ls_partition <- lapply(input, function(x) {
-            # convert the numbers to characters
-            ls_species <- sapply(x, function(y) {
-                ls_label[y]
-            })
-        })
-
-        return(ls_partition)
-    }
-
-    # open the trees
-    gene_tree <- ape::read.tree(fn_gene_tree)
-    refs_tree <- ape::read.tree(fn_refs_tree)
-
-    # extract information
-    ntaxa <- length(gene_tree$tip.label)
-    RF <- 0
-    n_infbranch <- 0
-
-    # extract bootstrap values and their respective nodes from gene tree (source: ChatGPT)
-    df_node_gene <- data.frame(node = (ntaxa + 1):(ntaxa + gene_tree$Nnode), bootstrap = as.numeric(gene_tree$node.label))
-    df_node_refs <- data.frame(node = (ntaxa + 1):(ntaxa + refs_tree$Nnode), bootstrap = as.numeric(refs_tree$node.label))
-
-    # update the rows with NA bootstrap value
-    for (i in 1:nrow(df_node_gene)) {
-        if (is.na(df_node_gene$bootstrap[i])) {
-            gene_child_first <- gene_tree$edge[gene_tree$edge[,1]==df_node_gene$node[i], 2]
-            gene_child_first_bs <- df_node_gene$bootstrap[df_node_gene$node==max(gene_child_first)]
-            df_node_gene$bootstrap[i] <- ifelse(length(gene_child_first_bs)!=0 && !is.na(gene_child_first_bs), gene_child_first_bs, 0)
-        }
-    }
-    
-    for (i in 1:nrow(df_node_refs)) {
-        if (is.na(df_node_refs$bootstrap[i])) {
-            refs_child_first <- refs_tree$edge[refs_tree$edge[,1]==df_node_refs$node[i], 2]
-            refs_child_first_bs <- df_node_refs$bootstrap[df_node_refs$node==max(refs_child_first)]
-            df_node_refs$bootstrap[i] <- ifelse(length(refs_child_first_bs)!=0 && !is.na(refs_child_first_bs), refs_child_first_bs, 0)
-        }
-    }
-
-    # get partitions from gene tree
-    gene_part <- lapply(f_part_num2chr(ape::prop.part(gene_tree)), sort)
-    refs_part <- lapply(f_part_num2chr(ape::prop.part(refs_tree)), sort)
-
-    # iterate over branching events with high bootstrap value
-    for (part in gene_part) {
-        # get mrca for gene tree
-        gene_part_mrca <- ape::getMRCA(gene_tree, part)
-        i <- which(df_node_gene$node==gene_part_mrca)
-
-        # check if bootstrap value is low
-        if (df_node_gene$bootstrap[i] < min_bootstrap) {
-            next
-        }
-
-        # update value
-        n_infbranch <- n_infbranch + 1
-
-        # check if partition is present in the refs_tree
-        is_present <- FALSE
-        for (part_ref in refs_part) {
-            if (setequal(part, part_ref)) {
-                is_present <- TRUE
-            }
-        }
-        if (is_present) { next }
-
-        # get mrca for the refs tree
-        refs_part_mrca <- ape::getMRCA(refs_tree, part)
-
-        # check if all bootstrap values are low
-        if (all(f_get_bootstraps(refs_tree, refs_part_mrca, df_node_refs) < min_bootstrap)) {
-            next
-        }
-
-        # update value
-        RF <- RF + 1
-    }
-
-    # return value for RF
-    return(list(dist=RF, n_infbranch=n_infbranch))
-}
-
-# function: extract average bootstrap value
-f_calculate_mean_bs <- function(fn_tree) {
-    # open treefile
-    tree <- ape::read.tree(fn_tree)
-
-    # calculate mean bootstrap values
-    mean_bs <- mean(as.numeric(tree$node.label[tree$node.label!=""]))
-
-    return(mean_bs)
+# function: generate window trees
+f_multiple_tree <- function(dir_aln, prefix, thread, dir_iqtree2) {
+    iqtree_cmd <- paste(dir_iqtree2,
+                        "-S", dir_aln,
+                        "-pre", prefix,
+                        "-T", thread,
+                        "--quiet -redo")
+    system(iqtree_cmd)
 }
 
 # function: run ASTRAL-III 
@@ -492,4 +150,54 @@ f_astral <- function(fn_input, fn_output, fn_log, exe_astral) {
                     "-o", fn_output,
                     "-t 2 2>", fn_log)
     system(cmd_astral)
+}
+
+# function: run ASTRAL-III (constrained)
+f_astral_constrained <- function(fn_input, fn_output, fn_log, fn_sptree, exe_astral) {
+    cmd_astral <- paste("java -jar", exe_astral,
+                    "-i", fn_input,
+                    "-j", fn_sptree,
+                    "-o", fn_output,
+                    "-t 2 2>", fn_log)
+    system(cmd_astral)
+}
+
+# function: calculate sCF and gCF
+f_calculate_cf <- function(fn_all_trees, fn_sp_tree, dir_fasta, dir_output, thread, exe_iqtree2) {
+    # calculate gCF
+    cmd_gcf <- paste(exe_iqtree2,
+                     "-t", fn_sp_tree,
+                     "--gcf", fn_all_trees,
+                     "-T", thread,
+                     "--prefix", paste0(dir_output, "/gcf"))
+    system(cmd_gcf)
+
+    # calculate sCF
+    cmd_scf <- paste(exe_iqtree2,
+                     "-te", fn_sp_tree,
+                     "-p", dir_fasta,
+                     "--scfl 100",
+                     "-T", thread,
+                     "--prefix", paste0(dir_output, "/scf"))
+    system(cmd_scf)
+}
+
+# function: extract support values
+f_extract_branch_supports <- function(fn_input, ls_header) {
+    # open trees
+    tre <- ape::read.tree(fn_input)
+    tre_mrca <- ape::getMRCA(tre_astral, ls_header)
+    tre_supp <- tre$node.label[tre_mrca - length(tre$tip.label)]
+    tre_supp <- gsub("'\\[", "", tre_supp)
+    tre_supp <- gsub("\\]'", "", tre_supp)
+    tre_supp <- strsplit(tre_supp, split=";")[[1]]
+
+    # extract support values
+    supp_pairs <- strsplit(tre_supp, "=")
+    supp_pairs <- setNames(
+        lapply(supp_pairs, function(x) as.numeric(x[2])),
+        sapply(supp_pairs, function(x) x[1])
+    )
+
+    return(supp_pairs)
 }

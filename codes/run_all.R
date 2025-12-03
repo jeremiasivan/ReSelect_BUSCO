@@ -20,30 +20,27 @@ exe_samtools <- "samtools"
 exe_bcftools <- "bcftools"
 exe_qualimap <- "qualimap"
 
-exe_gffread <- "gffread"
 exe_gff2bed <- "bedops/bin/gff2bed"
 
 exe_busco <- "busco"
 exe_iqtree2 <- "iqtree2"
 exe_mafft <- "mafft"
 exe_trimal <- "trimal"
-exe_treeshrink <- "treeshrink"
+exe_treeshrink <- "run_treeshrink"
 
 exe_astral <- "astral.jar"
 
 busco_lineage <- "eudicots_odb10"
 busco_mode <- "genome"
-type <- "coordinate"
+
+is_astral_constrained <- FALSE
+file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
 
 min_busco_depth <- 10
 
 outgroup <- c("Angophora","Corymbia")
+focal_species <- ""
 
-# BUSCO tree
-file_buscotree <- paste0(codedir, "/../data/eucs_buscotree.txt")
-file_genome_treefile <- paste0(codedir, "/../data/eucs.treefile")
-busco_tree_mode <- "random"
-busco_tree_random_ref <- TRUE
 #################################
 
 # extract current time
@@ -70,11 +67,12 @@ rmarkdown::render(input=paste0(codedir,"/1_data_preparation/1_main.Rmd"),
 rmarkdown::render(input=paste0(codedir,"/2_busco_check/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, outprefix, ".check.html"),
                   params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
-                              file_refseq=file_refseq, file_shortreads=file_shortreads, file_genome_treefile=file_genome_treefile, file_buscotree=file_buscotree,
-                              exe_busco=exe_busco, exe_gffread=exe_gffread, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed, exe_qualimap=exe_qualimap,
+                              file_refseq=file_refseq, file_shortreads=file_shortreads,
+                              exe_busco=exe_busco, exe_samtools=exe_samtools, exe_gff2bed=exe_gff2bed, exe_qualimap=exe_qualimap,
                               exe_iqtree2=exe_iqtree2, exe_mafft=exe_mafft, exe_trimal=exe_trimal, exe_treeshrink=exe_treeshrink, exe_astral=exe_astral,
-                              busco_lineage=busco_lineage, busco_mode=busco_mode, type=type, outgroup=outgroup,
-                              min_busco_depth=min_busco_depth, busco_tree_mode=busco_tree_mode, busco_tree_random_ref=busco_tree_random_ref,
+                              busco_lineage=busco_lineage, busco_mode=busco_mode, outgroup=outgroup,
+                              is_astral_constrained=is_astral_constrained, file_genome_treefile=file_genome_treefile,
+                              min_busco_depth=min_busco_depth, focal_species=focal_species,
                               current_time=current_time),
                   quiet=TRUE)
 

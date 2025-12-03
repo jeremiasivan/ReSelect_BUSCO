@@ -1,393 +1,199 @@
 ---
-title: "Calculate nRF on BUSCO Trees"
+title: "Summarise BUSCO Trees"
 ---
 
-## Check correlation between number of references and topology distance
-```{r check-busco-tree-setup, include=FALSE}
+```{r check-btree-setup, include=FALSE}
 f_write_log(fn_log=fn_log,
             msg=c("", "####################################",
-                      "####      Check BUSCO Trees     ####",
+                      "####         BUSCO Trees        ####",
                       "####################################"))
 
-# output directory
-dir_check_tree <- paste0(dir_busco, "busco_tree/")
-if (params$busco_tree_mode == "control" && file.exists(params$file_buscotree)) {
-    dir_check_tree <- paste0(dir_check_tree, "control/")
-} else if (params$busco_tree_mode == "oneref") {
-    dir_check_tree <- paste0(dir_check_tree, "oneref/")
-} else {
-    dir_check_tree <- paste0(dir_check_tree, "random/")
+# output directories
+dir_buscotree <- paste0(dir_busco, "busco_tree/")
+if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+    dir_buscotree <- paste0(dir_busco, "busco_tree_constrained/")
 }
 
-dir_check_tree_summary <- paste0(dir_check_tree, "summary/")
-if (!dir.exists(dir_check_tree_summary)) {
-    dir.create(dir_check_tree_summary, recursive=T)
+if (!dir.exists(dir_buscotree)) {
+    dir.create(dir_buscotree, recursive=T)
 }
 
-# check input genome treefile
-if (!file.exists(params$file_genome_treefile)) {
-    log4r::error(fn_logger, "Genome treefile is not found. Exited.")
-    knitr::knit_exit()
-}
+# input files
+fn_prefix <- paste0(dir_check_summary, params$prefix)
+fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
 
 # output files
-fn_busco_sumtable <- paste0(dir_check_tree_summary, "summary.dist.sumtable")
-fn_nrf_tiff <- paste0(dir_check_tree_summary, "summary.nrf.tiff")
-fn_genomedist_tiff <- paste0(dir_check_tree_summary, "summary.genomedist.tiff")
+fn_cf_summary <- paste0(fn_prefix, ".cf.sumtable")
 ```
 
-```{r results='asis'}
-# read genome treefile
-genome_tree_id <- f_ref_tips_to_id(params$file_genome_treefile, df_refs)
-genome_tree <- ape::read.tree(text=genome_tree_id)
-genome_tree$edge.length <- ifelse(is.na(genome_tree$edge.length), 0.05, genome_tree$edge.length)
-genome_dist <- ape::cophenetic.phylo(genome_tree)
+```{r check-btree-run}
+# open the input data.frame
+df_cor_summary <- data.table::fread(fn_cor_summary)
 
-# set number of threads
-nthread <- ifelse(params$thread > length(shared_busco), length(shared_busco), params$thread)
-
-# check if analysis done according to input file or random
-ngrouping <- length(ls_refseq)
-if (params$busco_tree_mode == "control" && file.exists(params$file_buscotree)) {
-    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4b_control.Rmd"))
-} else if (params$busco_tree_mode == "oneref") {
-    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4c_oneref.Rmd"))
-} else {
-    knitr::knit_child(paste0(params$codedir,"/2_busco_check/4a_random.Rmd"))
-}
-```
-
-```{r check-busco-tree-alignment}
-f_write_log(fn_log=fn_log, msg=c("", "---------- BUSCO Alignment ---------"))
-
-# create doSNOW cluster
-nwcl <- makeCluster(nthread)
-doSNOW::registerDoSNOW(nwcl)
-
-# iterate over number of reference sequences
-for (i in 1:ngrouping) {
+# iterate over short-reads
+for (read in ls_shortreads) {
     # output directory
-    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
+    dir_output_read <- paste0(dir_buscotree, read, "/")
 
-    # check if input file exists
-    fn_metadata <- paste0(dir_check_tree_category, "metadata.tsv")
-    if (!file.exists(fn_metadata)) {
-        log4r::warn(fn_logger, paste("File not found: metadata for", i, "references. Skipped."))
-        next
-    }
+    # subset the data.frame
+    df_cor_subset <- df_cor_summary[df_cor_summary$read==read,]
 
-    # extract unique BUSCOs
-    df_metadata <- data.table::fread(fn_metadata)
-    ls_uq_busco <- unique(df_metadata$busco)
+    # iterate over sets of BUSCO
+    for (condition in c("all", "bias", "nonbias")) {
+        # create output directories
+        dir_output_condition <- paste0(dir_output_read, condition, "/")
+        dir_output_condition_fasta <- paste0(dir_output_condition, "alignment/")
+        dir_output_condition_trees <- paste0(dir_output_condition, "trees/")
+        lapply(list(dir_output_condition_fasta,dir_output_condition_trees), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
 
-    # iterate over BUSCOs
-    foreach (busco = ls_uq_busco) %dopar% {
-        # output directories
-        dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
-        dir_check_busco_tree_read <- paste0(dir_check_busco_tree, "read/")
-        dir_check_busco_tree_refs <- paste0(dir_check_busco_tree, "refs/")
-        lapply(list(dir_check_busco_tree_read,dir_check_busco_tree_refs), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+        # list BUSCO
+        ls_busco_condition <- df_cor_subset$busco
+        if (condition == "bias") {
+            ls_busco_condition <- df_cor_subset$busco[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05]
+        } else if (condition == "nonbias") {
+            ls_busco_condition <- df_cor_subset$busco[df_cor_subset$lm_p>=0.05 & df_cor_subset$spearman_p>=0.05]
+        }
 
         # output files
-        fn_out_read <- paste0(dir_check_busco_tree_read, busco, ".faa")
-        fn_out_refs <- paste0(dir_check_busco_tree_refs, busco, ".faa")
-        fn_out_read_aligned <- paste0(dir_check_busco_tree_read, busco, "_aligned.faa")
-        fn_out_refs_aligned <- paste0(dir_check_busco_tree_refs, busco, "_aligned.faa")
-
-        # subset the metadata data.table
-        df_metadata_subset <- df_metadata[df_metadata$busco == busco,]
-
-        # check if output files exist for mapped reads
-        if (!all(file.exists(fn_out_read, fn_out_read_aligned)) || params$redo) {
-            # iterate over rows
-            for (j in 1:nrow(df_metadata_subset)) {
-                prefix <- paste0(df_metadata_subset$read[j], "--", df_metadata_subset$ref[j])
-
-                # convert mapped reads ID to reference ID
-                read_species_name <- df_reads_ref$species[df_reads_ref$reads==df_metadata_subset$read[j]]
-                read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
-
-                # input FASTA file
-                fn_fasta_read <- ""
-                if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
-                    fn_fasta_read <- paste0(dir_busco_read, prefix, "/", busco, ".faa")
-                } else if (params$type == "pipeline") {
-                    fn_fasta_read <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".faa")
-                }
-
-                # combine FASTA sequences into one file
-                f_fasta2msa(fn_fasta_read, read_ref_id, fn_out_read)
-            }
-
-            # align using MAFFT FFT-NS-2
-            f_mafft(fn_out_read, fn_out_read_aligned, "--retree 2", params$exe_mafft)
+        fn_busco_condition_prefix <- paste0(dir_output_condition_trees, "all_busco")
+        fn_busco_condition_treefile <- paste0(fn_busco_condition_prefix, ".treefile")
+        
+        fn_busco_condition_astral_treefile <- paste0(dir_output_condition_trees, "astral.treefile")
+        fn_busco_condition_astral_log <- paste0(dir_output_condition_trees, "astral.log")
+        fn_busco_condition_gcf_treefile <- paste0(dir_output_condition_trees, "gcf.cf.tree")
+        fn_busco_condition_scf_treefile <- paste0(dir_output_condition_trees, "scf.cf.tree")
+        if (all(file.exists(fn_busco_condition_astral_treefile, fn_busco_condition_gcf_treefile, fn_busco_condition_scf_treefile))) {
+            next
         }
 
-        # check if output files exist for reference sequences
-        if (!all(file.exists(fn_out_refs, fn_out_refs_aligned)) || params$redo) {
-            # iterate over rows
-            for (j in 1:nrow(df_metadata_subset)) {
-                # extract reference ID based on short-reads
-                read_species_name <- df_reads_ref$species[df_reads_ref$reads==df_metadata_subset$read[j]]
-                read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
+        # create doSNOW cluster
+        nwcl <- makeCluster(params$thread)
+        doSNOW::registerDoSNOW(nwcl)
 
-                # input FASTA file
-                fn_fasta_refs <- paste0(dir_busco_ref, read_ref_id, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco, ".faa")
-                if (!file.exists(fn_fasta_refs)) {
-                    return(busco)
-                }
-                
-                # MSA
-                f_fasta2msa(fn_fasta_refs, read_ref_id, fn_out_refs)
+        # iterate over all BUSCO
+        foreach(busco = ls_busco_condition) %dopar% {
+            # extract alignment
+            fn_input <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa")
+            fn_output <- paste0(dir_output_condition_fasta, busco, ".fa")
+            if (file.exists(fn_output)) {
+                return(NULL)
             }
 
-            # align using MAFFT FFT-NS-2
-            f_mafft(fn_out_refs, fn_out_refs_aligned, "--retree 2", params$exe_mafft)
-        }
-    }
+            # extract headers
+            ls_prefix_subset <- ls_prefix[grepl(paste0("^",read), ls_prefix)]
+            ls_header <- c(ls_refseq, ls_prefix_subset)
 
-    log4r::info(fn_logger, paste0("File created/modified: MSA for group ", i, "."))
-}
-
-stopCluster(nwcl)
-```
-
-```{r check-busco-tree-build}
-f_write_log(fn_log=fn_log, msg=c("", "------------- BUSCO Tree -----------"))
-
-# create doSNOW cluster
-nwcl <- makeCluster(nthread)
-doSNOW::registerDoSNOW(nwcl)
-
-# iterate over number of reference sequences
-for (i in 1:ngrouping) {
-    # output directory
-    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
-
-    # list BUSCOs
-    ls_uq_busco <- list.dirs(dir_check_tree_category, recursive=F, full.names=F)
-
-    # iterate over BUSCOs
-    foreach (busco = ls_uq_busco) %dopar% {
-        # iterate over mapped reads and reference sequences
-        lapply(list("read","refs"), function(type) {
-            dir_output <- paste0(dir_check_tree_category, busco, "/", type, "/")
-
-            # output IQ-Tree2 files
-            fn_fasta <- paste0(dir_output, busco, "_aligned.faa")
-            fn_treefile <- paste0(dir_output, busco, "_aligned.faa.treefile")
-            if (!file.exists(fn_treefile) || params$redo) {
-                # run IQ-Tree2
-                f_iqtree2(fn_fasta, params$exe_iqtree2)
-            }
-        })
-    }
-
-    log4r::info(fn_logger, paste0("File created/modified: BUSCO trees for group ", i, "."))
-}
-
-stopCluster(nwcl)
-```
-
-```{r check-busco-tree-distance}
-f_write_log(fn_log=fn_log, msg=c("", "-------- BUSCO Tree Distance -------"))
-
-# output data.table
-df_output <- data.table::data.table(n_ref=numeric(), busco=character(), ntaxa=numeric(), n_spmatch=numeric(),
-                                    nrf=numeric(), nrf2=numeric(), nrf_highbs=numeric(),
-                                    sum_genome_dist=numeric(), read_infsites=numeric(),
-                                    ratio_treelen=numeric(), ratio_meanbs=numeric(), ratio_read_tiplen=numeric())
-
-# create doSNOW cluster
-nwcl <- makeCluster(nthread)
-doSNOW::registerDoSNOW(nwcl)
-
-# iterate over number of reference sequences
-for (i in 1:ngrouping) {
-    # output directory
-    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
-
-    # open metadata file
-    fn_metadata <- paste0(dir_check_tree_category, "metadata.tsv")
-    if (!file.exists(fn_metadata)) {
-        next
-    }
-
-    # input files
-    df_metadata <- data.table::fread(fn_metadata)
-    ls_uq_busco <- list.dirs(dir_check_tree_category, recursive=F, full.names=F)
-
-    # iterate over BUSCOs
-    df_output_subset <- foreach (busco = ls_uq_busco, .combine='rbind') %dopar% {
-        # input files
-        dir_check_busco_tree <- paste0(dir_check_tree_category, busco, "/")
-        fn_tree_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.faa.treefile")
-        fn_tree_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.faa.treefile")
-        
-        # check if file exists
-        if (!all(file.exists(fn_tree_one, fn_tree_two))) {
-            return(NULL)
+            f_extract_fasta(fn_input, ls_header, fn_output)
         }
 
-        # check the number of taxa
-        tre <- ape::read.tree(fn_tree_two)
-        nrf_denominator <- 2 * (length(tre$tip.label) - 3)
+        stopCluster(nwcl)
 
-        # extract the total genome distance
-        genome_dist <- sum(df_metadata$genome_dist[df_metadata$busco==busco])
-        n_spmatch <- length(df_metadata$read[df_metadata$busco==busco & df_metadata$genome_dist==0])
+        # run IQ-TREE2
+        f_multiple_tree(dir_output_condition_fasta, fn_busco_condition_prefix, params$thread, params$exe_iqtree2)
+        alltre_temp <- ape::read.tree(fn_busco_condition_treefile)
+        alltre_temp <- alltre_temp[[1]]
 
-        # extract the number of parsimony informative sites
-        fn_log_one <- paste0(dir_check_busco_tree, "read/", busco, "_aligned.faa.iqtree")
-        fn_log_two <- paste0(dir_check_busco_tree, "refs/", busco, "_aligned.faa.iqtree")
+        # run ASTRAL
+        if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+            fn_sptree <- paste0(dir_output_condition_trees, "sptree.treefile")
+            
+            # open species tree
+            sptree <- ape::read.tree(params$file_genome_treefile)
+            sptree <- ape::drop.tip(sptree, tip=sptree$tip.label[!sptree$tip.label%in%alltre_temp$tip.label])
+            ape::write.tree(sptree, file=fn_sptree)
 
-        # extract tree lengths
-        read_blen <- as.numeric(gsub("^.* ", "", system(paste("grep '^Total tree length (sum of branch lengths):'",fn_log_one), intern = T)))
-        refs_blen <- as.numeric(gsub("^.* ", "", system(paste("grep '^Total tree length (sum of branch lengths):'",fn_log_two), intern = T)))
-        ratio_treelen <- round(read_blen/refs_blen, 3)
+            f_astral_constrained(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, fn_busco_condition_astral_log, fn_sptree, params$exe_astral)
 
-        # extract ratio of tip to total tree lengths
-        read_inblen <- gsub("^.*\\: ", "", system(paste("grep '^Sum of internal branch lengths:'",fn_log_one), intern = T))
-        read_inblen <- as.numeric(gsub(".\\(.*$", "", read_inblen))
-        ratio_read_tiplen <- 1 - round(read_inblen/read_blen, 3)
-
-        # extract number of informative sites
-        n_infsites <- gsub("^.* ", "", system(paste("grep '^Number of parsimony informative sites:'",fn_log_one), intern = T))
-
-        # extract average bootstrap
-        read_meanbs <- f_calculate_mean_bs(fn_tree_one)
-        refs_meanbs <- f_calculate_mean_bs(fn_tree_two)
-        ratio_meanbs <- round(read_meanbs/refs_meanbs, 3)
-
-        # calculate nRF
-        nrf_dist <- f_calculate_nRF(fn_tree_one, fn_tree_two)
-        
-        gene_tree_dist <- f_calculate_treedist(fn_tree_one, fn_tree_two, 0)
-        refs_tree_dist <- f_calculate_treedist(fn_tree_two, fn_tree_one, 0)
-        nrf2 <- round((gene_tree_dist$dist+refs_tree_dist$dist) / nrf_denominator, 3)
-
-        gene_tree_dist_highbs <- f_calculate_treedist(fn_tree_one, fn_tree_two, 95)
-        refs_tree_dist_highbs <- f_calculate_treedist(fn_tree_two, fn_tree_one, 95)
-        nrf2_highbs <- round((gene_tree_dist_highbs$dist+refs_tree_dist_highbs$dist) / nrf_denominator, 3)
-
-        return(data.table::data.table(n_ref=i, busco=busco, ntaxa=length(tre$tip.label), n_spmatch=n_spmatch,
-                                      nrf=nrf_dist, nrf2=nrf2, nrf_highbs=nrf2_highbs,
-                                      sum_genome_dist=genome_dist, read_infsites=n_infsites,
-                                      ratio_treelen=ratio_treelen, ratio_meanbs=ratio_meanbs, ratio_read_tiplen=ratio_read_tiplen))
-    }
-
-    # update data.table
-    df_output <- rbind(df_output, df_output_subset)
-}
-
-stopCluster(nwcl)
-
-# check if function works as intended
-if (setequal(df_output$nrf, df_output$nrf2)) {
-    df_output$nrf2 <- NULL
-}
-
-# save file
-data.table::fwrite(df_output, file=fn_busco_sumtable, quote=F, sep="\t")
-
-# visualisation
-df_output_nrf <- df_output %>% group_by(n_ref) %>%
-                    summarise(nrf=mean(nrf), nrf_highbs=mean(nrf_highbs)) %>%
-                    pivot_longer(cols=-n_ref)
-
-tiff(file=fn_nrf_tiff, units="px", width=2880, height=1800)
-print(ggplot(data=df_output_nrf, aes(x=as.factor(n_ref), y=value, group=name, color=name, ymin=0, ymax=1)) +
-             geom_line(linewidth=7) +
-             ggtitle("nRF Distance across Numbers of Available References") + xlab("nRF") + ylab("Number of available references") +
-             theme(plot.title = element_text(hjust=0.5, size=50),
-                   plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
-                   axis.text.x = element_text(size=40),
-                   axis.title.x = element_text(size=40, margin=margin(t=20, r=0, b=0, l=0)),
-                   axis.text.y = element_text(size=40),
-                   axis.title.y = element_text(size=40, margin=margin(t=0, r=20, b=0, l=0)),
-                   legend.title=element_text(size=40),
-                   legend.text=element_text(size=40),
-                   legend.key.size=unit(1,"cm"),
-                   strip.text=element_text(size=40)))
-dev.off()
-
-tiff(file=fn_genomedist_tiff, units="px", width=2880, height=1800)
-print(ggplot(data=df_output, aes(x=as.factor(n_ref), y=sum_genome_dist)) +
-             geom_boxplot(size=3, outlier.size=8) +
-             ggtitle("Total PD across Numbers of Available References") + ylab("Total phylogenetic distance") + xlab("Number of available references") +
-             theme(plot.title = element_text(hjust=0.5, size=50),
-                   plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
-                   axis.text.x = element_text(size=40),
-                   axis.title.x = element_text(size=40, margin=margin(t=20, r=0, b=0, l=0)),
-                   axis.text.y = element_text(size=40),
-                   axis.title.y = element_text(size=40, margin=margin(t=0, r=20, b=0, l=0)),
-                   legend.position = "none"))
-dev.off()
-```
-
-```{r check-busco-tree-astral}
-f_write_log(fn_log=fn_log, msg=c("", "--------- ASTRAL BUSCO Tree --------",
-                                     "nRF Distance with Genome Tree"))
-
-
-# create doSNOW cluster
-nwcl <- makeCluster(nthread)
-doSNOW::registerDoSNOW(nwcl)
-
-# iterate over number of reference sequences
-for (i in 1:ngrouping) {
-    # output directory
-    dir_check_tree_category <- paste0(dir_check_tree, i, "/")
-
-    # open metadata file
-    fn_metadata <- paste0(dir_check_tree_category, "metadata.tsv")
-    if (!file.exists(fn_metadata)) {
-        next
-    }
-
-    # input files
-    df_metadata <- data.table::fread(fn_metadata)
-    ls_uq_busco <- list.dirs(dir_check_tree_category, recursive=F, full.names=F)
-
-    # iterate over BUSCOs
-    ls_trees <- foreach (busco = ls_uq_busco, .combine='c') %dopar% {
-        # input file
-        fn_tree <- paste0(dir_check_tree_category, busco, "/read/", busco, "_aligned.faa.treefile")
-        
-        # check if file exists
-        if (!file.exists(fn_tree)) {
-            return(NULL)
         } else {
-            return(fn_tree)
-        }      
-    }
-
-    ls_trees <- paste(ls_trees, collapse=" ")
-
-    # combine all BUSCO trees
-    fn_outfile <- paste0(dir_check_tree_category, "alltrees.tre")
-    system(paste("cat", ls_trees, ">", fn_outfile))
-
-    # run ASTRAL-III
-    fn_astral_outfile <- paste0(dir_check_tree_category, "alltrees.astral.tre")
-    fn_astral_logfile <- paste0(dir_check_tree_category, "alltrees.astral.log")
-    f_astral(fn_outfile, fn_astral_outfile, fn_astral_logfile, params$exe_astral)
-    
-    # convert tips to species name
-    fn_astral_sp_outfile <- paste0(dir_check_tree_category, "alltrees.astral.sp.tre")
-    f_tips_to_species(fn_astral_outfile, fn_astral_sp_outfile, ls_species_name)
-    
-    # calculate nRF distance
-    astral_tree <- ape::read.tree(fn_astral_outfile)
-    genome_tree_subset <- ape::keep.tip(genome_tree, tip=astral_tree$tip.label)
-
-    # extract information
-    nrf_dist <- round(phangorn::RF.dist(genome_tree_subset, astral_tree, normalize=T), 3)
-    quartet_score <- gsub("^.*\\: ", "", system(paste("grep '^Final normalized quartet score is:'",fn_astral_logfile), intern = T))
-    quartet_score <- round(as.numeric(quartet_score), 3)
-
-    f_write_log(fn_log=fn_log, msg=paste0("- Group ", i, ": ", nrf_dist, " (qScore: ", quartet_score, ")"))
+            f_astral(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, fn_busco_condition_astral_log, params$exe_astral)
+        }
+        
+        # calculate sCF and gCF
+        f_calculate_cf(fn_busco_condition_treefile, fn_busco_condition_astral_treefile, dir_output_condition_fasta, dir_output_condition_trees, params$thread, params$exe_iqtree2)
+    }    
 }
 
-stopCluster(nwcl)
+# iterate over shortreads
+for (read in ls_shortreads) {
+    # subset the data.frame
+    df_cor_subset <- df_cor_summary[df_cor_summary$read==read,]
+
+    # iterate over sets of BUSCO
+    for (condition in c("all", "bias", "nonbias")) {
+        # create output directories
+        dir_output_condition_ref <- paste0(dir_buscotree, read, "/", condition, "/per_reference/")
+
+        # list BUSCO
+        ls_busco_condition <- df_cor_subset$busco
+        if (condition == "bias") {
+            ls_busco_condition <- df_cor_subset$busco[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05]
+        } else if (condition == "nonbias") {
+            ls_busco_condition <- df_cor_subset$busco[df_cor_subset$lm_p>=0.05 & df_cor_subset$spearman_p>=0.05]
+        }
+
+        # iterate over reference sequences
+        for (ref in ls_refseq) {
+            dir_output_perref <- paste0(dir_output_condition_ref, ref, "/")
+            dir_output_perref_fasta <- paste0(dir_output_perref, "alignment/")
+            dir_output_perref_trees <- paste0(dir_output_perref, "trees/")
+            lapply(list(dir_output_perref_fasta,dir_output_perref_trees), function(x){if(!dir.exists(x)) dir.create(x, recursive=T)})
+
+            # output files
+            fn_busco_perref_prefix <- paste0(dir_output_perref_trees, "all_busco")
+            fn_busco_perref_treefile <- paste0(fn_busco_perref_prefix, ".treefile")
+            
+            fn_busco_perref_astral_treefile <- paste0(dir_output_perref_trees, "astral.treefile")
+            fn_busco_perref_astral_log <- paste0(dir_output_perref_trees, "astral.log")
+            fn_busco_perref_gcf_treefile <- paste0(dir_output_condition_trees, "gcf.cf.tree")
+            fn_busco_perref_scf_treefile <- paste0(dir_output_condition_trees, "scf.cf.tree")
+            if (all(file.exists(fn_busco_perref_astral_treefile, fn_busco_perref_gcf_treefile, fn_busco_perref_scf_treefile))) {
+                next
+            }
+
+            # create doSNOW cluster
+            nwcl <- makeCluster(params$thread)
+            doSNOW::registerDoSNOW(nwcl)
+
+            # iterate over all BUSCO
+            foreach(busco = ls_busco_condition) %dopar% {
+                # extract alignment
+                fn_input <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa")
+                fn_output <- paste0(dir_output_perref_fasta, busco, ".fa")
+                if (file.exists(fn_output)) {
+                    return(NULL)
+                }
+
+                # extract headers
+                ls_header <- c(ls_refseq, paste0(read,"--",ref))
+
+                f_extract_fasta(fn_input, ls_header, fn_output)
+            }
+
+            stopCluster(nwcl)
+
+            # run IQ-TREE2
+            f_multiple_tree(dir_output_perref_fasta, fn_busco_perref_prefix, params$thread, params$exe_iqtree2)
+            alltre_temp <- ape::read.tree(fn_busco_perref_treefile)
+            alltre_temp <- alltre_temp[[1]]
+
+            # run ASTRAL
+            if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+                fn_sptree <- paste0(dir_output_perref_trees, "sptree.treefile")
+                
+                # open species tree
+                sptree <- ape::read.tree(params$file_genome_treefile)
+                sptree <- ape::drop.tip(sptree, tip=sptree$tip.label[!sptree$tip.label%in%alltre_temp$tip.label])
+                ape::write.tree(sptree, file=fn_sptree)
+
+                f_astral_constrained(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, fn_busco_perref_astral_log, fn_sptree, params$exe_astral)
+
+            } else {
+                f_astral(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, fn_busco_perref_astral_log, params$exe_astral)
+            }
+
+            # calculate sCF and gCF
+            f_calculate_cf(fn_busco_perref_treefile, fn_busco_perref_astral_treefile, dir_output_perref_fasta, dir_output_perref_trees, params$thread, params$exe_iqtree2)
+        }
+    }
+}
 ```

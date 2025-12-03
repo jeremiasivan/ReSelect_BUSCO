@@ -15,24 +15,22 @@ f_refseq_download <- function(dir_datasets, accession, file_output) {
 }
 
 # function: download short reads FASTQ sequence using SRA Toolkit
-f_shortreads_download <- function(dir_sratoolkit, accession, dir_output) {
+f_shortreads_download <- function(dir_sratoolkit, accession, read, dir_output) {
     # prefetch from NCBI
     exe_prefetch <- paste0(dir_sratoolkit,"/prefetch")
     cmd_download <- paste(exe_prefetch, "--output-directory", dir_output, accession)
     system(cmd_download)
 
-    # output SRA file
-    file_sra <- paste0(dir_output,"/",accession,"/",accession,".sra")
-    
-    # create fastq folder
-    dir_fastq <- paste0(dir_output,"/",accession,"/fastq/")
-    if (!dir.exists(dir_fastq)) {
-        dir.create(dir_fastq, recursive=T)
-    }
+    # copy SRA file
+    dir_output_sra_init <- paste0(dir_output, "/", accession, "/")
+    dir_output_sra <- paste0(dir_output, "/", read, "/")
+    file_sra <- paste0(dir_output_sra, accession, ".sra")
+
+    system(paste("mv", dir_output_sra_init, dir_output_sra))
 
     # download fastq files
     exe_fastqdump <- paste0(dir_sratoolkit,"/fastq-dump")
-    cmd_fastq <- paste(exe_fastqdump, "--outdir", dir_fastq, "--split-files", file_sra)
+    cmd_fastq <- paste(exe_fastqdump, "--outdir", dir_output_sra, "--split-files", file_sra)
     system(cmd_fastq)
 }
 
@@ -52,7 +50,8 @@ f_qc_short_reads <- function(fastq_one, fastq_two, fn_adapters, prefix, min_qual
 
     # set the minimum quality score and merge overlapping reads
     cmd_qc <- paste(cmd_qc, "--basename", prefix,
-                    "--trimqualities --trimns --minquality", min_quality)
+                    "--trimqualities --trimns --minquality", min_quality,
+                    "--threads", thread)
     
     # run AdapterRemoval to get prefix.collapsed.truncated
     system(cmd_qc)
@@ -102,7 +101,8 @@ f_qualimap <- function(fn_bam, dir_output, thread, fn_gff, exe_qualimap) {
     cmd_coverage <- paste(exe_qualimap, "bamqc",
                           "-bam", fn_bam,
                           "-outdir", dir_output,
-                          "-nt", thread)
+                          "-nt", thread,
+                          "--java-mem-size=4G")
 
     if (!is.null(fn_gff)) {
         cmd_coverage <- paste(cmd_coverage, "-gff", fn_gff)

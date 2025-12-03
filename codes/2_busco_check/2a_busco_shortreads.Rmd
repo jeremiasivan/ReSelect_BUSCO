@@ -120,7 +120,7 @@ for (prefix in ls_prefix) {
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
     # get average coverage
-    mean_coverage <- as.numeric(df_readmap_coverage$mean_coverage[df_readmap_coverage$read_id==read & df_readmap_coverage$ref_id==ref])
+    mean_coverage <- as.numeric(df_readmap_coverage$mean_coverage[df_readmap_coverage$read_sp==read & df_readmap_coverage$ref_sp==ref])
     max_busco_depth <- 2 * mean_coverage
 
     # remove file extension .faa
@@ -225,9 +225,10 @@ for (prefix in ls_prefix) {
     mapped_reads <- as.numeric(strsplit(mapped_reads, split="%")[[1]][1])
 
     # update the data.table
-    df_coverage <- rbind(df_coverage, data.table::data.table(read_id=readref[1], ref_id=readref[2],
-                                                             read_sp=df_reads$species[df_reads$id==readref[1]],
-                                                             ref_sp=df_refs$species[df_refs$id==readref[2]],
+    df_coverage <- rbind(df_coverage, data.table::data.table(read_id=df_reads$id[df_reads$species==readref[1]],
+                                                             ref_id=df_refs$id[df_refs$species==readref[2]],
+                                                             read_sp=readref[1],
+                                                             ref_sp=readref[2],
                                                              mean_coverage=mean_coverage,
                                                              mapped_reads=mapped_reads))
 }

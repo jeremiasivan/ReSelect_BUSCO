@@ -12,14 +12,14 @@ In this step, we download the reference genomes and short reads from NCBI. Then,
 
 | Parameters               | Definition                                                                                                                            |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `codedir`                | Directory for folder `ReSelect_BUSCO/codes/`                                                                                                  |
+| `codedir`                | Directory for folder `ReSelect_BUSCO/codes/`                                                                                          |
 | `prefix`                 | Prefix for output files and folder                                                                                                    | 
 | `outdir`                 | Output directory                                                                                                                      |
 | `thread`                 | Number of threads for parallelisation                                                                                                 |
 | `redo`                   | If `FALSE`, skip analysis if output files exist; if `TRUE`, overwrite previous results                                                |
-| `file_refseq`            | Metadata file for reference assembly (e.g., `ReSelect_BUSCO/data/eucs_refseq.txt`)                                                            |
-| `file_shortreads`        | Metadata file for short reads (e.g., `ReSelect_BUSCO/data/eucs_shortreads.txt`)                                                               |
-| `file_adapters`          | Metadata file for sequencing adapters (e.g., `ReSelect_BUSCO/data/eucs_adapter.txt`)                                                          |
+| `file_refseq`            | Metadata file for reference assembly (e.g., `ReSelect_BUSCO/data/eucs_refseq.txt`)                                                    |
+| `file_shortreads`        | Metadata file for short reads (e.g., `ReSelect_BUSCO/data/eucs_shortreads.txt`)                                                       |
+| `file_adapters`          | Metadata file for sequencing adapters (e.g., `ReSelect_BUSCO/data/eucs_adapter.txt`)                                                  |
 | `exe_datasets`           | Executable for NCBI Datasets                                                                                                          |
 | `bin_sratoolkit`         | `bin/` directory for SRA-Toolkit                                                                                                      |
 | `exe_adapterremoval`     | Executable for AdapterRemoval                                                                                                         |
@@ -57,11 +57,10 @@ In this step, we run correlation analysis to check for the extent of reference b
 | `file_refseq`            | Metadata file for reference genomes (e.g., `ReSelect_BUSCO/data/eucs_refseq.txt`)                                                     |
 | `file_shortreads`        | Metadata file for short reads (e.g., `ReSelect_BUSCO/data/eucs_shortreads.txt`)                                                       |
 | `file_genome_treefile`   | Tree file for the reference genomes (e.g., `ReSelect_BUSCO/data/eucs.treefile`)                                                       |
-| `file_buscotree`         | Configuration file for the BUSCO tree analyses (e.g., `ReSelect_BUSCO/data/eucs_buscotree.txt`)                                       |
 | `exe_busco`              | Executable for BUSCO                                                                                                                  |
-| `exe_gffread`            | Executable for GffRead                                                                                                                |
 | `exe_gff2bed`            | Executable for Gff2Bed from BEDOPS                                                                                                    |
 | `exe_samtools`           | Executable for Samtools                                                                                                               |
+| `exe_qualimap`           | Executable for QualiMap                                                                                                               |
 | `exe_mafft`              | Executable for MAFFT                                                                                                                  |
 | `exe_trimal`             | Executable for TrimAl                                                                                                                 |
 | `exe_iqtree2`            | Executable for IQ-TREE 2                                                                                                              |
@@ -69,12 +68,11 @@ In this step, we run correlation analysis to check for the extent of reference b
 | `exe_astral`             | Executable for ASTRAL                                                                                                                 |
 | `busco_lineage`          | Lineage for BUSCO pipeline                                                                                                            |
 | `busco_mode`             | Mode for BUSCO pipeline. Options: genome, transcriptome, or protein                                                                   |
-| `type`                   | Method to extract BUSCOs from mapped reads. Options: coordinate or pipeline                                                           |
 | `thread_busco`           | Number of threads for BUSCO                                                                                                           |
 | `min_busco_depth`        | Minimum BUSCO depth for mapped reads                                                                                                  |
-| `busco_tree_mode`        | Mode for BUSCO tree analyses. Options: control, random, or oneref                                                                     |
-| `busco_tree_random_ref`  | Randomise references for each BUSCO (optional). Only available for `busco_tree_mode==random`.                                         |
+| `is_astral_constrained`  | Constrain the ASTRAL tree topology based on `file_genome_treefile`                                                                    |
 | `outgroup`               | Outgroup(s) from the list of references (optional)                                                                                    |
+| `focal_species`          | Focal species for the correlation analyses (optional)                                                                                 |
 
 #### Output
 Running the code will create the following folders in `outdir/prefix`:
@@ -83,18 +81,18 @@ Running the code will create the following folders in `outdir/prefix`:
     - `busco_refseq/`: folder with all BUSCO runs on individual reference genome
         - `fasta/`: folder with all BUSCO sequences inferred from BUSCO GFF files. Applicable only for `type==coordinate`.
         - `metadata.tsv`: file with the error status for each BUSCO for each reference
-    - `busco_coordinate/` and/or `busco_pipeline/`
-        - `short_reads/`: folder with all BUSCO sequences for all mapped reads
-            - `metadata.tsv`: file with the error status for each BUSCO for each mapped reads
-        - `trees/`: folder with all BUSCO alignments and trees for reference genomes and mapped reads
-        - `summary/`: folder with summary files from correlation analyses
-            - `correlation_figs/`: folder with scatter plots from the correlation analysis
-            - `prefix.cor.sumtable`: file with the results of the correlation analyses
-            - `prefix.dist.tiff`: file with the phylogenetic distances of mapped reads that come from the same species
-        - `busco_tree/`: folder with output from the BUSCO tree analyses
-            - `control/`, `random/`, and/or `oneref/`: folder with individual analysis across number of replicates
-                - `summary/`: folder with the summary of the BUSCO tree analyses
-                    - `summary.dist.sumtable`: file with the nRF distance and other statistics
+    - `short_reads/`: folder with all BUSCO sequences for all mapped reads
+        - `metadata.tsv`: file with the error status for each BUSCO for each mapped reads
+    - `trees/`: folder with all BUSCO alignments and trees for reference genomes and mapped reads
+    - `summary/`: folder with summary files from correlation analyses
+        - `correlation_figs/`: folder with scatter plots from the correlation analysis
+        - `prefix.cor.sumtable`: file with the results of the correlation analyses
+        - `prefix.dist.tiff`: file with the phylogenetic distances of mapped reads that come from the same species
+    - `busco_tree/`: folder with output from the BUSCO tree analyses
+        - `all/`, `bias/`, and `nonbias/`: folder with individual analysis for different sets of loci
+            - `alignment/`: folder with locus sequences
+            - `per_reference/`: folder with one reconstruction per run
+            - `trees`: folder with locus trees and ASTRAL tree
 
 ---
-*Last update: 19 May 2025 by Jeremias Ivan*
+*Last update: 03 December 2025 by Jeremias Ivan*

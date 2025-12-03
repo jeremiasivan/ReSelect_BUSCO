@@ -15,33 +15,22 @@ df_refseq_dir <- data.table::fread(fn_readmap_metadata)
 df_readmap_coverage <- data.table::fread(fn_readmap_coverage)
 
 df_refs <- data.table::fread(params$file_refseq)
-ls_refseq <- df_refs$id
+df_refs$species <- gsub("\\.", "_", df_refs$species)
+ls_refseq <- df_refs$species
 
 df_reads <- data.table::fread(params$file_shortreads)
-ls_shortreads <- df_reads$id[df_reads$is_check]
+df_reads$species <- gsub("\\.", "_", df_reads$species)
+ls_shortreads <- df_reads$species[df_reads$is_check]
 
 # list of prefix
 ls_prefix <- as.vector(outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--")))
 
 # output directories
-dir_busco <- ""
-
-# check the BUSCO extraction method
-if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
-    dir_busco <- paste0(currentdir, "/busco_check/busco_coordinate/")
-    f_write_log(fn_log=fn_log, msg="Running coordinate-based method.")
-} else if (params$type == "pipeline") {
-    dir_busco <- paste0(currentdir, "/busco_check/busco_pipeline/")
-    f_write_log(fn_log=fn_log, msg="Running pipeline-based method.")
-} else {
-    log4r::error(fn_logger, "Invalid type of BUSCO extraction method. Exited.")
-    knitr::knit_exit()
-}
-
 dir_readmap <- paste0(currentdir, "/readmap/")
 dir_busco_lineage <- paste0(currentdir, "/busco_lineage/")
-dir_busco_ref <- paste0(currentdir, "/busco_check/busco_refseq/")
 
+dir_busco <- paste0(currentdir, "/busco_check/")
+dir_busco_ref <- paste0(dir_busco, "refseq/")
 dir_busco_read <- paste0(dir_busco, "short_reads/")
 dir_busco_tree <- paste0(dir_busco, "trees/")
 
@@ -50,21 +39,6 @@ lapply(list(dir_busco_lineage,dir_busco_ref,dir_busco_read,dir_busco_tree), func
 # output files
 fn_refs_busco <- paste0(dir_busco_ref, "metadata.tsv")
 fn_mapped_reads_busco <- paste0(dir_busco_read, "metadata.tsv")
-```
-
-```{r busco-check-species-map, include=FALSE}
-# create a map for ID and species name
-ls_species_name <- c()
-
-# iterate over reference sequences
-for (ref in 1:nrow(df_refs)) {
-    ls_species_name[df_refs$id[ref]] <- df_refs$species[ref]
-}
-
-# iterate over short reads
-for (read in 1:nrow(df_reads)) {
-    ls_species_name[df_reads$id[read]] <- df_reads$species[read]
-}
 ```
 
 ## Download BUSCO lineage dataset
@@ -183,168 +157,23 @@ if (length(shared_busco) == 0) {
 } else {
     f_write_log(fn_log=fn_log, msg=c("", paste0("Number of complete single-copy BUSCOs: ", length(shared_busco), ".")))
 }
-```
 
-## Extract BUSCOs for reference sequences
-```{r check-busco-extract-ref-metadata, include=FALSE}
-is_ref_extract <- TRUE
-
-# open the metadata file
-if (file.exists(fn_refs_busco) && !params$redo) {
-    df_chr_busco <- data.table::fread(fn_refs_busco)
-
-    # exclude problematic BUSCOs from further analyses
-    shared_busco <- unique(df_chr_busco$busco)
-    ls_problematic_busco <- unique(df_chr_busco$busco[df_chr_busco$is_error])
-    shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
-
-    # print the number of BUSCO in HTML document
-    cat(paste("Number of shared BUSCO after filtering non-identical genes:", length(shared_busco)))
-    f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering problematic genes: ", length(shared_busco), ".")))
-
-    is_ref_extract <- FALSE
-}
-
-# stop the knit if shared busco is zero
-if (length(shared_busco) == 0) {
-    knitr::knit_exit()
-}
-```
-
-```{r check-busco-extract-ref, include=is_ref_extract, eval=is_ref_extract}
 # output data.table
 df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), note=character())
 
-# create doSNOW cluster
-nwcl <- makeCluster(params$thread)
-doSNOW::registerDoSNOW(nwcl)
+# extract total number of BUSCO
+len_shared_busco <- length(shared_busco)
 
-# check the BUSCO extraction method
-if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
-    # iterate over reference sequences
-    for (ref in ls_refseq) {
-        # directory for BUSCO alignments
-        dir_busco_out <- paste0(dir_busco_ref, ref, "/fasta/")
-        if (!dir.exists(dir_busco_out)) {
-            dir.create(dir_busco_out, recursive=T)
-        }
-    
-        # extract reference file location
-        file_fas <- df_refseq_dir$dir[df_refseq_dir$id==ref]
-
-        # Metaeuk GFF files
-        dir_metaeuk_out_initial <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/initial_results/")
-        file_metaeuk_gff_initial <- list.files(dir_metaeuk_out_initial, pattern="*.gff$", full.names=T, recursive=F)
-        df_metaeuk_gff_initial <- data.table::fread(file_metaeuk_gff_initial, header=FALSE, select=1:9)
-        data.table::setnames(df_metaeuk_gff_initial, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
-
-        dir_metaeuk_out_rerun <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/metaeuk_output/rerun_results/")
-        file_metaeuk_gff_rerun <- list.files(dir_metaeuk_out_rerun, pattern="*.gff$", full.names=T, recursive=F)
-        df_metaeuk_gff_rerun <- data.table::fread(file_metaeuk_gff_rerun, header=FALSE, select=1:9)
-        data.table::setnames(df_metaeuk_gff_rerun, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
-
-        # iterate over shared BUSCOs
-        df_output_temp <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
-            require(data.table)
-            require(Biostrings)
-            require(stringr)
-
-            # BUSCO files
-            dir_busco_gff <- paste0(dir_busco_ref, ref, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", busco)
-            file_busco_fas <- paste0(dir_busco_gff, ".faa")
-            file_busco_gff <- paste0(dir_busco_gff, ".gff")
-
-            # output files
-            file_busco_cds <- paste0(dir_busco_out, busco, ".cds.faa")
-            file_busco_gff_out <- paste0(dir_busco_out, busco, ".gff")
-            file_busco_bed_out <- paste0(dir_busco_out, busco, ".bed")
-            file_busco_concat <- paste0(dir_busco_out, busco, ".faa")
-
-            # check if GFF file exists
-            if (!file.exists(file_busco_gff)) {
-                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, note="File not found: GFF file"))
-            }
-
-            # extract GFF entries from Metaeuk
-            df_busco_gff <- data.table::fread(file_busco_gff, header=FALSE, select=1:9)
-            data.table::setnames(df_busco_gff, c("seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"))
-
-            target_id <- stringr::str_extract(df_busco_gff$attribute[1], "^Target_ID=.*\\;")
-            df_metaeuk_gff_subset <- df_metaeuk_gff_initial[grepl(target_id, df_metaeuk_gff_initial$attribute),]
-            if (nrow(df_metaeuk_gff_subset) == 0) {
-                df_metaeuk_gff_subset <- df_metaeuk_gff_rerun[grepl(target_id, df_metaeuk_gff_rerun$attribute),]
-            }
-
-            # check if GFF file is problematic
-            if (nrow(df_metaeuk_gff_subset) == 0) {
-                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, note="File not found: GFF entries from Metaeuk output"))
-            } else if (nrow(df_metaeuk_gff_subset[df_metaeuk_gff_subset$feature=="gene"]) > 1) {
-                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, note="Error: multiple gene entries from Metaeuk output"))
-            }
-
-            # save the new GFF file
-            df_metaeuk_gff_subset$attribute <- gsub("TCS_ID", "ID", df_metaeuk_gff_subset$attribute)
-            df_metaeuk_gff_subset <- df_metaeuk_gff_subset[abs(df_metaeuk_gff_subset$start-df_metaeuk_gff_subset$end)!=1,]
-            data.table::fwrite(df_metaeuk_gff_subset, file=file_busco_gff_out, sep="\t", quote=F, row.names=F, col.names=F)
-
-            # run bedops gff2bed
-            cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff, ">", file_busco_bed_out)
-            system(cmd_gff2bed)
-
-            # extract BUSCO
-            f_extract_fasta_from_gff(file_fas, file_busco_gff_out, file_busco_cds, file_busco_concat, params$exe_gffread)
-
-            # sanity check if FASTA is the same
-            output <- f_compare_fasta(file_busco_fas, file_busco_concat)
-            if (!is.null(output$errmsg)) {
-                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, note=output$errmsg))
-            }
-
-            if (!output$is_identical){
-                return(data.table::data.table(ref=ref, busco=busco, is_error=TRUE, note="Sequence is not identical"))
-            }
-
-            return(data.table::data.table(ref=ref, busco=busco, is_error=FALSE, note=NA))
-        }
-
-        # update the list of output data.table
-        df_chr_busco <- rbind(df_chr_busco, df_output_temp)
-
-        log4r::info(fn_logger, paste0("File created/modified: BUSCO FASTA alignments for ", ref, "."))
-    }
-
-} else if (params$type == "pipeline") {
-    df_chr_busco <- data.table::data.table(ref=character(), busco=character(), is_error=logical(), note=character())
-
-    # extract total number of BUSCO
-    len_shared_busco <- length(shared_busco)
-
-    # iterate over references
-    for (ref in ls_refseq) {
-        df_chr_busco <- rbind(df_chr_busco, data.table::data.table(ref=rep(ref, len_shared_busco),
-                                                                   busco=shared_busco,
-                                                                   is_error=rep(FALSE, len_shared_busco),
-                                                                   note=rep(NA, len_shared_busco)))
-    }
+# iterate over references
+for (ref in ls_refseq) {
+    df_chr_busco <- rbind(df_chr_busco, data.table::data.table(ref=rep(ref, len_shared_busco),
+                                                                busco=shared_busco,
+                                                                is_error=rep(FALSE, len_shared_busco),
+                                                                note=rep(NA, len_shared_busco)))
 }
-
-stopCluster(nwcl)
 
 # save data.table
 data.table::fwrite(df_chr_busco, file=fn_refs_busco, quote=F, sep="\t")
-
-# exclude problematic BUSCOs from further analyses
-ls_problematic_busco <- unique(df_chr_busco$busco[df_chr_busco$is_error])
-shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
-
-# print the number of BUSCO in HTML document
-cat(paste("Number of shared BUSCO after filtering non-identical genes:", length(shared_busco)))
-f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering problematic genes: ", length(shared_busco), ".")))
-
-# stop the knit if shared busco is zero
-if (length(shared_busco) == 0) {
-    knitr::knit_exit()
-}
 ```
 
 ## Extract BUSCOs for mapped reads
@@ -371,12 +200,7 @@ if (!is.null(df_mapped_reads_busco) && !params$redo) {
     shared_busco <- shared_busco[!shared_busco %in% ls_problematic_busco]
 
 } else {
-    # run BUSCO extraction for mapped reads
-    if (params$type == "coordinate" || params$type == "" || is.null(params$type)) {
-        knitr::knit_child(paste0(params$codedir,"/2_busco_check/2a_coordinate.Rmd"))
-    } else if (params$type == "pipeline") {
-        knitr::knit_child(paste0(params$codedir,"/2_busco_check/2b_pipeline.Rmd"))
-    }
+    knitr::knit_child(paste0(params$codedir,"/2_busco_check/2a_busco_shortreads.Rmd"))
 }
 
 # print the number of BUSCO in HTML document
@@ -387,12 +211,8 @@ f_write_log(fn_log=fn_log, msg=c("", paste0("Number of BUSCO after filtering pro
 ## Convert individual BUSCO alignments into MSA
 ```{r check-busco-msa}
 # set up variables
-busco_refs_dir_mid <- "/fasta/"
-busco_read_dir_mid <- "/"
-if (params$type == "pipeline") {
-    busco_refs_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
-    busco_read_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
-}
+busco_refs_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
+busco_read_dir_mid <- paste0("/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
 
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
@@ -480,12 +300,6 @@ foreach (busco = shared_busco) %dopar% {
         # run IQ-Tree2
         f_iqtree2(fn_fasta, params$exe_iqtree2)
     }
-
-    # change the ID into species name
-    fn_treefile_species <- paste0(dir_output, busco, "_aligned.fa.treefile.species")
-    if (!file.exists(fn_treefile_species) || params$redo) {
-        f_tips_to_species(fn_treefile, fn_treefile_species, ls_species_name)
-    }
 }
 
 stopCluster(nwcl)
@@ -501,6 +315,9 @@ doSNOW::registerDoSNOW(nwcl)
 # iterate over shared BUSCOs
 foreach (busco = shared_busco) %dopar% {
     dir_output <- paste0(dir_busco_tree, busco, "/treeshrink/")
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
+    }
 
     # input file
     fn_treefile <- paste0(dir_busco_tree, busco, "/", busco, "_aligned.fa.treefile")
@@ -515,12 +332,6 @@ foreach (busco = shared_busco) %dopar% {
     if (!file.exists(fn_treeshrink_tree) || params$redo) {
         # run TreeShrink
         f_treeshrink(fn_treefile, prefix, dir_output, params$exe_treeshrink)
-    }
-
-    # change the ID into species name
-    fn_treefile_species <- paste0(dir_output, prefix, ".treefile.species")
-    if (!file.exists(fn_treefile_species) || params$redo) {
-        f_tips_to_species(fn_treeshrink_tree, fn_treefile_species, ls_species_name)
     }
 }
 
@@ -559,12 +370,6 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     if (!file.exists(fn_treefile) || params$redo) {
         # run IQ-Tree2
         f_iqtree2(fn_out_trimal, params$exe_iqtree2)
-    }
-
-    # change the ID into species name
-    fn_treefile_species <- paste0(dir_output, busco, "_aligned_trimal.fa.treefile.species")
-    if (!file.exists(fn_treefile_species) || params$redo) {
-        f_tips_to_species(fn_treefile, fn_treefile_species, ls_species_name)
     }
 }
 

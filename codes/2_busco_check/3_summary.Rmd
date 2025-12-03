@@ -1,5 +1,5 @@
 ---
-title: "Summarise BUSCO Trees"
+title: "Summarise BUSCO Alignments and Trees"
 ---
 
 ```{r check-summary-setup, include=FALSE}
@@ -62,14 +62,24 @@ for (i in 1:nrow(df_reads_subset)) {
 
     # extract reference ID
     ref_id <- df_refs$id[df_refs$species == species_name]
+    if (is.null(ref_id)) {
+        next
+    }
 
     # update data.frame
     df_reads_ref <- rbind(df_reads_ref, data.table::data.table(species=species_name, reads=df_reads_subset$id[i], ref=ref_id))
 }
+
+# update variable
+is_check_summary_individual <- TRUE
+if (nrow(df_reads_ref)==0) {
+    is_check_summary_individual <- FALSE
+}
+
 ```
 
 ## Calculate phylogenetic distance between mapped reads and reference from the same taxon
-```{r check-summary-individual}
+```{r check-summary-individual, eval=is_check_summary_individual}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -105,16 +115,16 @@ plot <- ggplot(data.frame(ls_output), aes(x=ls_output, xmin=0, xmax=max(ls_outpu
 
 tiff(file=fn_dist_tiff, units="px", width=2880, height=1800)
 print(plot + theme(plot.title = element_text(hjust=0.5, size=50),
-                   plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
-                   axis.text.x = element_text(size=30),
-                   axis.title.x = element_blank(),
-                   axis.text.y = element_text(size=30),
-                   axis.title.y = element_text(size=40, margin=margin(t=0, r=20, b=0, l=0)),
-                   legend.position = "none"))
+                plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
+                axis.text.x = element_text(size=30),
+                axis.title.x = element_blank(),
+                axis.text.y = element_text(size=30),
+                axis.title.y = element_text(size=40, margin=margin(t=0, r=20, b=0, l=0)),
+                legend.position = "none"))
 dev.off()
 ```
 
-```{r, out.width="100%", echo=FALSE}
+```{r, out.width="100%", include=is_check_summary_individual}
 print(plot + theme(plot.title = element_text(face = "bold"),
                    plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm")))
 ```
@@ -124,6 +134,14 @@ print(plot + theme(plot.title = element_text(face = "bold"),
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
+
+# set the pivot species
+focal_sp <- params$focal_species
+if (is.null(focal_sp) || focal_sp=="") {
+    focal_sp <- sample(ls_refseq_available, 1)
+}
+
+f_write_log(fn_log=fn_log, msg=paste("Calculating pairwise distance against ", focal_sp))
 
 # iterate over BUSCOs
 df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
@@ -163,10 +181,6 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
         # temporary data.table
         temp_df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric(), grouping=character(), shape=character())
 
-        # extract taxa list
-        read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
-        read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
-
         # extract available available reference sequences
         ls_refseq_available <- grep(paste0("^",read), tre_original_tips, value=T)
         ls_refseq_available <- sapply(ls_refseq_available, function(x) {
@@ -180,20 +194,17 @@ df_output <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
             prefix_shape <- ifelse(prefix %in% tre_treeshrink_tips, "IN", "OUT")
 
             # calculate distance for reference
-            ref_dist <- 0
-            if (read_ref_id != ref) {
-                ref_dist <- distance_tre[rownames(distance_tre)==read_ref_id, colnames(distance_tre)==ref]
-            }
+            ref_dist <- distance_tre[rownames(distance_tre)==focal_sp, colnames(distance_tre)==ref]
 
             # calculate distance for short reads
-            read_dist <- distance_tre[rownames(distance_tre)==read_ref_id, colnames(distance_tre)==prefix]
+            read_dist <- distance_tre[rownames(distance_tre)==focal_sp, colnames(distance_tre)==prefix]
 
             # update data.frame
-            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read_species_name,
-                                                                       ref=df_refs$species[df_refs$id==ref],
+            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read,
+                                                                       ref=ref,
                                                                        ref_dist=ref_dist,
                                                                        read_dist=read_dist,
-                                                                       grouping=df_refs$grouping[df_refs$id==ref],
+                                                                       grouping=df_refs$grouping[df_refs$species==ref],
                                                                        shape=prefix_shape))
         }
 
@@ -321,10 +332,6 @@ df_output_trimal <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
         # temporary data.table
         temp_df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric(), grouping=character())
 
-        # extract taxa list
-        read_species_name <- df_reads_ref$species[df_reads_ref$reads==read]
-        read_ref_id <- df_reads_ref$ref[df_reads_ref$species==read_species_name]
-
         # extract available available reference sequences
         ls_refseq_available <- grep(paste0("^",read), tre_original_tips, value=T)
         ls_refseq_available <- sapply(ls_refseq_available, function(x) {
@@ -337,20 +344,17 @@ df_output_trimal <- foreach (busco = shared_busco, .combine='rbind') %dopar% {
             prefix <- paste0(read,"--",ref)
 
             # calculate distance for reference
-            ref_dist <- 0
-            if (read_ref_id != ref) {
-                ref_dist <- distance_tre[rownames(distance_tre)==read_ref_id, colnames(distance_tre)==ref]
-            }
+            ref_dist <- distance_tre[rownames(distance_tre)==focal_sp, colnames(distance_tre)==ref]
 
             # calculate distance for short reads
-            read_dist <- distance_tre[rownames(distance_tre)==read_ref_id, colnames(distance_tre)==prefix]
+            read_dist <- distance_tre[rownames(distance_tre)==focal_sp, colnames(distance_tre)==prefix]
 
             # update data.frame
-            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read_species_name,
-                                                                       ref=df_refs$species[df_refs$id==ref],
+            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read,
+                                                                       ref=ref,
                                                                        ref_dist=ref_dist,
                                                                        read_dist=read_dist,
-                                                                       grouping=df_refs$grouping[df_refs$id==ref]))
+                                                                       grouping=df_refs$grouping[df_refs$species==ref]))
         }
 
         # check if all values are NULL or NAs
