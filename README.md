@@ -9,6 +9,7 @@
 ## <a id="prereqs">Prerequisites</a>
 This pipeline requires several software and R packages to run. All software have to be executable (except for **SRA Toolkit** which points to `bin` directory), while the R packages should be installed either in your local directory or virtual environment. We recommend you to use environment management system (e.g. `conda`) to install the software and packages, but you can also use `install.packages()` built-in function in R or RStudio.
 
+
 ### Software
 | Name                    | Website / Github                                                      |
 | ----------------------- |:---------------------------------------------------------------------:|
@@ -59,6 +60,7 @@ This pipeline requires several software and R packages to run. All software have
         Notes: Please install all of the R packages and their dependencies. A good starting point is to install <a href="https://anaconda.org/conda-forge/r-essentials">`r-essentials`</a> which includes commonly-used packages in R. 
 
 3. **Update the parameters in the file** <br>
+    Please refer to <a href="codes/README.md">`codes/README.md`</a> for full description of the parameters used.
 
 4. **Run the code file** <br>
     For running individual steps:
@@ -75,4 +77,4 @@ This pipeline requires several software and R packages to run. All software have
     In UNIX-based operating systems (e.g., Linux and MacOS), it is advisable to use `nohup` or `tmux` to run the whole pipeline. For Windows, you can use `start`, but I have never tried it before. 
 
 ---
-*Last update: 03 December 2025 by Jeremias Ivan*
+*Last update: 01 March 2026 by Jeremias Ivan*
