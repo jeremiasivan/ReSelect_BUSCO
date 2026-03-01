@@ -22,6 +22,10 @@ params:
   file_shortreads: ""
   file_adapters: ""
 
+  skip_refseq_download: FALSE
+  skip_shortreads_download: FALSE
+  skip_shortreads_qc: FALSE
+
   # executables
   exe_datasets: ""
   bin_sratoolkit: ""

@@ -1,39 +1,40 @@
 # ReSelect BUSCO
 
 ## Table of Content
-- <a href="#analyses">Analyses</a>
-    - <a href="#prepare">Data Preparation</a>
-    - <a href="#check">Checking Reference Bias on BUSCO</a>
+- <a href="#prepare">Data Preparation</a>
+    - <a href="#owndata">Using Your Own Datasets</a>
+- <a href="#check">Checking Reference Bias on BUSCO</a>
 
-## <a id="analyses">Analyses</a>
-
-### <a id="prepare">Data Preparation</a>
+## <a id="prepare">Data Preparation</a>
 In this step, we download the reference genomes and short reads from NCBI. Then, we performed quality-control (QC) on the short reads and map them to all of the available references. The parameters for this step is set in `1_data_download/1_main.Rmd`.
 
-| Parameters               | Definition                                                                                                                            |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `codedir`                | Directory for folder `ReSelect_BUSCO/codes/`                                                                                          |
-| `prefix`                 | Prefix for output files and folder                                                                                                    | 
-| `outdir`                 | Output directory                                                                                                                      |
-| `thread`                 | Number of threads for parallelisation                                                                                                 |
-| `redo`                   | If `FALSE`, skip analysis if output files exist; if `TRUE`, overwrite previous results                                                |
-| `file_refseq`            | Metadata file for reference assembly (e.g., `ReSelect_BUSCO/data/eucs_refseq.txt`)                                                    |
-| `file_shortreads`        | Metadata file for short reads (e.g., `ReSelect_BUSCO/data/eucs_shortreads.txt`)                                                       |
-| `file_adapters`          | Metadata file for sequencing adapters (e.g., `ReSelect_BUSCO/data/eucs_adapter.txt`)                                                  |
-| `exe_datasets`           | Executable for NCBI Datasets                                                                                                          |
-| `bin_sratoolkit`         | `bin/` directory for SRA-Toolkit                                                                                                      |
-| `exe_adapterremoval`     | Executable for AdapterRemoval                                                                                                         |
-| `exe_bwamem2`            | Executable for BWA-MEM2                                                                                                               |
-| `exe_samtools`           | Executable for Samtools                                                                                                               |
-| `exe_bcftools`           | Executable for Bcftools                                                                                                               |
-| `exe_qualimap`           | Executable for QualiMap                                                                                                               |
-| `min_read_quality`       | Minimum quality for short reads                                                                                                       |
-| `thread_adapterremoval`  | Number of threads for AdapterRemoval                                                                                                  |
-| `thread_bwamem2`         | Number of threads for BWA-MEM2                                                                                                        |
-| `thread_samtools`        | Number of threads for Samtools and Bcftools                                                                                           |
-| `thread_qualimap`        | Number of threads for QualiMap                                                                                                        |
+| Parameters                 | Definition                                                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `codedir`                  | Directory for folder `ReSelect_BUSCO/codes/`                                                                                          |
+| `prefix`                   | Prefix for output files and folder                                                                                                    | 
+| `outdir`                   | Output directory                                                                                                                      |
+| `thread`                   | Number of threads for parallelisation                                                                                                 |
+| `redo`                     | If `FALSE`, skip analysis if output files exist; if `TRUE`, overwrite previous results                                                |
+| `file_refseq`              | Metadata file for reference assembly (e.g., `ReSelect_BUSCO/data/eucs_refseq.txt`)                                                    |
+| `file_shortreads`          | Metadata file for short reads (e.g., `ReSelect_BUSCO/data/eucs_shortreads.txt`)                                                       |
+| `file_adapters`            | Metadata file for sequencing adapters (e.g., `ReSelect_BUSCO/data/eucs_adapter.txt`)                                                  |
+| `skip_refseq_download`     | Skip download step for reference genomes                                                                                              |
+| `skip_shortreads_download` | Skip download step for short reads data                                                                                               |
+| `skip_shortreads_qc`       | Skip QC step for short reads data                                                                                                     |
+| `exe_datasets`             | Executable for NCBI Datasets                                                                                                          |
+| `bin_sratoolkit`           | `bin/` directory for SRA-Toolkit                                                                                                      |
+| `exe_adapterremoval`       | Executable for AdapterRemoval                                                                                                         |
+| `exe_bwamem2`              | Executable for BWA-MEM2                                                                                                               |
+| `exe_samtools`             | Executable for Samtools                                                                                                               |
+| `exe_bcftools`             | Executable for Bcftools                                                                                                               |
+| `exe_qualimap`             | Executable for QualiMap                                                                                                               |
+| `min_read_quality`         | Minimum quality for short reads                                                                                                       |
+| `thread_adapterremoval`    | Number of threads for AdapterRemoval                                                                                                  |
+| `thread_bwamem2`           | Number of threads for BWA-MEM2                                                                                                        |
+| `thread_samtools`          | Number of threads for Samtools and Bcftools                                                                                           |
+| `thread_qualimap`          | Number of threads for QualiMap                                                                                                        |
 
-#### Output
+### Output
 Running the code will create the following folders in `outdir/prefix`:
 - `refseq/`: folder with all reference assemblies
 - `short_reads/`: folder with all raw short reads
@@ -44,7 +45,47 @@ Running the code will create the following folders in `outdir/prefix`:
     - `summary.tsv`: file with the summary coverage for all mapped reads
 - `logs/`: folder that contains the log files for each run
 
-### <a id="check">Checking Reference Bias on BUSCO</a>
+### <a id="owndata">Using Your Own Datasets</a>
+If you have your own dataset, please follow these steps (*I am sorry in advance for the complicated folder structures as I follow default outputs from NCBI Datasets, SRA Toolkit, and AdapterRemoval*):
+1. For example, I have a paired-end short-read data (`newsp_R1.fastq` and `newsp_R2.fastq`) and three reference genomes (`ref1.fna`, `ref2.fna`, `ref3.fna`).
+2. For `file_shortreads` parameter, add each short-read dataset (one per line):
+
+    | id          | species          | is_check          |
+    | ----------- | ---------------- | ----------------- |
+    | `newsp`     | `newspecies`     | `TRUE`            |
+
+
+3. For `file_refseq` parameter, add each reference genome (one per line):
+
+    | id          | species          | grouping          |
+    | ----------- | ---------------- | ----------------- |
+    | `ref1`      | `reference1`     | `group1`          |
+    | `ref2`      | `reference2`     | `group1`          |
+    | `ref3`      | `reference3`     | `group2`          |
+
+4. For short-read dataset:
+    - If you have *raw* sequencing reads, store them in: `$outdir/short_reads/$species/`. <br><br>
+    Following the example, if the `$outdir` parameter is `/home/jeremias/output`, then the directories of the short-read files are:
+        - `/home/jeremias/output/short_reads/newspecies/newsp_R1.fastq`
+        - `/home/jeremias/output/short_reads/newspecies/newsp_R2.fastq`
+        - **Ensure all files end with `.fastq`**
+
+    - If you have *cleaned* sequencing reads, store them in: `$output/short_reads/filtered/`. <br><br>
+    Following the example, if the `$outdir` parameter is `/home/jeremias/output`, then the directories of the short-read files are:
+        - `/home/jeremias/output/short_reads/filtered/newspecies.pair1.truncated`
+        - `/home/jeremias/output/short_reads/filtered/newspecies.pair2.truncated`
+        - **Ensure all files end with `.pairX.truncated`, where `X` represents either 1 or 2**
+
+5. For reference genomes, store each in: `$outdir/refseq/$species/ncbi_dataset/data/$id/`. <br><br>
+   Following the example, if the `$outdir` parameter is `/home/jeremias/output`, then the directories of the reference genomes are:
+    - `/home/jeremias/output/refseq/reference1/ncbi_dataset/data/ref1/ref1.fna`
+    - `/home/jeremias/output/refseq/reference2/ncbi_dataset/data/ref2/ref2.fna`
+    - `/home/jeremias/output/refseq/reference3/ncbi_dataset/data/ref3/ref3.fna`
+    - **Ensure all files end with `.fna`**
+
+6. Set `skip_refseq_download`, `skip_shortreads_download`, and/or `skip_shortreads_qc` parameters to be `TRUE`
+
+## <a id="check">Checking Reference Bias on BUSCO</a>
 In this step, we run correlation analysis to check for the extent of reference bias in BUSCO and assess if it changes the BUSCO tree topology. The parameters for this step is set in `2_busco_check/1_main.Rmd`.
 
 | Parameters               | Definition                                                                                                                            |
@@ -95,4 +136,4 @@ Running the code will create the following folders in `outdir/prefix`:
             - `trees`: folder with locus trees and ASTRAL tree
 
 ---
-*Last update: 03 December 2025 by Jeremias Ivan*
+*Last update: 01 March 2026 by Jeremias Ivan*

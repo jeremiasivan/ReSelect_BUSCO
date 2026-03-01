@@ -10,6 +10,10 @@ file_refseq <- paste0(codedir, "/../data/eucs_refseq.txt")
 file_shortreads <- paste0(codedir, "/../data/eucs_shortreads.txt")
 file_adapters <- paste0(codedir, "/../data/eucs_adapter.txt")
 
+skip_refseq_download <- FALSE
+skip_shortreads_download <- FALSE
+skip_shortreads_qc <- FALSE
+
 exe_datasets <- "datasets"
 bin_sratoolkit <- "sratoolkit/bin/"
 
@@ -58,6 +62,7 @@ rmarkdown::render(input=paste0(codedir,"/1_data_preparation/1_main.Rmd"),
                   output_file=paste0(outdir_prefix, outprefix, ".download.html"),
                   params=list(prefix=outprefix, codedir=codedir, outdir=outdir, thread=thread, redo=redo,
                               file_refseq=file_refseq, file_shortreads=file_shortreads, file_adapters=file_adapters,
+                              skip_refseq_download=skip_refseq_download, skip_shortreads_download=skip_shortreads_download, skip_shortreads_qc=skip_shortreads_qc,
                               exe_datasets=exe_datasets, bin_sratoolkit=bin_sratoolkit,
                               exe_adapterremoval=exe_adapterremoval, exe_bwamem2=exe_bwamem2, exe_samtools=exe_samtools, exe_bcftools=exe_bcftools, exe_qualimap=exe_qualimap,
                               current_time=current_time),
