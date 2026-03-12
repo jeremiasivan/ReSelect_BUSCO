@@ -138,7 +138,7 @@ doSNOW::registerDoSNOW(nwcl)
 # set the pivot species
 focal_sp <- params$focal_species
 if (is.null(focal_sp) || focal_sp=="") {
-    focal_sp <- sample(ls_refseq_available, 1)
+    focal_sp <- sample(ls_refseq, 1)
 }
 
 f_write_log(fn_log=fn_log, msg=paste("Calculating pairwise distance against ", focal_sp))

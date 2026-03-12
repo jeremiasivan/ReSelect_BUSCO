@@ -144,8 +144,8 @@ for (read in ls_shortreads) {
             
             fn_busco_perref_astral_treefile <- paste0(dir_output_perref_trees, "astral.treefile")
             fn_busco_perref_astral_log <- paste0(dir_output_perref_trees, "astral.log")
-            fn_busco_perref_gcf_treefile <- paste0(dir_output_condition_trees, "gcf.cf.tree")
-            fn_busco_perref_scf_treefile <- paste0(dir_output_condition_trees, "scf.cf.tree")
+            fn_busco_perref_gcf_treefile <- paste0(dir_output_perref_trees, "gcf.cf.tree")
+            fn_busco_perref_scf_treefile <- paste0(dir_output_perref_trees, "scf.cf.tree")
             if (all(file.exists(fn_busco_perref_astral_treefile, fn_busco_perref_gcf_treefile, fn_busco_perref_scf_treefile))) {
                 next
             }

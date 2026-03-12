@@ -123,6 +123,11 @@ for (ref in ls_refseq) {
 
     # check if there are multiple reference sequences
     file_ref <- list.files(dir_ref, pattern="*.fna$", recursive=F, full.names=T)
+    if (length(file_ref) == 0) {
+        log4r::warn(fn_logger, paste0("No reference is found for ", ref, ". Skipped."))
+        next
+    }
+
     file_ref <- file_ref[1]
     if (length(file_ref) > 1) {
         log4r::warn(fn_logger, paste0("Multiple references are found for ", ref, ". ", file_ref, " is selected."))
