@@ -43,7 +43,7 @@ sys_tic <- Sys.time()
 # load libraries and function
 suppressPackageStartupMessages(library(doSNOW))
 
-source(file.path(path.expand(params$codedir), "codes", "01_readmap", "functions.R"), local=TRUE)
+source(file.path(path.expand(params$codedir), "1_data_preparation", "1_readmap", "functions.R"), local=TRUE)
 
 # create outdir
 currentdir <- file.path(path.expand(params$outdir), params$prefix)
@@ -68,7 +68,7 @@ if (!file.exists(fn_log)) {
 knitr::opts_knit$set(root.dir = currentdir)
 ```
 
-```{r child = file.path(path.expand(params$codedir), "codes", "01_readmap", "2_run.Rmd")}
+```{r child = file.path(path.expand(params$codedir), "1_data_preparation", "1_readmap", "2_run.Rmd")}
 ```
 
 ```{r, include=FALSE}

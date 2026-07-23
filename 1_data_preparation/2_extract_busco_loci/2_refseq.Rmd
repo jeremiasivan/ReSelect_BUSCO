@@ -115,7 +115,7 @@ nwcl <- makeCluster(cl_busco)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over reference sequences
-foreach (ref = ls_refseq) %dopar% {
+foreach (ref = ls_busco_ref_run) %dopar% {
     # extract reference file location
     file_ref <- df_refs$dir[df_refs$species==ref]
 

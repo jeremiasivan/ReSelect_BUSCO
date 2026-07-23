@@ -83,6 +83,7 @@ f_calculate_cf <- function(fn_all_trees, fn_sp_tree, dir_fasta, dir_output, thre
                      "-t", fn_sp_tree,
                      "--gcf", fn_all_trees,
                      "-T", thread,
+                     "-redo",
                      "--prefix", paste0(dir_output, "/gcf"))
     system(cmd_gcf)
 
@@ -92,6 +93,7 @@ f_calculate_cf <- function(fn_all_trees, fn_sp_tree, dir_fasta, dir_output, thre
                      "-p", dir_fasta,
                      "--scfl 100",
                      "-T", thread,
+                     "-redo",
                      "--prefix", paste0(dir_output, "/scf"))
     system(cmd_scf)
 }

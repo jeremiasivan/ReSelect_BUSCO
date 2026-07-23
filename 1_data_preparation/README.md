@@ -28,7 +28,6 @@ In this step, we download the reference genomes and short reads from NCBI. Then,
 | `exe_samtools`             | Executable for Samtools                                                                                                               |
 | `exe_bcftools`             | Executable for Bcftools                                                                                                               |
 | `exe_qualimap`             | Executable for QualiMap                                                                                                               |
-| `min_read_quality`         | Minimum quality for short reads                                                                                                       |
 | `thread_adapterremoval`    | Number of threads for AdapterRemoval                                                                                                  |
 | `thread_bwamem2`           | Number of threads for BWA-MEM2                                                                                                        |
 | `thread_samtools`          | Number of threads for Samtools and Bcftools                                                                                           |

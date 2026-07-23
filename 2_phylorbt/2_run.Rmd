@@ -40,13 +40,13 @@ fn_dist_tiff <- file.path(dir_check_summary, paste0(params$prefix, ".dist.tiff")
 
 ```{r summary-update}
 # extract list of locus
-dir_loci <- list.files(params$dir_gene_trees, pattern="*.treefile$", recursive=T, full.names=T)
+ls_locus <- list.dirs(params$dir_genes_alignment, recursive=F, full.names=F)
 
 # print the number of locus in HTML document
-cat(paste("Number of gene trees:", length(dir_loci)))
+cat(paste("Number of gene trees:", length(ls_locus)))
 
 # check if list is of length zero
-if (length(dir_loci) == 0) {
+if (length(ls_locus) == 0) {
     log4r::error(fn_logger, "Error: list of locus is of length zero. Exited.")
     knitr::knit_exit()
 }
@@ -71,12 +71,9 @@ if (length(ls_intersect_sp) > 0) {
     doSNOW::registerDoSNOW(nwcl)
 
     # iterate over loci
-    ls_output <- foreach (fn_tree = dir_loci, .combine='c') %dopar% {
-        # extract locus
-        locus <- tools::file_path_sans_ext(basename(fn_tree))
-
+    ls_output <- foreach (locus = ls_locus, .combine='c') %dopar% {
         # read tree
-        tre <- ape::read.tree(fn_tree)
+        tre <- ape::read.tree(file.path(params$dir_genes_alignment, locus, paste0(locus, ".treefile")))
         ls_tips <- tre$tip.label
 
         # calculate phylogenetic distance
@@ -131,21 +128,18 @@ if (is.null(focal_sp) || focal_sp=="") {
 readr::write_lines(paste("Calculating pairwise distance against ", focal_sp), file=fn_log, append=T)
 
 # iterate over loci
-df_output <- foreach (fn_tree = dir_loci, .combine='rbind') %dopar% {
+df_output <- foreach (locus = ls_locus, .combine='rbind') %dopar% {
     library(ggplot2)
 
-    # extract locus
-    locus <- tools::file_path_sans_ext(basename(fn_tree))
-
     # output variables
-    read_out <- data.table::data.table(dir_tree=character(), locus=character(), read=character(),
+    read_out <- data.table::data.table(locus=character(), read=character(),
                                        lm_r2=numeric(), lm_slope=numeric(), lm_p=numeric(),
                                        spearman_rho=numeric(), spearman_p=numeric(),
                                        lm_r2_noout=numeric(), lm_slope_noout=numeric(), lm_p_noout=numeric(),
                                        spearman_rho_noout=numeric(), spearman_p_noout=numeric())
 
     # read trees
-    tre_original <- ape::read.tree(fn_tree)
+    tre_original <- ape::read.tree(file.path(params$dir_genes_alignment, locus, paste0(locus, ".treefile")))
     tre_original_tips <- tre_original$tip.label
 
     # update list of mapped reads
@@ -167,7 +161,7 @@ df_output <- foreach (fn_tree = dir_loci, .combine='rbind') %dopar% {
         temp_df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric(), grouping=character())
 
         # extract available available reference sequences
-        ls_refseq_available <- grep(paste0("^",read), tre_original_tips, value=T)
+        ls_refseq_available <- grep(paste0("^",read,"--"), tre_original_tips, value=T)
         ls_refseq_available <- sapply(ls_refseq_available, function(x) {
             unlist(strsplit(x, split="--"))[2]
         })
@@ -198,13 +192,7 @@ df_output <- foreach (fn_tree = dir_loci, .combine='rbind') %dopar% {
         }
 
         # subset data.frame
-        temp_df_dist_filtered <- temp_df_dist[temp_df_dist$shape == "IN",]
-        temp_df_dist_filtered_noout <- temp_df_dist_filtered[!temp_df_dist_filtered$grouping %in% params$outgroup,]
-
-        # check if filtered table has more than one entry and consists of all NULL or NAs
-        if (nrow(temp_df_dist_filtered)==0 || f_all_null_or_na(temp_df_dist_filtered$ref_dist) || f_all_null_or_na(temp_df_dist_filtered$read_dist)) {
-            next
-        }
+        temp_df_dist_noout <- temp_df_dist[!temp_df_dist$grouping %in% params$outgroup,]
 
         # run linear model with outgroup
         lm <- lm(read_dist~ref_dist, data=temp_df_dist)
@@ -217,24 +205,23 @@ df_output <- foreach (fn_tree = dir_loci, .combine='rbind') %dopar% {
         plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist)) +
             geom_point(aes(size=20, color=grouping)) +
             geom_abline(slope=1, intercept=0, linetype=3, aes(linewidth=3)) +
-            stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=1, method='lm', formula=y~x, color="black", alpha=0.5)
+            stat_smooth(geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=1, method='lm', formula=y~x, color="black", alpha=0.5)
 
         # linear model without outgroup
         lm_statistics_noout <- list(rsquared=NULL, slope=NULL, pvalue=NULL)
         sp_statistics_noout <- list(rho=NULL, pvalue=NULL)
 
-        if (nrow(temp_df_dist_filtered_noout) > 0 && !f_all_null_or_na(temp_df_dist_filtered_noout$ref_dist) && !f_all_null_or_na(temp_df_dist_filtered_noout$read_dist)) {
+        if (nrow(temp_df_dist_noout) > 0 && !f_all_null_or_na(temp_df_dist_noout$ref_dist) && !f_all_null_or_na(temp_df_dist_noout$read_dist)) {
             # run linear model without outgroup
-            lm_noout <- lm(read_dist~ref_dist, data=temp_df_dist_filtered_noout)
+            lm_noout <- lm(read_dist~ref_dist, data=temp_df_dist_noout)
             lm_statistics_noout <- f_extract_summary_lm(lm_noout)
-            sp_statistics_noout <- f_spearman_test(temp_df_dist_filtered_noout$read_dist, temp_df_dist_filtered_noout$ref_dist)
+            sp_statistics_noout <- f_spearman_test(temp_df_dist_noout$read_dist, temp_df_dist_noout$ref_dist)
 
-            plot <- plot + stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, color="red", alpha=0.5)
+            plot <- plot + stat_smooth(data=temp_df_dist_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, color="red", alpha=0.5)
         }
 
         # update data.frame
-        read_out <- rbind(read_out, data.table::data.table(dir_tree=fn_tree,
-                                                           locus=locus,
+        read_out <- rbind(read_out, data.table::data.table(locus=locus,
                                                            read=read,
                                                            lm_r2=lm_statistics$rsquared,
                                                            lm_slope=lm_statistics$slope,

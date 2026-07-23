@@ -232,12 +232,12 @@ for (prefix in ls_prefix) {
     }
 
     # extract coverage
-    mean_coverage <- system(paste0("grep 'mean coverageData' ", dir_qualimap_output, "genome_results.txt"), intern=T)
+    mean_coverage <- system(paste0("grep 'mean coverageData' ", dir_qualimap_output, "/genome_results.txt"), intern=T)
     mean_coverage <- strsplit(mean_coverage, split=" = ")[[1]][2]
     mean_coverage <- as.numeric(strsplit(mean_coverage, split="X")[[1]][1])
 
     # extract percentage of mapped reads
-    mapped_reads <- system(paste0("grep 'number of mapped reads' ", dir_qualimap_output, "genome_results.txt"), intern=T)
+    mapped_reads <- system(paste0("grep 'number of mapped reads' ", dir_qualimap_output, "/genome_results.txt"), intern=T)
     mapped_reads <- stringr::str_match(mapped_reads, "\\((.*)\\)")[,2]
     mapped_reads <- as.numeric(strsplit(mapped_reads, split="%")[[1]][1])
 
@@ -249,6 +249,6 @@ for (prefix in ls_prefix) {
 }
 
 # save the file
-fn_output <- paste0(dir_busco_read, "summary_coverage.tsv")
+fn_output <- file.path(dir_busco_read, "summary_coverage.tsv")
 data.table::fwrite(df_coverage, file=fn_output, sep="\t", quote=F, row.names=F, col.names=F)
 ```

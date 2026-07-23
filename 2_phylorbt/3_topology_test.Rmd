@@ -9,7 +9,7 @@ readr::write_lines(c("", "--------- Tree Topology Test -------"),
 # output directory
 dir_locustree <- file.path(currentdir, "topology_test")
 if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
-    dir_locustree <- paste0(currentdir, "topology_test_constrained")
+    dir_locustree <- file.path(currentdir, "topology_test_constrained")
 }
 
 if (!dir.exists(dir_locustree)) {
@@ -60,7 +60,7 @@ for (read in ls_shortreads) {
         fn_locus_condition_astral_log <- file.path(dir_output_condition_trees, "astral.log")
         fn_locus_condition_gcf_treefile <- file.path(dir_output_condition_trees, "gcf.cf.tree")
         fn_locus_condition_scf_treefile <- file.path(dir_output_condition_trees, "scf.cf.tree")
-        if (all(file.exists(fn_locus_condition_astral_treefile, fn_locus_condition_gcf_treefile, fn_locus_condition_scf_treefile))) {
+        if (all(file.exists(fn_locus_condition_astral_treefile, fn_locus_condition_gcf_treefile, fn_locus_condition_scf_treefile)) && !params$redo) {
             next
         }
 
@@ -71,14 +71,14 @@ for (read in ls_shortreads) {
         # iterate over all locus
         foreach(locus = ls_locus_condition) %dopar% {
             # extract alignment
-            fn_input <- file.path(dir_locus_tree, locus, paste0(locus, "_aligned.fa"))
+            fn_input <- file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa"))
             fn_output <- file.path(dir_output_condition_fasta, paste0(locus, ".fa"))
             if (file.exists(fn_output)) {
                 return(NULL)
             }
 
             # extract headers
-            ls_prefix_subset <- ls_prefix[grepl(paste0("^",read), ls_prefix)]
+            ls_prefix_subset <- ls_prefix[grepl(paste0("^",read,"--"), ls_prefix)]
             ls_header <- c(ls_refseq, ls_prefix_subset)
 
             f_extract_fasta(fn_input, ls_header, fn_output)
@@ -145,7 +145,7 @@ for (read in ls_shortreads) {
             fn_locus_perref_astral_log <- file.path(dir_output_perref_trees, "astral.log")
             fn_locus_perref_gcf_treefile <- file.path(dir_output_perref_trees, "gcf.cf.tree")
             fn_locus_perref_scf_treefile <- file.path(dir_output_perref_trees, "scf.cf.tree")
-            if (all(file.exists(fn_locus_perref_astral_treefile, fn_locus_perref_gcf_treefile, fn_locus_perref_scf_treefile))) {
+            if (all(file.exists(fn_locus_perref_astral_treefile, fn_locus_perref_gcf_treefile, fn_locus_perref_scf_treefile)) && !params$redo) {
                 next
             }
 
@@ -156,7 +156,7 @@ for (read in ls_shortreads) {
             # iterate over all locus
             foreach(locus = ls_locus_condition) %dopar% {
                 # extract alignment
-                fn_input <- df_cor_subset$dir_tree[df_cor_subset$locus==locus & read==read]
+                fn_input <- file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa"))
                 fn_output <- file.path(dir_output_perref_fasta, paste0(locus, ".fa"))
                 if (file.exists(fn_output)) {
                     return(NULL)

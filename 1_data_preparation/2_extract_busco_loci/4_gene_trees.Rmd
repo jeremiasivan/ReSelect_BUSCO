@@ -29,6 +29,9 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
         }
     }
 
+    # delete the file
+    unlink(fn_out)
+
     # extract BUSCO alignment from reference sequences
     for (ref in ls_refseq) {
         file_busco_ref <- file.path(dir_busco_ref, ref, busco_refs_dir_mid, paste0(busco, ".faa"))
@@ -42,7 +45,7 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     # extract BUSCO alignment from short reads
     count_unavailable_prefix <- 0
     for (read in ls_prefix) {
-        file_busco_read <- file.path(dir_busco_read, read, busco_read_dir_mid, psate0(busco, ".faa"))
+        file_busco_read <- file.path(dir_busco_read, read, busco_read_dir_mid, paste0(busco, ".faa"))
         if (!file.exists(file_busco_read)) {
             count_unavailable_prefix <- count_unavailable_prefix + 1
             next

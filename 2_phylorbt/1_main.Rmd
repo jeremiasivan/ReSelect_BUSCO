@@ -22,7 +22,7 @@ params:
   file_shortreads: ""
   file_genome_treefile: ""
 
-  dir_gene_trees: ""
+  dir_genes_alignment: ""
   
   # --- Executables ---------------------------------------------
   exe_iqtree2: ""
@@ -45,7 +45,7 @@ sys_tic <- Sys.time()
 suppressPackageStartupMessages(library(doSNOW))
 suppressPackageStartupMessages(library(tidyverse))
 
-source(file.path(path.expand(params$codedir), "codes", "03_phylorbt", "functions.R"), local=TRUE)
+source(file.path(path.expand(params$codedir), "2_phylorbt", "functions.R"), local=TRUE)
 
 # create outdir
 currentdir <- file.path(path.expand(params$outdir), params$prefix)
@@ -70,10 +70,10 @@ if (!file.exists(fn_log)) {
 knitr::opts_knit$set(root.dir = currentdir)
 ```
 
-```{r child = file.path(path.expand(params$codedir), "codes", "03_phylorbt", "2_run.Rmd")}
+```{r child = file.path(path.expand(params$codedir), "2_phylorbt", "2_run.Rmd")}
 ```
 
-```{r child = file.path(path.expand(params$codedir), "codes", "03_phylorbt", "3_topology_test.Rmd")}
+```{r child = file.path(path.expand(params$codedir), "2_phylorbt", "3_topology_test.Rmd")}
 ```
 
 ```{r, include=FALSE}

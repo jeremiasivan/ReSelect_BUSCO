@@ -151,7 +151,7 @@ foreach (prefix = ls_readmap_run) %dopar% {
     # extract FASTQ file
     file_fastq_one <- df_reads$dir[df_reads$read=="R1" & df_reads$species==read]
     file_fastq_two <- df_reads$dir[df_reads$read=="R2" & df_reads$species==read]
-    if (!file.exists(file_fastq_two)) {
+    if (!file.exists(file_fastq_two) || length(file_fastq_two)!=1) {
         file_fastq_two <- NULL
     }
     
@@ -212,12 +212,12 @@ df_coverage <- foreach (prefix = ls_prefix, .combine='rbind') %dopar% {
     }
 
     # extract coverage
-    mean_coverage <- system(paste0("grep 'mean coverageData' ", dir_qualimap_output, "genome_results.txt"), intern=T)
+    mean_coverage <- system(paste0("grep 'mean coverageData' ", dir_qualimap_output, "/genome_results.txt"), intern=T)
     mean_coverage <- strsplit(mean_coverage, split=" = ")[[1]][2]
     mean_coverage <- as.numeric(strsplit(mean_coverage, split="X")[[1]][1])
 
     # extract percentage of mapped reads
-    mapped_reads <- system(paste0("grep 'number of mapped reads' ", dir_qualimap_output, "genome_results.txt"), intern=T)
+    mapped_reads <- system(paste0("grep 'number of mapped reads' ", dir_qualimap_output, "/genome_results.txt"), intern=T)
     mapped_reads <- stringr::str_match(mapped_reads, "\\((.*)\\)")[,2]
     mapped_reads <- as.numeric(strsplit(mapped_reads, split="%")[[1]][1])
 
@@ -233,7 +233,7 @@ df_coverage <- foreach (prefix = ls_prefix, .combine='rbind') %dopar% {
 stopCluster(nwcl)
 
 # save the file
-fn_output <- paste0(dir_readmap, "summary.tsv")
+fn_output <- file.path(dir_readmap, "summary.tsv")
 data.table::fwrite(df_coverage, file=fn_output, sep="\t", quote=F, row.names=F)
 ```
 
