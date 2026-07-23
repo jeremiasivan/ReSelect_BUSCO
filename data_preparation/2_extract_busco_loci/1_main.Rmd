@@ -1,5 +1,5 @@
 ---
-title: "Short-read Mapping"
+title: "Extracting BUSCO Loci"
 author: "Jeremias Ivan"
 date: "`r format(Sys.time(), '%d %B %Y, %H:%M%p')`"
 
@@ -16,24 +16,31 @@ params:
   outdir: "/home/user/output/"
   thread: 1
   redo: FALSE
-  
+
   # --- Input Files ---------------------------------------------
   file_refseq: ""
   file_shortreads: ""
-
+  
   # --- Executables ---------------------------------------------
-  exe_bwamem2: "bwamem2"
-  exe_samtools: "samtools"
-  exe_bcftools: "bcftools"
-  exe_qualimap: "qualimap"
+  exe_busco: ""
+  exe_gff2bed: ""
+  exe_samtools: ""
+  exe_qualimap: ""
 
-  # --- Variant Calling Parameters ------------------------------
-  min_read_quality: 25
+  exe_mafft: ""
+  exe_trimal: ""
+  exe_iqtree2: ""
+  exe_treeshrink: ""
 
-  # --- Number of Threads ---------------------------------------
-  thread_bwamem2: 1
-  thread_samtools: 1
-  thread_qualimap: 1
+  # --- BUSCO Pipeline Parameters -------------------------------
+  busco_lineage: ""
+  busco_mode: "genome"
+
+  thread_busco: 50
+  min_busco_depth: 10
+
+  run_trimal: FALSE
+  run_treeshrink: FALSE
 ---
 
 ```{r, include=FALSE}
@@ -42,8 +49,9 @@ sys_tic <- Sys.time()
 
 # load libraries and function
 suppressPackageStartupMessages(library(doSNOW))
+suppressPackageStartupMessages(library(tidyverse))
 
-source(file.path(path.expand(params$codedir), "1_data_preparation", "1_readmap", "functions.R"), local=TRUE)
+source(file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco_loci", "functions.R"), local=TRUE)
 
 # create outdir
 currentdir <- file.path(path.expand(params$outdir), params$prefix)
@@ -52,7 +60,7 @@ if (!dir.exists(currentdir)) {
 }
 
 # create log file
-fn_log <- file.path(currentdir, paste0(params$prefix, "_mapping.log"))
+fn_log <- file.path(currentdir, paste0(params$prefix, "_buscoextract.log"))
 log_appender <- log4r::file_appender(fn_log, append=TRUE, layout=log4r::default_log_layout())
 fn_logger <- log4r::logger(threshold="INFO", appenders=log_appender)
 if (params$redo) {
@@ -61,14 +69,20 @@ if (params$redo) {
 
 if (!file.exists(fn_log)) {
   readr::write_lines(c("####################################",
-                       "####        Read Mapping        ####",
+                       "####      BUSCO Extraction      ####",
                        "####################################"), file=fn_log)
 }
 
 knitr::opts_knit$set(root.dir = currentdir)
 ```
 
-```{r child = file.path(path.expand(params$codedir), "1_data_preparation", "1_readmap", "2_run.Rmd")}
+```{r child = file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco_loci", "2_refseq.Rmd")}
+```
+
+```{r child = file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco_loci", "3_shortreads.Rmd")}
+```
+
+```{r child = file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco_loci", "4_gene_trees.Rmd")}
 ```
 
 ```{r, include=FALSE}

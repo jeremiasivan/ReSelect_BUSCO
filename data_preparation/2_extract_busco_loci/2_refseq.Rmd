@@ -30,10 +30,11 @@ dir_busco_lineage <- file.path(currentdir, "busco_lineage")
 dir_busco <- file.path(currentdir, "busco_extraction")
 dir_busco_ref <- file.path(dir_busco, "refseq")
 dir_busco_read <- file.path(dir_busco, "short_reads")
-dir_busco_tree <- file.path(dir_busco, "trees")
-dir_busco_treeshrink <- file.path(dir_busco, "trees_treeshrink")
+dir_busco_tree <- file.path(dir_busco, "trees", "unfiltered")
+dir_busco_trimal <- file.path(dir_busco, "trees", "trimal")
+dir_busco_treeshrink <- file.path(dir_busco, "trees", "unfiltered_treeshrink")
 
-lapply(list(dir_busco_lineage, dir_busco_ref, dir_busco_read, dir_busco_tree, dir_busco_treeshrink), function(x){
+lapply(list(dir_busco_lineage, dir_busco_ref, dir_busco_read, dir_busco_tree, dir_busco_trimal, dir_busco_tree_treeshrink), function(x){
     if(!dir.exists(x)) dir.create(x, recursive=T)})
 
 # output files

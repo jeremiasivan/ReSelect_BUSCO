@@ -1,0 +1,31 @@
+# ============================================================
+#  BusIER — 2_phylorbt config file
+#
+#  Edit this file, then run:
+#    Rscript run_pipeline.R --config config.yaml
+# ============================================================
+
+# --- General -------------------------------------------------
+codedir:  "/home/user/BusIER/"            # path to BusIER repo root
+prefix:   ""                              # output prefix (default: "" -> derived from file_genome_treefile)
+outdir:   "/home/user/output"             # output directory
+thread:   1                               # number of parallel threads (default: 1)
+redo:     FALSE                           # re-run even if output files exist (default: FALSE)
+
+# --- Input Files -----------------------------------------------
+file_refseq:          "data/eucs_refseq.txt"       # reference sequence metadata (id, species, dir, grouping)
+file_shortreads:      "data/eucs_shortreads.txt"   # short-read metadata (id, species, dir, is_check)
+file_genome_treefile: "data/eucs.treefile"         # backbone/genome-scale species tree
+
+dir_genes_alignment:  "/home/user/output/eucs_refseq/gene_trees"   # per-locus alignments+treefiles from 1_data_preparation
+
+# --- Executables -----------------------------------------------
+exe_iqtree2: "iqtree2"                    # path to IQ-TREE2 executable
+exe_astral:  "astral.jar"                 # path to ASTRAL executable (.jar)
+
+# --- PhyloRBT Parameters -----------------------------------------
+is_astral_constrained: FALSE              # run ASTRAL constrained search (default: FALSE)
+
+# --- Optional ----------------------------------------------------
+outgroup:       []                        # outgroup taxon name(s) (default: [] (no outgroup))
+focal_species:  ""                        # focal species to highlight (default: "" (none))

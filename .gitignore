@@ -52,5 +52,4 @@ rsconnect/
 *.DS_Store
 
 # Other files
-data/*
 notes.txt

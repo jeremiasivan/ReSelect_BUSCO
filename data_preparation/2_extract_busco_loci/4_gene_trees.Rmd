@@ -20,8 +20,8 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     }
 
     # output MSA file
-    fn_out <- file.path(dir_output, paste0(busco, ".fa"))
-    fn_out_aligned <- file.path(dir_output, paste0(busco, "_aligned.fa"))
+    fn_out <- file.path(dir_output, paste0(busco, "_unaligned.fa"))
+    fn_out_aligned <- file.path(dir_output, paste0(busco, ".fa"))
     if (all(file.exists(fn_out, fn_out_aligned)) && !params$redo) {
         # check if file is not empty
         if (file.size(fn_out_aligned) != 0L) {
@@ -92,8 +92,8 @@ foreach (busco = shared_busco) %dopar% {
     dir_output <- file.path(dir_busco_tree, busco)
 
     # output IQ-Tree2 files
-    fn_fasta <- file.path(dir_output, paste0(busco, "_aligned.fa"))
-    fn_treefile <- file.path(dir_output, paste0(busco, "_aligned.fa.treefile"))
+    fn_fasta <- file.path(dir_output, paste0(busco, ".fa"))
+    fn_treefile <- file.path(dir_output, paste0(busco, ".fa.treefile"))
     if (!file.exists(fn_treefile) || params$redo) {
         # run IQ-Tree2
         f_iqtree2(fn_fasta, params$exe_iqtree2)
@@ -103,7 +103,7 @@ foreach (busco = shared_busco) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r check-busco-treeshrink, echo=FALSE}
+```{r check-busco-treeshrink, include=params$run_treeshrink, eval=params$run_treeshrink}
 readr::write_lines(c("", "------------ TreeShrink ------------"), file=fn_log, append=T)
               
 # create doSNOW cluster
@@ -118,18 +118,16 @@ foreach (busco = shared_busco) %dopar% {
     }
 
     # input file
-    fn_treefile <- file.path(dir_busco_tree, busco, paste0(busco, "_aligned.fa.treefile"))
+    fn_treefile <- file.path(dir_busco_tree, busco, paste0(busco, ".fa.treefile"))
     if (!file.exists(fn_treefile)) {
         return(NULL)
     }
 
     # output file
-    prefix <- paste0(busco, ".treeshrink")
-
-    fn_treeshrink_tree <- file.path(dir_output, paste0(prefix, ".treefile"))
+    fn_treeshrink_tree <- file.path(dir_output, paste0(busco, ".treefile"))
     if (!file.exists(fn_treeshrink_tree) || params$redo) {
         # run TreeShrink
-        f_treeshrink(fn_treefile, prefix, dir_output, params$exe_treeshrink)
+        f_treeshrink(fn_treefile, busco, dir_output, params$exe_treeshrink)
     }
 }
 
@@ -138,21 +136,23 @@ stopCluster(nwcl)
 ```
 
 ## Run TrimAl
-```{r check-busco-trimal}
+```{r check-busco-trimal, include=params$run_trimal, eval=params$run_trimal}
+readr::write_lines(c("", "-------------- TrimAl --------------"), file=fn_log, append=T)
+
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over shared BUSCOs
 output <- foreach (busco = shared_busco, .combine='c') %dopar% {
-    dir_output <- file.path(dir_busco_tree, busco, "trimal")
+    dir_output <- file.path(dir_busco_trimal, busco)
     if (!dir.exists(dir_output)) {
         dir.create(dir_output, recursive=T)
     }
     
     # output MSA file
-    fn_out_aligned <- file.path(dir_busco_tree, busco, paste0(busco, "_aligned.fa"))
-    fn_out_trimal <- file.path(dir_output, paste0(busco, "_aligned_trimal.fa"))
+    fn_out_aligned <- file.path(dir_busco_tree, busco, paste0(busco, ".fa"))
+    fn_out_trimal <- file.path(dir_output, paste0(busco, ".fa"))
     if (file.exists(fn_out_trimal) && !params$redo) {
         # check if file is not empty
         if (file.size(fn_out_trimal) != 0L) {
@@ -164,7 +164,7 @@ output <- foreach (busco = shared_busco, .combine='c') %dopar% {
     f_trimal(fn_out_aligned, fn_out_trimal, "-automated1", params$exe_trimal)
 
     # run IQ-TREE2
-    fn_treefile <- file.path(dir_output, paste0(busco, "_aligned_trimal.fa.treefile"))
+    fn_treefile <- file.path(dir_output, paste0(busco, ".fa.treefile"))
     if (!file.exists(fn_treefile) || params$redo) {
         # run IQ-Tree2
         f_iqtree2(fn_out_trimal, params$exe_iqtree2)
