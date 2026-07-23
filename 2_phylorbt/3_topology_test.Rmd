@@ -1,0 +1,198 @@
+---
+title: "Tree Topology Test"
+---
+
+```{r check-btree-setup, include=FALSE}
+readr::write_lines(c("", "--------- Tree Topology Test -------"),
+                   file=fn_log, append=T)
+
+# output directory
+dir_locustree <- file.path(currentdir, "topology_test")
+if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+    dir_locustree <- paste0(currentdir, "topology_test_constrained")
+}
+
+if (!dir.exists(dir_locustree)) {
+    dir.create(dir_locustree, recursive=T)
+}
+
+# input files
+fn_cor_summary <- file.path(dir_check_summary, paste0(params$prefix, ".cor.sumtable"))
+
+# output files
+fn_cf_summary <- file.path(dir_locustree, paste0(params$prefix, ".cf.sumtable"))
+```
+
+```{r check-btree-run}
+# open the input data.frame
+df_cor_summary <- data.table::fread(fn_cor_summary)
+
+# iterate over short-reads
+for (read in ls_shortreads) {
+    # output directory
+    dir_output_read <- file.path(dir_locustree, read)
+
+    # subset the data.frame
+    df_cor_subset <- df_cor_summary[df_cor_summary$read==read,]
+
+    # iterate over sets of locus
+    for (condition in c("all", "bias", "nonbias")) {
+        # create output directories
+        dir_output_condition <- file.path(dir_output_read, condition)
+        dir_output_condition_fasta <- file.path(dir_output_condition, "alignment")
+        dir_output_condition_trees <- file.path(dir_output_condition, "trees")
+        lapply(list(dir_output_condition_fasta,dir_output_condition_trees), function(x){
+            if(!dir.exists(x)) dir.create(x, recursive=T)})
+
+        # list locus
+        ls_locus_condition <- df_cor_subset$locus
+        if (condition == "bias") {
+            ls_locus_condition <- df_cor_subset$locus[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05]
+        } else if (condition == "nonbias") {
+            ls_locus_condition <- df_cor_subset$locus[df_cor_subset$lm_p>=0.05 & df_cor_subset$spearman_p>=0.05]
+        }
+
+        # output files
+        fn_locus_condition_prefix <- file.path(dir_output_condition_trees, "all_locus")
+        fn_locus_condition_treefile <- paste0(fn_locus_condition_prefix, ".treefile")
+        
+        fn_locus_condition_astral_treefile <- file.path(dir_output_condition_trees, "astral.treefile")
+        fn_locus_condition_astral_log <- file.path(dir_output_condition_trees, "astral.log")
+        fn_locus_condition_gcf_treefile <- file.path(dir_output_condition_trees, "gcf.cf.tree")
+        fn_locus_condition_scf_treefile <- file.path(dir_output_condition_trees, "scf.cf.tree")
+        if (all(file.exists(fn_locus_condition_astral_treefile, fn_locus_condition_gcf_treefile, fn_locus_condition_scf_treefile))) {
+            next
+        }
+
+        # create doSNOW cluster
+        nwcl <- makeCluster(params$thread)
+        doSNOW::registerDoSNOW(nwcl)
+
+        # iterate over all locus
+        foreach(locus = ls_locus_condition) %dopar% {
+            # extract alignment
+            fn_input <- file.path(dir_locus_tree, locus, paste0(locus, "_aligned.fa"))
+            fn_output <- file.path(dir_output_condition_fasta, paste0(locus, ".fa"))
+            if (file.exists(fn_output)) {
+                return(NULL)
+            }
+
+            # extract headers
+            ls_prefix_subset <- ls_prefix[grepl(paste0("^",read), ls_prefix)]
+            ls_header <- c(ls_refseq, ls_prefix_subset)
+
+            f_extract_fasta(fn_input, ls_header, fn_output)
+        }
+
+        stopCluster(nwcl)
+
+        # run IQ-TREE2
+        f_multiple_tree(dir_output_condition_fasta, fn_locus_condition_prefix, params$thread, params$exe_iqtree2)
+        alltre_temp <- ape::read.tree(fn_locus_condition_treefile)
+        alltre_temp <- alltre_temp[[1]]
+
+        # run ASTRAL
+        if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+            fn_sptree <- file.path(dir_output_condition_trees, "sptree.treefile")
+            
+            # open species tree
+            sptree <- ape::read.tree(params$file_genome_treefile)
+            sptree <- ape::drop.tip(sptree, tip=sptree$tip.label[!sptree$tip.label%in%alltre_temp$tip.label])
+            ape::write.tree(sptree, file=fn_sptree)
+
+            f_astral_constrained(fn_locus_condition_treefile, fn_locus_condition_astral_treefile, fn_locus_condition_astral_log, fn_sptree, params$exe_astral)
+
+        } else {
+            f_astral(fn_locus_condition_treefile, fn_locus_condition_astral_treefile, fn_locus_condition_astral_log, params$exe_astral)
+        }
+        
+        # calculate sCF and gCF
+        f_calculate_cf(fn_locus_condition_treefile, fn_locus_condition_astral_treefile, dir_output_condition_fasta, dir_output_condition_trees, params$thread, params$exe_iqtree2)
+    }    
+}
+
+# iterate over shortreads
+for (read in ls_shortreads) {
+    # subset the data.frame
+    df_cor_subset <- df_cor_summary[df_cor_summary$read==read,]
+
+    # iterate over sets of locus
+    for (condition in c("all", "bias", "nonbias")) {
+        # create output directories
+        dir_output_condition_ref <- file.path(dir_locustree, read, condition, "per_reference")
+
+        # list locus
+        ls_locus_condition <- df_cor_subset$locus
+        if (condition == "bias") {
+            ls_locus_condition <- df_cor_subset$locus[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05]
+        } else if (condition == "nonbias") {
+            ls_locus_condition <- df_cor_subset$locus[df_cor_subset$lm_p>=0.05 & df_cor_subset$spearman_p>=0.05]
+        }
+
+        # iterate over reference sequences
+        for (ref in ls_refseq) {
+            dir_output_perref <- file.path(dir_output_condition_ref, ref)
+            dir_output_perref_fasta <- file.path(dir_output_perref, "alignment")
+            dir_output_perref_trees <- file.path(dir_output_perref, "trees")
+            lapply(list(dir_output_perref_fasta,dir_output_perref_trees), function(x){
+                if(!dir.exists(x)) dir.create(x, recursive=T)})
+
+            # output files
+            fn_locus_perref_prefix <- file.path(dir_output_perref_trees, "all_locus")
+            fn_locus_perref_treefile <- paste0(fn_locus_perref_prefix, ".treefile")
+            
+            fn_locus_perref_astral_treefile <- file.path(dir_output_perref_trees, "astral.treefile")
+            fn_locus_perref_astral_log <- file.path(dir_output_perref_trees, "astral.log")
+            fn_locus_perref_gcf_treefile <- file.path(dir_output_perref_trees, "gcf.cf.tree")
+            fn_locus_perref_scf_treefile <- file.path(dir_output_perref_trees, "scf.cf.tree")
+            if (all(file.exists(fn_locus_perref_astral_treefile, fn_locus_perref_gcf_treefile, fn_locus_perref_scf_treefile))) {
+                next
+            }
+
+            # create doSNOW cluster
+            nwcl <- makeCluster(params$thread)
+            doSNOW::registerDoSNOW(nwcl)
+
+            # iterate over all locus
+            foreach(locus = ls_locus_condition) %dopar% {
+                # extract alignment
+                fn_input <- df_cor_subset$dir_tree[df_cor_subset$locus==locus & read==read]
+                fn_output <- file.path(dir_output_perref_fasta, paste0(locus, ".fa"))
+                if (file.exists(fn_output)) {
+                    return(NULL)
+                }
+
+                # extract headers
+                ls_header <- c(ls_refseq, paste0(read,"--",ref))
+
+                f_extract_fasta(fn_input, ls_header, fn_output)
+            }
+
+            stopCluster(nwcl)
+
+            # run IQ-TREE2
+            f_multiple_tree(dir_output_perref_fasta, fn_locus_perref_prefix, params$thread, params$exe_iqtree2)
+            alltre_temp <- ape::read.tree(fn_locus_perref_treefile)
+            alltre_temp <- alltre_temp[[1]]
+
+            # run ASTRAL
+            if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+                fn_sptree <- file.path(dir_output_perref_trees, "sptree.treefile")
+                
+                # open species tree
+                sptree <- ape::read.tree(params$file_genome_treefile)
+                sptree <- ape::drop.tip(sptree, tip=sptree$tip.label[!sptree$tip.label%in%alltre_temp$tip.label])
+                ape::write.tree(sptree, file=fn_sptree)
+
+                f_astral_constrained(fn_locus_perref_treefile, fn_locus_perref_astral_treefile, fn_locus_perref_astral_log, fn_sptree, params$exe_astral)
+
+            } else {
+                f_astral(fn_locus_perref_treefile, fn_locus_perref_astral_treefile, fn_locus_perref_astral_log, params$exe_astral)
+            }
+
+            # calculate sCF and gCF
+            f_calculate_cf(fn_locus_perref_treefile, fn_locus_perref_astral_treefile, dir_output_perref_fasta, dir_output_perref_trees, params$thread, params$exe_iqtree2)
+        }
+    }
+}
+```

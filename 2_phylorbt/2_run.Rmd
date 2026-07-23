@@ -1,0 +1,281 @@
+---
+title: "PhyloRBT"
+---
+
+```{r, include=FALSE}
+# open input files
+df_refs <- data.table::fread(params$file_refseq)
+df_refs$species <- gsub(" ", "", df_refs$species)
+df_refs$species <- gsub("\\.", "_", df_refs$species)
+
+df_reads <- data.table::fread(params$file_shortreads)
+df_reads$species <- gsub(" ", "", df_reads$species)
+df_reads$species <- gsub("\\.", "_", df_reads$species)
+
+# input directories
+dir_readmap <- file.path(currentdir, "readmap")
+ls_prefix <- list.dirs(dir_readmap, recursive=F, full.names=F)
+
+# extract list of reference sequences and short-reads
+ls_refseq <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[2] }))
+ls_shortreads <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[1] }))
+
+# output directories
+dir_check_summary <- file.path(currentdir, "summary")
+dir_check_summary_correlation <- file.path(dir_check_summary, "correlation_figs")
+for (read in ls_shortreads) {
+    dir_check_summary_correlation_read <- file.path(dir_check_summary_correlation, read)
+    if (!dir.exists(dir_check_summary_correlation_read)) {
+        dir.create(dir_check_summary_correlation_read, recursive=T)
+    }
+}
+
+# output files
+fn_prefix <- file.path(dir_check_summary, params$prefix)
+fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
+fn_cor_summary_trimal <- paste0(fn_prefix, ".cor_trimal.sumtable")
+
+fn_dist_tiff <- file.path(dir_check_summary, paste0(params$prefix, ".dist.tiff"))
+```
+
+```{r summary-update}
+# extract list of locus
+dir_loci <- list.files(params$dir_gene_trees, pattern="*.treefile$", recursive=T, full.names=T)
+
+# print the number of locus in HTML document
+cat(paste("Number of gene trees:", length(dir_loci)))
+
+# check if list is of length zero
+if (length(dir_loci) == 0) {
+    log4r::error(fn_logger, "Error: list of locus is of length zero. Exited.")
+    knitr::knit_exit()
+}
+```
+
+## Calculate phylogenetic distance between mapped reads and reference from the same taxon
+```{r summary-individual}
+# set up variable
+is_check_summary_individual <- FALSE
+plot <- NULL
+
+# check species overlaps
+ls_intersect_sp <- intersect(ls_refseq, ls_shortreads)
+
+# iterate over overlaps
+if (length(ls_intersect_sp) > 0) {
+    # update variable
+    is_check_summary_individual <- TRUE
+
+    # create doSNOW cluster
+    nwcl <- makeCluster(params$thread)
+    doSNOW::registerDoSNOW(nwcl)
+
+    # iterate over loci
+    ls_output <- foreach (fn_tree = dir_loci, .combine='c') %dopar% {
+        # extract locus
+        locus <- tools::file_path_sans_ext(basename(fn_tree))
+
+        # read tree
+        tre <- ape::read.tree(fn_tree)
+        ls_tips <- tre$tip.label
+
+        # calculate phylogenetic distance
+        distance_tre <- ape::cophenetic.phylo(tre)
+
+        # iterate over reads
+        ls_dist <- c()
+        for (sp in ls_intersect_sp) {
+            ls_dist <- c(ls_dist, distance_tre[rownames(distance_tre)==paste0(sp,"--",sp),
+                                               colnames(distance_tre)==sp])
+        }
+        
+        return(ls_dist)
+    }
+
+    stopCluster(nwcl)
+
+    # visualisation
+    plot <- ggplot(data.frame(ls_output), aes(x=ls_output, xmin=0, xmax=max(ls_output))) + 
+        geom_histogram(bins = 100) +
+        ggtitle("Locus Phylogenetic Distance between Mapped Reads and Reference") + ylab("Count")
+
+    tiff(file=fn_dist_tiff, units="px", width=2880, height=1800)
+    print(plot + theme(plot.title = element_text(hjust=0.5, size=50),
+                    plot.margin = margin(1.25, 1.25, 1.25, 1.25, "cm"),
+                    axis.text.x = element_text(size=30),
+                    axis.title.x = element_blank(),
+                    axis.text.y = element_text(size=30),
+                    axis.title.y = element_text(size=40, margin=margin(t=0, r=20, b=0, l=0)),
+                    legend.position = "none"))
+    dev.off()
+}
+```
+
+```{r, out.width="100%", include=is_check_summary_individual}
+print(plot + theme(plot.title = element_text(face = "bold"),
+                   plot.margin = margin(0.5, 0.5, 0.5, 0.5, "cm")))
+```
+
+## Correlation analysis on locus phylogenetic distances
+```{r summary-correlation}
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# set the pivot species
+focal_sp <- params$focal_species
+if (is.null(focal_sp) || focal_sp=="") {
+    focal_sp <- sample(ls_refseq, 1)
+}
+
+readr::write_lines(paste("Calculating pairwise distance against ", focal_sp), file=fn_log, append=T)
+
+# iterate over loci
+df_output <- foreach (fn_tree = dir_loci, .combine='rbind') %dopar% {
+    library(ggplot2)
+
+    # extract locus
+    locus <- tools::file_path_sans_ext(basename(fn_tree))
+
+    # output variables
+    read_out <- data.table::data.table(dir_tree=character(), locus=character(), read=character(),
+                                       lm_r2=numeric(), lm_slope=numeric(), lm_p=numeric(),
+                                       spearman_rho=numeric(), spearman_p=numeric(),
+                                       lm_r2_noout=numeric(), lm_slope_noout=numeric(), lm_p_noout=numeric(),
+                                       spearman_rho_noout=numeric(), spearman_p_noout=numeric())
+
+    # read trees
+    tre_original <- ape::read.tree(fn_tree)
+    tre_original_tips <- tre_original$tip.label
+
+    # update list of mapped reads
+    ls_prefix_available <- ls_prefix[ls_prefix %in% tre_original_tips]
+    ls_shortreads_available <- sapply(ls_prefix_available, function(x) {
+        unlist(strsplit(x, split="--"))[1]
+    })
+    ls_shortreads_available <- unique(ls_shortreads_available)
+
+    # calculate phylogenetic distance
+    distance_tre <- ape::cophenetic.phylo(tre_original)
+
+    # iterate over short reads
+    for (read in ls_shortreads_available) {
+        # initiate variables
+        dir_temp_fig <- file.path(dir_check_summary_correlation, read)
+
+        # temporary data.table
+        temp_df_dist <- data.table::data.table(read=character(), ref=character(), ref_dist=numeric(), read_dist=numeric(), grouping=character())
+
+        # extract available available reference sequences
+        ls_refseq_available <- grep(paste0("^",read), tre_original_tips, value=T)
+        ls_refseq_available <- sapply(ls_refseq_available, function(x) {
+            unlist(strsplit(x, split="--"))[2]
+        })
+
+        # iterate over reference sequence
+        for (ref in ls_refseq_available) {
+            # check if prefix if filtered out by TreeShrink
+            prefix <- paste0(read, "--", ref)
+
+            # calculate distance for reference
+            ref_dist <- distance_tre[rownames(distance_tre)==focal_sp, colnames(distance_tre)==ref]
+
+            # calculate distance for short reads
+            read_dist <- distance_tre[rownames(distance_tre)==focal_sp, colnames(distance_tre)==prefix]
+
+            # update data.frame
+            temp_df_dist <- rbind(temp_df_dist, data.table::data.table(read=read,
+                                                                       ref=ref,
+                                                                       ref_dist=ref_dist,
+                                                                       read_dist=read_dist,
+                                                                       grouping=df_refs$grouping[df_refs$species==ref]
+                                                                       ))
+        }
+
+        # check if all values are NULL or NAs
+        if (f_all_null_or_na(temp_df_dist$ref_dist) || f_all_null_or_na(temp_df_dist$read_dist)) {
+            next
+        }
+
+        # subset data.frame
+        temp_df_dist_filtered <- temp_df_dist[temp_df_dist$shape == "IN",]
+        temp_df_dist_filtered_noout <- temp_df_dist_filtered[!temp_df_dist_filtered$grouping %in% params$outgroup,]
+
+        # check if filtered table has more than one entry and consists of all NULL or NAs
+        if (nrow(temp_df_dist_filtered)==0 || f_all_null_or_na(temp_df_dist_filtered$ref_dist) || f_all_null_or_na(temp_df_dist_filtered$read_dist)) {
+            next
+        }
+
+        # run linear model with outgroup
+        lm <- lm(read_dist~ref_dist, data=temp_df_dist)
+        lm_statistics <- f_extract_summary_lm(lm)
+        sp_statistics <- f_spearman_test(temp_df_dist$read_dist, temp_df_dist$ref_dist)
+
+        # visualisation
+        fn_locus_tiff <- file.path(dir_temp_fig, paste0(locus, ".tiff"))
+
+        plot <- ggplot(temp_df_dist, aes(x=ref_dist, y=read_dist)) +
+            geom_point(aes(size=20, color=grouping)) +
+            geom_abline(slope=1, intercept=0, linetype=3, aes(linewidth=3)) +
+            stat_smooth(data=temp_df_dist_filtered, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=1, method='lm', formula=y~x, color="black", alpha=0.5)
+
+        # linear model without outgroup
+        lm_statistics_noout <- list(rsquared=NULL, slope=NULL, pvalue=NULL)
+        sp_statistics_noout <- list(rho=NULL, pvalue=NULL)
+
+        if (nrow(temp_df_dist_filtered_noout) > 0 && !f_all_null_or_na(temp_df_dist_filtered_noout$ref_dist) && !f_all_null_or_na(temp_df_dist_filtered_noout$read_dist)) {
+            # run linear model without outgroup
+            lm_noout <- lm(read_dist~ref_dist, data=temp_df_dist_filtered_noout)
+            lm_statistics_noout <- f_extract_summary_lm(lm_noout)
+            sp_statistics_noout <- f_spearman_test(temp_df_dist_filtered_noout$read_dist, temp_df_dist_filtered_noout$ref_dist)
+
+            plot <- plot + stat_smooth(data=temp_df_dist_filtered_noout, geom='line', aes(x=ref_dist, y=read_dist, linewidth=3), linetype=2, method='lm', formula=y~x, color="red", alpha=0.5)
+        }
+
+        # update data.frame
+        read_out <- rbind(read_out, data.table::data.table(dir_tree=fn_tree,
+                                                           locus=locus,
+                                                           read=read,
+                                                           lm_r2=lm_statistics$rsquared,
+                                                           lm_slope=lm_statistics$slope,
+                                                           lm_p=lm_statistics$pvalue,
+                                                           spearman_rho=sp_statistics$rho,
+                                                           spearman_p=sp_statistics$pvalue,
+                                                           lm_r2_noout=lm_statistics_noout$rsquared,
+                                                           lm_slope_noout=lm_statistics_noout$slope,
+                                                           lm_p_noout=lm_statistics_noout$pvalue,
+                                                           spearman_rho_noout=sp_statistics_noout$rho,
+                                                           spearman_p_noout=sp_statistics_noout$pvalue
+                                                           ))
+        
+        # update plot
+        plot <- plot + ggtitle(paste(locus, "Phylogenetic Distances")) +
+            xlab("Reference Distance") + ylab("Mapped Reads Distance") +
+            guides(color=guide_legend(title="Taxonomy"), size="none", linewidth="none") +
+            theme(
+                plot.title=element_text(hjust = 0.5, size = 50),
+                plot.margin=margin(1.25, 1.25, 1.25, 1.25, "cm"),
+                axis.title.x=element_text(size = 40, margin = margin(t=20, r=0, b=0, l=0)),
+                axis.title.y=element_text(size = 40, margin = margin(t=0, r=20, b=0, l=0)),
+                axis.text.y=element_text(size=30),
+                axis.text.x=element_text(size=30),
+                legend.title=element_text(size=15),
+                legend.text=element_text(size=15),
+                legend.key.size=unit(1,"cm"),
+                strip.text=element_text(size = 30)
+            )
+
+        # save the plot
+        tiff(file=fn_locus_tiff, units="px", width=1400, height=700)
+        print(plot)
+        dev.off()
+    }
+
+    return(read_out)
+}
+
+stopCluster(nwcl)
+
+# save the data.frame
+data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
+```

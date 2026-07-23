@@ -1,0 +1,172 @@
+---
+title: "Inferring BUSCO Trees"
+---
+
+## Convert individual BUSCO alignments into MSA
+```{r check-busco-msa}
+# set up variables
+busco_refs_dir_mid <- file.path(paste0("run_", params$busco_lineage), "busco_sequences", "single_copy_busco_sequences")
+busco_read_dir_mid <- file.path(paste0("run_", params$busco_lineage), "busco_sequences", "single_copy_busco_sequences")
+
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over shared BUSCOs
+output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    dir_output <- file.path(dir_busco_tree, busco)
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
+    }
+
+    # output MSA file
+    fn_out <- file.path(dir_output, paste0(busco, ".fa"))
+    fn_out_aligned <- file.path(dir_output, paste0(busco, "_aligned.fa"))
+    if (all(file.exists(fn_out, fn_out_aligned)) && !params$redo) {
+        # check if file is not empty
+        if (file.size(fn_out_aligned) != 0L) {
+            return(NULL)
+        }
+    }
+
+    # extract BUSCO alignment from reference sequences
+    for (ref in ls_refseq) {
+        file_busco_ref <- file.path(dir_busco_ref, ref, busco_refs_dir_mid, paste0(busco, ".faa"))
+        if (!file.exists(file_busco_ref)) {
+            next
+        }
+
+        f_fasta2msa(file_busco_ref, ref, fn_out)
+    }
+
+    # extract BUSCO alignment from short reads
+    count_unavailable_prefix <- 0
+    for (read in ls_prefix) {
+        file_busco_read <- file.path(dir_busco_read, read, busco_read_dir_mid, psate0(busco, ".faa"))
+        if (!file.exists(file_busco_read)) {
+            count_unavailable_prefix <- count_unavailable_prefix + 1
+            next
+        }
+
+        f_fasta2msa(file_busco_read, read, fn_out)
+    }
+
+    # align using MAFFT FFT-NS-2
+    f_mafft(fn_out, fn_out_aligned, "--retree 2", params$exe_mafft)
+
+    # return BUSCOs with zero mapped reads
+    if (count_unavailable_prefix == length(ls_prefix)) {
+        return(busco)
+    }
+}
+
+stopCluster(nwcl)
+
+# update the number of shared BUSCOs
+shared_busco <- shared_busco[!shared_busco %in% output]
+
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO after filtering reference-only genes:", length(shared_busco)))
+readr::write_lines(c("", paste0("Number of BUSCO after filtering genes with zero mapped reads: ", length(shared_busco), ".")),
+                   file=fn_log, append=T)
+
+# stop the knit if shared busco is zero
+if (length(shared_busco) == 0) {
+    knitr::knit_exit()
+}
+```
+
+## Infer BUSCO trees
+```{r check-busco-tree}
+readr::write_lines(c("", "------------ BUSCO Trees -----------"), file=fn_log, append=T)
+              
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over shared BUSCOs
+foreach (busco = shared_busco) %dopar% {
+    dir_output <- file.path(dir_busco_tree, busco)
+
+    # output IQ-Tree2 files
+    fn_fasta <- file.path(dir_output, paste0(busco, "_aligned.fa"))
+    fn_treefile <- file.path(dir_output, paste0(busco, "_aligned.fa.treefile"))
+    if (!file.exists(fn_treefile) || params$redo) {
+        # run IQ-Tree2
+        f_iqtree2(fn_fasta, params$exe_iqtree2)
+    }
+}
+
+stopCluster(nwcl)
+```
+
+```{r check-busco-treeshrink, echo=FALSE}
+readr::write_lines(c("", "------------ TreeShrink ------------"), file=fn_log, append=T)
+              
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over shared BUSCOs
+foreach (busco = shared_busco) %dopar% {
+    dir_output <- file.path(dir_busco_treeshrink, busco)
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
+    }
+
+    # input file
+    fn_treefile <- file.path(dir_busco_tree, busco, paste0(busco, "_aligned.fa.treefile"))
+    if (!file.exists(fn_treefile)) {
+        return(NULL)
+    }
+
+    # output file
+    prefix <- paste0(busco, ".treeshrink")
+
+    fn_treeshrink_tree <- file.path(dir_output, paste0(prefix, ".treefile"))
+    if (!file.exists(fn_treeshrink_tree) || params$redo) {
+        # run TreeShrink
+        f_treeshrink(fn_treefile, prefix, dir_output, params$exe_treeshrink)
+    }
+}
+
+log4r::info(fn_logger, "File created/modified: BUSCO trees.")
+stopCluster(nwcl)
+```
+
+## Run TrimAl
+```{r check-busco-trimal}
+# create doSNOW cluster
+nwcl <- makeCluster(params$thread)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over shared BUSCOs
+output <- foreach (busco = shared_busco, .combine='c') %dopar% {
+    dir_output <- file.path(dir_busco_tree, busco, "trimal")
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
+    }
+    
+    # output MSA file
+    fn_out_aligned <- file.path(dir_busco_tree, busco, paste0(busco, "_aligned.fa"))
+    fn_out_trimal <- file.path(dir_output, paste0(busco, "_aligned_trimal.fa"))
+    if (file.exists(fn_out_trimal) && !params$redo) {
+        # check if file is not empty
+        if (file.size(fn_out_trimal) != 0L) {
+            return(NULL)
+        }
+    }
+
+    # run TrimAl
+    f_trimal(fn_out_aligned, fn_out_trimal, "-automated1", params$exe_trimal)
+
+    # run IQ-TREE2
+    fn_treefile <- file.path(dir_output, paste0(busco, "_aligned_trimal.fa.treefile"))
+    if (!file.exists(fn_treefile) || params$redo) {
+        # run IQ-Tree2
+        f_iqtree2(fn_out_trimal, params$exe_iqtree2)
+    }
+}
+
+stopCluster(nwcl)
+```

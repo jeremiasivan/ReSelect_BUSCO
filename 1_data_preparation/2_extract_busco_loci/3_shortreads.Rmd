@@ -1,10 +1,10 @@
 ---
-title: "Run BUSCO Pipeline on Individual Reference Sequences and Mapped Reads"
+title: "Run BUSCO Analysis on Mapped Reads"
 ---
 
-## Run BUSCO on mapped reads
 ```{r, include=FALSE}
-f_write_log(fn_log=fn_log, msg=c("", "------------ Mapped Reads ----------"))
+readr::write_lines(c("", "------------ Mapped Reads ----------"),
+                   file=fn_log, append=T)
 
 # set up variables
 is_busco_read <- FALSE
@@ -12,61 +12,65 @@ is_busco_read <- FALSE
 ls_busco_read_done <- c()
 ls_busco_read_run <- c()
 
-# iterate over mapped sequences
-if (params$redo) {
-    ls_busco_read_run <- ls_prefix
-} else {
-    for (read in ls_prefix) {
-        # check if BUSCO run exists
-        file_busco_log <- paste0(dir_busco_read, read, "/logs/busco.log")
-        if (file.exists(file_busco_log)) {
-            finish_msg <- system(paste("grep 'BUSCO analysis done'", file_busco_log), intern=T)
-            if (length(finish_msg) != 0) {
-                ls_busco_read_done <- c(ls_busco_read_done, paste("-", read))
-                next
+# filter out BUSCOs according to several criteria
+if (!file.exists(fn_mapped_reads_busco) || params$redo) {
+    # iterate over mapped sequences
+    if (params$redo) {
+        ls_busco_read_run <- ls_prefix
+    } else {
+        for (read in ls_prefix) {
+            # check if BUSCO run exists
+            file_busco_log <- file.path(dir_busco_read, read, "logs", "busco.log")
+            if (file.exists(file_busco_log)) {
+                finish_msg <- system(paste("grep 'BUSCO analysis done'", file_busco_log), intern=T)
+                if (length(finish_msg) != 0) {
+                    ls_busco_read_done <- c(ls_busco_read_done, paste("-", read))
+                    next
+                }
             }
+
+            # add mapped sequence to to-do-list
+            ls_busco_read_run <- c(ls_busco_read_run, read)
         }
-
-        # add mapped sequence to to-do-list
-        ls_busco_read_run <- c(ls_busco_read_run, read)
     }
-}
 
-# output log file for available mapped sequence BUSCO runs
-if (length(ls_busco_read_done) > 0) {
-    ls_busco_read_done <- c(paste0("Available mapped sequence BUSCO runs (", length(ls_busco_read_done), "/", length(ls_prefix), ")"), ls_busco_read_done, "")
-    f_write_log(fn_log=fn_log, msg=ls_busco_read_done)
-}
+    # output log file for available mapped sequence BUSCO runs
+    if (length(ls_busco_read_done) > 0) {
+        ls_busco_read_done <- c(paste0("Available mapped sequence BUSCO runs (", length(ls_busco_read_done), "/", length(ls_prefix), ")"), ls_busco_read_done, "")
+        readr::write_lines(ls_busco_read_done, file=fn_log, append=T)
+    }
 
-# update variable for the next analysis
-if (length(ls_busco_read_run) > 0) {
-    is_busco_read <- TRUE
+    # update variable for the next analysis
+    if (length(ls_busco_read_run) > 0) {
+        is_busco_read <- TRUE
+    }
+
+    # print the number of available mapped reads BUSCO in HTML document
+    cat(paste0("Available mapped reads BUSCO (", length(ls_busco_read_done), "/", length(ls_prefix), ")"))
+    cat(paste("Mapped reads BUSCO to run:", length(ls_busco_read_run)))
 }
 ```
 
-```{r}
-# print the number of available mapped reads BUSCO in HTML document
-cat(paste0("Available mapped reads BUSCO (", length(ls_busco_read_done), "/", length(ls_prefix), ")"))
-cat(paste("Mapped reads BUSCO to run:", length(ls_busco_read_run)))
-```
+## Run BUSCO on mapped reads
+```{r check-busco-read, include=is_busco_read, eval=is_busco_read}
+readr::write_lines(paste("Running BUSCO using", params$thread_busco, "threads"),
+                   file=fn_log, append=T)
 
-```{r check-busco-pipeline-run, include=is_busco_read, eval=is_busco_read}
-f_write_log(fn_log=fn_log, msg=paste("Running BUSCO using", params$thread_busco, "threads"))
-
-# create doSNOW cluster
+# set up number of doSNOW cluster
 cl_busco <- floor(params$thread/params$thread_busco)
 if (cl_busco < 1) {
     log4r::error(fn_logger, "Invalid thread for BUSCO. Exited.")
     knitr::knit_exit()
 }
 
+# create doSNOW cluster
 nwcl <- makeCluster(cl_busco)
 doSNOW::registerDoSNOW(nwcl)
 
 # iterate over mapped reads
 foreach (prefix = ls_busco_read_run) %dopar% {
     # input FASTA file
-    file_read <- paste0(dir_readmap, prefix, "/", prefix, ".fa")
+    file_read <- file.path(dir_readmap, prefix, paste0(prefix, ".fa"))
 
     # run BUSCO
     f_run_busco(file_read, dir_lineage, prefix, dir_busco_read, params$busco_mode, params$thread_busco, params$exe_busco)
@@ -76,10 +80,13 @@ foreach (prefix = ls_busco_read_run) %dopar% {
 stopCluster(nwcl)
 ```
 
-## Extract common BUSCOs between reference sequences and mapped reads
-```{r check-busco-pipeline-extract}
+```{r check-busco-read-common, include=is_busco_read, eval=is_busco_read}
 # output data.table
-df_mapped_reads_busco <- data.table::data.table(ref=character(), read=character(), busco=character(), is_error=logical(), note=character())
+df_mapped_reads_busco <- data.table::data.table(ref=character(),
+                                                read=character(),
+                                                busco=character(),
+                                                is_error=logical(),
+                                                note=character())
 
 # store the list of problematic BUSCOs
 ls_error_busco <- c()
@@ -91,16 +98,16 @@ doSNOW::registerDoSNOW(nwcl)
 # iterate over mapped reads
 for (prefix in ls_prefix) {
     # input files
-    file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
+    file_bam <- file.path(dir_readmap, prefix, paste0(prefix, ".bam"))
 
     # output directories
-    dir_bed <- paste0(dir_busco_read, prefix, "/bed/")
+    dir_bed <- file.path(dir_busco_read, prefix, "bed")
     if (!dir.exists(dir_bed)) {
         dir.create(dir_bed, recursive=T)
     }
 
     # output file
-    fn_read_summary <- paste0(dir_busco_read, prefix, "/metadata.tsv")
+    fn_read_summary <- file.path(dir_busco_read, prefix, "metadata.tsv")
     if (file.exists(fn_read_summary) && !params$redo) {
         # update the data.frame
         df_read_summary <- data.table::fread(fn_read_summary)
@@ -113,24 +120,24 @@ for (prefix in ls_prefix) {
     }
 
     # directory for BUSCO alignments
-    dir_buscos <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/")
+    dir_buscos <- file.path(dir_busco_read, prefix, paste0("run_", params$busco_lineage), "busco_sequences", "single_copy_busco_sequences")
     
     # extract short read and reference sequence IDs
     read <- unlist(strsplit(prefix, split="--"))[1]
     ref <- unlist(strsplit(prefix, split="--"))[2]
 
     # get average coverage
-    mean_coverage <- as.numeric(df_readmap_coverage$mean_coverage[df_readmap_coverage$read_sp==read & df_readmap_coverage$ref_sp==ref])
+    mean_coverage <- as.numeric(df_readmap_coverage$mean_coverage[df_readmap_coverage$read==read & df_readmap_coverage$ref==ref])
     max_busco_depth <- 2 * mean_coverage
 
     # remove file extension .faa
-    busco_ids <- list.files(dir_buscos, pattern = "*.faa$", full.names = F, recursive = F)
-    busco_ids <- sapply(busco_ids, function(x) { gsub(".faa", "", x) })
+    busco_ids <- list.files(dir_buscos, pattern = "*.faa$", full.names=F, recursive=F)
+    busco_ids <- gsub(".faa", "", busco_ids)
     
     # iterate over shared BUSCOs
     df_output_temp <- foreach (busco = busco_ids, .combine='rbind') %dopar% {
         # input files
-        file_busco_gff <- paste0(dir_buscos, busco, ".gff")
+        file_busco_gff <- file.path(dir_buscos, paste0(busco, ".gff"))
         if (!file.exists(file_busco_gff)) {
             return(data.table::data.table(ref=ref, read=read, busco=busco, is_error=TRUE, note="File not found: GFF file"))
         }
@@ -141,7 +148,7 @@ for (prefix in ls_prefix) {
         }
 
         # run bedops gff2bed
-        file_busco_bed <- paste0(dir_bed, busco, ".bed")
+        file_busco_bed <- file.path(dir_bed, paste0(busco, ".bed"))
         cmd_gff2bed <- paste(params$exe_gff2bed, "<", file_busco_gff, ">", file_busco_bed)
         system(cmd_gff2bed)
 
@@ -169,6 +176,11 @@ stopCluster(nwcl)
 
 # save the output file
 data.table::fwrite(df_mapped_reads_busco, file=fn_mapped_reads_busco, sep="\t", quote=F)
+```
+
+```{r}
+# open the output data.frame
+df_mapped_reads_busco <- data.table::fread(fn_mapped_reads_busco)
 
 # remove BUSCOs with incomplete taxa
 df_mapped_reads_busco <- df_mapped_reads_busco %>% mutate(prefix=paste0(read,"--",ref))
@@ -188,28 +200,33 @@ if (length(shared_busco) == 0) {
     log4r::error(fn_logger, paste0("Error: no BUSCO shared between sequences. Exited."))
     knitr::knit_exit()
 }
+
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO after filtering low-coverage and incomplete genes:", length(shared_busco)))
+readr::write_lines(c("", paste0("Number of BUSCO after filtering problematic genes: ", length(shared_busco), ".")),
+                   file=fn_log, append=T)
 ```
 
-```{r check-busco-pipeline-coverage}
+```{r check-busco-read-coverage}
 # iterate over mapped reads
 df_coverage <- data.table::data.table()
 
 for (prefix in ls_prefix) {
     # extract reference and reads
-    readref <- strsplit(prefix, split="--")[[1]]
+    readref <- unlist(strsplit(prefix, split="--"))
 
     # input parameters
-    dir_qualimap_output <- paste0(dir_busco_read, prefix, "/qualimap/")
-    file_bam <- paste0(dir_readmap, prefix, "/", prefix, ".bam")
-    file_gff <- paste0(dir_busco_read, prefix, "/all_busco.gff")
+    dir_qualimap_output <- file.path(dir_busco_read, prefix, "qualimap")
+    file_bam <- file.path(dir_readmap, prefix, paste0(prefix, ".bam"))
+    file_gff <- file.path(dir_busco_read, prefix, "all_busco.gff")
 
     # concatenate all GFF files
-    shared_busco_gff <- paste0(dir_busco_read, prefix, "/run_", params$busco_lineage, "/busco_sequences/single_copy_busco_sequences/", shared_busco, ".gff")
+    shared_busco_gff <- file.path(dir_busco_read, prefix, paste0("run_", params$busco_lineage), "busco_sequences", "single_copy_busco_sequences", paste0(shared_busco, ".gff"))
     shared_busco_gff <- paste0(shared_busco_gff, collapse=" ")
     system(paste("cat", shared_busco_gff, ">", file_gff))    
 
     # run QualiMap
-    file_qualimap_html <- paste0(dir_busco_read, prefix, "/qualimap/qualimapReport.html")
+    file_qualimap_html <- file.path(dir_busco_read, prefix, "qualimap", "qualimapReport.html")
     if (!file.exists(file_qualimap_html)) {
         f_qualimap(file_bam, dir_qualimap_output, params$thread, file_gff, params$exe_qualimap)
     }
@@ -225,10 +242,8 @@ for (prefix in ls_prefix) {
     mapped_reads <- as.numeric(strsplit(mapped_reads, split="%")[[1]][1])
 
     # update the data.table
-    df_coverage <- rbind(df_coverage, data.table::data.table(read_id=df_reads$id[df_reads$species==readref[1]],
-                                                             ref_id=df_refs$id[df_refs$species==readref[2]],
-                                                             read_sp=readref[1],
-                                                             ref_sp=readref[2],
+    df_coverage <- rbind(df_coverage, data.table::data.table(read=readref[1],
+                                                             ref=readref[2],
                                                              mean_coverage=mean_coverage,
                                                              mapped_reads=mapped_reads))
 }
