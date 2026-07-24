@@ -48,31 +48,37 @@ f_extract_fasta <- function(fn_input, ls_header, fn_output) {
 }
 
 # function: generate window trees
-f_multiple_tree <- function(dir_aln, prefix, thread, dir_iqtree2) {
+f_multiple_tree <- function(dir_aln, prefix, thread, is_redo, dir_iqtree2) {
     iqtree_cmd <- paste(dir_iqtree2,
                         "-S", dir_aln,
                         "-pre", prefix,
                         "-T", thread,
-                        "--quiet -redo")
+                        "--quiet")
+
+    # check if is_redo is TRUE
+    if (is_redo) {
+        iqtree_cmd <- paste(iqtree_cmd, "-redo")
+    }
+    
     system(iqtree_cmd)
 }
 
 # function: run ASTRAL-III 
 f_astral <- function(fn_input, fn_output, fn_log, exe_astral) {
-    cmd_astral <- paste("java -jar", exe_astral,
-                    "-i", fn_input,
-                    "-o", fn_output,
-                    "-t 2 2>", fn_log)
+    cmd_astral <- paste(exe_astral,
+                        "-i", fn_input,
+                        "-o", fn_output,
+                        "-t 2 2>", fn_log)
     system(cmd_astral)
 }
 
 # function: run ASTRAL-III (constrained)
 f_astral_constrained <- function(fn_input, fn_output, fn_log, fn_sptree, exe_astral) {
-    cmd_astral <- paste("java -jar", exe_astral,
-                    "-i", fn_input,
-                    "-j", fn_sptree,
-                    "-o", fn_output,
-                    "-t 2 2>", fn_log)
+    cmd_astral <- paste(exe_astral,
+                        "-i", fn_input,
+                        "-j", fn_sptree,
+                        "-o", fn_output,
+                        "-t 2 2>", fn_log)
     system(cmd_astral)
 }
 

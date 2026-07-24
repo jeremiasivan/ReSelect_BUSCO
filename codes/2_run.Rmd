@@ -73,7 +73,12 @@ if (length(ls_intersect_sp) > 0) {
     # iterate over loci
     ls_output <- foreach (locus = ls_locus, .combine='c') %dopar% {
         # read tree
-        tre <- ape::read.tree(file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa.treefile")))
+        fn_tre <- file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa.treefile"))
+        if (!file.exists(fn_tre)) {
+            return(NULL)
+        }
+
+        tre <- ape::read.tree(fn_tre)
         ls_tips <- tre$tip.label
 
         # calculate phylogenetic distance
@@ -125,7 +130,7 @@ if (is.null(focal_sp) || focal_sp=="") {
     focal_sp <- sample(ls_refseq, 1)
 }
 
-readr::write_lines(paste("Calculating pairwise distance against ", focal_sp), file=fn_log, append=T)
+readr::write_lines(paste("Calculating pairwise distance against", focal_sp), file=fn_log, append=T)
 
 # iterate over loci
 df_output <- foreach (locus = ls_locus, .combine='rbind') %dopar% {
@@ -138,8 +143,13 @@ df_output <- foreach (locus = ls_locus, .combine='rbind') %dopar% {
                                        lm_r2_noout=numeric(), lm_slope_noout=numeric(), lm_p_noout=numeric(),
                                        spearman_rho_noout=numeric(), spearman_p_noout=numeric())
 
-    # read trees
-    tre_original <- ape::read.tree(file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa.treefile")))
+    # read tree
+    fn_tre_original <- file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa.treefile"))
+    if (!file.exists(fn_tre_original)) {
+        return(NULL)
+    }
+
+    tre_original <- ape::read.tree(fn_tre_original)
     tre_original_tips <- tre_original$tip.label
 
     # update list of mapped reads
@@ -182,7 +192,7 @@ df_output <- foreach (locus = ls_locus, .combine='rbind') %dopar% {
                                                                        ref=ref,
                                                                        ref_dist=ref_dist,
                                                                        read_dist=read_dist,
-                                                                       grouping=df_refs$grouping[df_refs$species==ref]
+                                                                       grouping=ifelse(any(ref%in%params$outgroup), "Outgroup", "Ingroup")
                                                                        ))
         }
 
@@ -192,7 +202,7 @@ df_output <- foreach (locus = ls_locus, .combine='rbind') %dopar% {
         }
 
         # subset data.frame
-        temp_df_dist_noout <- temp_df_dist[!temp_df_dist$grouping %in% params$outgroup,]
+        temp_df_dist_noout <- temp_df_dist[temp_df_dist$grouping!="Outgroup",]
 
         # run linear model with outgroup
         lm <- lm(read_dist~ref_dist, data=temp_df_dist)

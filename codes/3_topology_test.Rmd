@@ -2,14 +2,14 @@
 title: "Tree Topology Test"
 ---
 
-```{r check-btree-setup, include=FALSE}
+```{r, include=FALSE}
 readr::write_lines(c("", "--------- Tree Topology Test -------"),
                    file=fn_log, append=T)
 
 # output directory
-dir_locustree <- file.path(currentdir, "topology_test")
+dir_locustree <- file.path(dir_check_summary, "topology_test")
 if (params$is_astral_constrained && file.exists(params$file_species_treefile)) {
-    dir_locustree <- file.path(currentdir, "topology_test_constrained")
+    dir_locustree <- file.path(dir_check_summary, "topology_test_constrained")
 }
 
 if (!dir.exists(dir_locustree)) {
@@ -18,15 +18,13 @@ if (!dir.exists(dir_locustree)) {
 
 # input files
 fn_cor_summary <- file.path(dir_check_summary, paste0(params$prefix, ".cor.sumtable"))
+df_cor_summary <- data.table::fread(fn_cor_summary)
 
 # output files
 fn_cf_summary <- file.path(dir_locustree, paste0(params$prefix, ".cf.sumtable"))
 ```
 
-```{r check-btree-run}
-# open the input data.frame
-df_cor_summary <- data.table::fread(fn_cor_summary)
-
+```{r topology-test}
 # iterate over short-reads
 for (read in ls_shortreads) {
     # output directory
@@ -49,8 +47,12 @@ for (read in ls_shortreads) {
         if (condition == "bias") {
             ls_locus_condition <- df_cor_subset$locus[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05]
         } else if (condition == "nonbias") {
-            ls_locus_condition <- df_cor_subset$locus[df_cor_subset$lm_p>=0.05 & df_cor_subset$spearman_p>=0.05]
+            ls_locus_condition_bias <- df_cor_subset$locus[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05]
+            ls_locus_condition <- df_cor_subset$locus[!df_cor_subset$locus%in%ls_locus_condition_bias]
         }
+
+        # remove NAs
+        ls_locus_condition <- ls_locus_condition[!is.na(ls_locus_condition)]
 
         # output files
         fn_locus_condition_prefix <- file.path(dir_output_condition_trees, "all_locus")
@@ -87,7 +89,7 @@ for (read in ls_shortreads) {
         stopCluster(nwcl)
 
         # run IQ-TREE2
-        f_multiple_tree(dir_output_condition_fasta, fn_locus_condition_prefix, params$thread, params$exe_iqtree2)
+        f_multiple_tree(dir_output_condition_fasta, fn_locus_condition_prefix, params$thread, params$redo, params$exe_iqtree2)
         alltre_temp <- ape::read.tree(fn_locus_condition_treefile)
         alltre_temp <- alltre_temp[[1]]
 
@@ -108,9 +110,13 @@ for (read in ls_shortreads) {
         
         # calculate sCF and gCF
         f_calculate_cf(fn_locus_condition_treefile, fn_locus_condition_astral_treefile, dir_output_condition_fasta, dir_output_condition_trees, params$thread, params$exe_iqtree2)
-    }    
-}
 
+        log4r::info(fn_logger, paste0("Finished running tree topology test on ", condition, " trees for ", read, "."))
+    }
+}
+```
+
+```{r topology-test-perref}
 # iterate over shortreads
 for (read in ls_shortreads) {
     # subset the data.frame
@@ -126,8 +132,12 @@ for (read in ls_shortreads) {
         if (condition == "bias") {
             ls_locus_condition <- df_cor_subset$locus[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05]
         } else if (condition == "nonbias") {
-            ls_locus_condition <- df_cor_subset$locus[df_cor_subset$lm_p>=0.05 & df_cor_subset$spearman_p>=0.05]
+            ls_locus_condition_bias <- df_cor_subset$locus[df_cor_subset$lm_p<0.05 | df_cor_subset$spearman_p<0.05]
+            ls_locus_condition <- df_cor_subset$locus[!df_cor_subset$locus%in%ls_locus_condition_bias]
         }
+
+        # remove NAs
+        ls_locus_condition <- ls_locus_condition[!is.na(ls_locus_condition)]
 
         # iterate over reference sequences
         for (ref in ls_refseq) {
@@ -171,7 +181,7 @@ for (read in ls_shortreads) {
             stopCluster(nwcl)
 
             # run IQ-TREE2
-            f_multiple_tree(dir_output_perref_fasta, fn_locus_perref_prefix, params$thread, params$exe_iqtree2)
+            f_multiple_tree(dir_output_perref_fasta, fn_locus_perref_prefix, params$thread, params$redo, params$exe_iqtree2)
             alltre_temp <- ape::read.tree(fn_locus_perref_treefile)
             alltre_temp <- alltre_temp[[1]]
 
@@ -193,6 +203,8 @@ for (read in ls_shortreads) {
             # calculate sCF and gCF
             f_calculate_cf(fn_locus_perref_treefile, fn_locus_perref_astral_treefile, dir_output_perref_fasta, dir_output_perref_trees, params$thread, params$exe_iqtree2)
         }
+
+        log4r::info(fn_logger, paste0("Finished running per-reference tree topology test on ", condition, " trees for ", read, "."))
     }
 }
 ```

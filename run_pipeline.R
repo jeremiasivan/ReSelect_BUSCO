@@ -94,7 +94,7 @@ render_params <- list(
   file_species_treefile = cfg$file_species_treefile,
 
   exe_iqtree2      = f_get_param(cfg$exe_iqtree2, "iqtree3"),
-  exe_astral       = f_get_param(cfg$astral, "astral"),
+  exe_astral       = f_get_param(cfg$exe_astral, "astral"),
 
   is_astral_constrained = as.logical(f_get_param(cfg$is_astral_constrained, FALSE)),
 
