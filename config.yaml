@@ -1,0 +1,28 @@
+# ============================================================
+#  PhyloRBT config file
+#
+#  Edit this file, then run:
+#    Rscript run_pipeline.R --config config.yaml
+# ============================================================
+
+# --- General ------------------------------------------------
+codedir:  "/home/user/PhyloRBT/"          # path to PhyloRBT directory
+prefix:   ""                              # output prefix (used for filenames) (default: "PhyloRBT_output")
+outdir:   "/home/user/output"             # output directory
+thread:   1                               # number of parallel threads (default: 1)
+redo:     FALSE                           # re-run even if output files exist (default: FALSE)
+
+# --- Input Files --------------------------------------------
+dir_genes_alignment:   "/home/user/output/busco_extraction/trees/unfiltered"    # per-locus alignments and their respective treefiles
+
+# --- Executables --------------------------------------------
+exe_iqtree2: "iqtree3"                    # path to IQ-TREE executable
+exe_astral:  "astral"                     # path to ASTRAL executable (.jar)
+
+# --- Topology Test Parameters -------------------------------
+is_astral_constrained: FALSE                    # run ASTRAL constrained search (default: FALSE; require https://github.com/maryamrabiee/Constrained-search)
+file_species_treefile: "files/eucs.treefile"    # reference species tree topology (only if is_astral_constrained==TRUE)
+
+# --- Optional -----------------------------------------------
+outgroup:       []                        # outgroup taxon name (default: "" (no outgroup))
+focal_species:  ""                        # focal species to calculate pairwise phylogenetic distances (default: "" (randomised))

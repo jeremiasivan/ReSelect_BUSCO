@@ -1,0 +1,324 @@
+---
+title: "Read Mapping of Short Reads"
+---
+
+```{r, include=FALSE}
+# open input files
+df_refs <- data.table::fread(params$file_refseq)
+df_refs$species <- gsub(" ", "", df_refs$species)
+df_refs$species <- gsub("\\.", "_", df_refs$species)
+
+df_reads <- data.table::fread(params$file_shortreads)
+df_reads$species <- gsub(" ", "", df_reads$species)
+df_reads$species <- gsub("\\.", "_", df_reads$species)
+
+# extract list of reference sequences and short-reads
+ls_refseq <- unique(df_refs$species)
+ls_shortreads <- unique(df_reads$species)
+
+# output directories
+dir_readmap <- file.path(currentdir, "readmap")
+if (!dir.exists(dir_readmap)) {
+    dir.create(dir_readmap, recursive=T)
+}
+
+# output file
+fn_readmap_metadata <- file.path(dir_readmap, "metadata.tsv")
+```
+
+```{r readmap-refread, include=FALSE}
+# output variables
+ls_invalid_ref <- c()
+ls_invalid_read <- c()
+
+# iterate over reference sequences
+for (ref in ls_refseq) {
+    # extract the directory of reference sequence
+    file_ref <- df_refs$dir[df_refs$species==ref]
+    if (!file.exists(file_ref) || length(file_ref)!=1) {
+        # update the list of invalid reference sequences
+        ls_invalid_ref <- c(ls_invalid_ref, ref)
+
+        log4r::warn(fn_logger, paste0("Invalid entry: FASTA file for ", ref, ". Skipped."))
+        next
+    }
+}
+
+# iterate over short reads
+for (read in ls_shortreads) {
+    # extract the directory of short reads
+    file_fastq <- df_reads$dir[df_reads$read=="R1" & df_reads$species==read]
+    if (!file.exists(file_fastq) || length(file_fastq)!=1) {
+        # update the list of invalid reference sequences
+        ls_invalid_read <- c(ls_invalid_read, read)
+
+        log4r::warn(fn_logger, paste0("Invalid entry: FASTQ file for ", read, ". Skipped."))
+        next
+    }
+}
+
+# update the list of reference sequences
+if (length(ls_invalid_ref) > 0) {
+    ls_refseq <- ls_refseq[!ls_refseq%in%ls_invalid_ref]
+}
+
+# update the list of short reads
+if (length(ls_invalid_read) > 0) {
+    ls_shortreads <- ls_shortreads[!ls_shortreads%in%ls_invalid_read]
+}
+```
+
+## Map short-reads data to reference genomes using BWA-MEM2
+```{r, include=FALSE}
+# set up variables
+is_readmap <- FALSE
+
+ls_readmap_done <- c()
+ls_readmap_run <- c()
+
+# list pairs of reference sequence and short reads
+ls_prefix <- as.vector(outer(ls_shortreads, ls_refseq, FUN = function(x, y) paste(x, y, sep = "--")))
+
+# iterate over pairs of reference sequence and short reads
+if (params$redo) {
+    ls_readmap_run <- ls_prefix
+} else {
+    for (prefix in ls_prefix) {
+        # check if file exists
+        file_bam <- file.path(dir_readmap, prefix, paste0(prefix, ".bam"))
+        if (file.exists(file_bam)) {
+            ls_readmap_done <- c(ls_readmap_done, paste("-", prefix))
+            next
+        }
+
+        # add prefix to to-do-list
+        ls_readmap_run <- c(ls_readmap_run, prefix)
+    }
+}
+
+# output log file for available mapped reads
+if (length(ls_readmap_done) > 0) {
+    ls_readmap_done <- c(paste0("Available mapped reads (", length(ls_readmap_done), "/", length(ls_prefix), ")"), ls_readmap_done, "")
+    readr::write_lines(ls_readmap_done, file=fn_log, append=T)
+}
+
+# update variable for the next analysis
+if (length(ls_readmap_run) > 0) {
+    is_readmap <- TRUE
+}
+```
+
+```{r}
+# print the number of mapped reads in HTML document
+cat(paste0("Available mapped reads (", length(ls_readmap_done), "/", length(ls_prefix), ")"))
+cat(paste("Short reads to be mapped:", length(ls_readmap_run)))
+```
+
+```{r readmap, include=is_readmap, eval=is_readmap}
+readr::write_lines(paste("Running BWA-MEM2 using", params$thread_bwamem2, "threads"),
+                   file=fn_log, append=T)
+
+# set up number of doSNOW cluster
+cl_bwamem2 <- floor(params$thread/params$thread_bwamem2)
+if (cl_bwamem2 < 1) {
+    log4r::error(fn_logger, "Invalid thread for BWA-MEM2. Exited.")
+    knitr::knit_exit()
+}
+
+# create doSNOW cluster
+nwcl <- makeCluster(cl_bwamem2)
+registerDoSNOW(nwcl)
+
+# iterate over prefix
+foreach (prefix = ls_readmap_run) %dopar% {
+    # output directory
+    dir_output <- file.path(dir_readmap, prefix)
+    if (!dir.exists(dir_output)) {
+        dir.create(dir_output, recursive=T)
+    }
+
+    # output file
+    file_sam <- file.path(dir_output, paste0(prefix, ".sam"))
+    file_bam <- file.path(dir_output, paste0(prefix, ".bam"))
+
+    # extract reference and short reads
+    read <- unlist(strsplit(prefix, split="--"))[1]
+    ref <- unlist(strsplit(prefix, split="--"))[2]
+
+    # extract reference file location
+    file_ref <- df_refs$dir[df_refs$species==ref]
+
+    # extract FASTQ file
+    file_fastq_one <- df_reads$dir[df_reads$read=="R1" & df_reads$species==read]
+    file_fastq_two <- df_reads$dir[df_reads$read=="R2" & df_reads$species==read]
+    if (!file.exists(file_fastq_two) || length(file_fastq_two)!=1) {
+        file_fastq_two <- NULL
+    }
+    
+    # run BWA-MEM2
+    f_read_mapping(file_ref, file_fastq_one, file_fastq_two, params$thread_bwamem2, params$exe_bwamem2, file_sam)
+
+    # convert SAM to BAM
+    f_sam_to_bam(prefix, dir_output, params$thread_samtools, params$exe_samtools)
+
+    # delete SAM file
+    unlink(file_sam)
+    log4r::info(fn_logger, paste0("File created: BAM file for ", prefix, "."))
+}
+
+stopCluster(nwcl)
+```
+
+```{r readmap-coverage, include=FALSE}
+readr::write_lines(paste("Running QualiMap using", params$thread_qualimap, "threads"),
+                   file=fn_log, append=T)
+
+# set up a variable
+ls_coverage_run <- c()
+
+# iterate over prefix
+if (params$redo) {
+    ls_coverage_run <- ls_prefix
+} else {
+    for (prefix in ls_prefix) {
+        # check if file exists
+        file_qualimap_html <- file.path(dir_readmap, prefix, "qualimap", "qualimapReport.html")
+        if (!file.exists(file_qualimap_html)) {
+            ls_coverage_run <- c(ls_coverage_run, prefix)
+        }
+    }
+}
+
+# set up number of doSNOW cluster
+cl_qualimap <- floor(params$thread/params$thread_qualimap)
+if (cl_qualimap < 1) {
+    log4r::error(fn_logger, "Invalid thread for QualiMap. Exited.")
+    knitr::knit_exit()
+}
+
+# create doSNOW cluster
+nwcl <- makeCluster(cl_qualimap)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over mapped reads
+df_coverage <- foreach (prefix = ls_prefix, .combine='rbind') %dopar% {
+    # input parameters
+    dir_qualimap_output <- file.path(dir_readmap, prefix, "qualimap")
+    file_bam <- file.path(dir_readmap, prefix, paste0(prefix, ".bam"))
+
+    # run QualiMap
+    if (prefix %in% ls_coverage_run) {
+        f_qualimap(file_bam, dir_qualimap_output, params$thread_qualimap, NULL, params$exe_qualimap)
+    }
+
+    # extract coverage
+    mean_coverage <- system(paste0("grep 'mean coverageData' ", dir_qualimap_output, "/genome_results.txt"), intern=T)
+    mean_coverage <- strsplit(mean_coverage, split=" = ")[[1]][2]
+    mean_coverage <- as.numeric(strsplit(mean_coverage, split="X")[[1]][1])
+
+    # extract percentage of mapped reads
+    mapped_reads <- system(paste0("grep 'number of mapped reads' ", dir_qualimap_output, "/genome_results.txt"), intern=T)
+    mapped_reads <- stringr::str_match(mapped_reads, "\\((.*)\\)")[,2]
+    mapped_reads <- as.numeric(strsplit(mapped_reads, split="%")[[1]][1])
+
+    # extract reference and reads
+    readref <- unlist(strsplit(prefix, split="--"))
+
+    return(data.table::data.table(read=readref[1],
+                                  ref=readref[2],
+                                  mean_coverage=mean_coverage,
+                                  mapped_reads=mapped_reads))
+}
+
+stopCluster(nwcl)
+
+# save the file
+fn_output <- file.path(dir_readmap, "summary.tsv")
+data.table::fwrite(df_coverage, file=fn_output, sep="\t", quote=F, row.names=F)
+```
+
+## Variant calling
+```{r, include=FALSE}
+readr::write_lines(c("", "---------- Variant Calling ---------"),
+                   file=fn_log, append=T)
+
+# set up variables
+is_variant <- FALSE
+
+ls_variant_done <- c()
+ls_variant_run <- c()
+
+# iterate over prefix
+if (params$redo) {
+    ls_variant_run <- ls_prefix
+} else {
+    for (prefix in ls_prefix) {
+        # check if file exists
+        file_vcf <- file.path(dir_readmap, prefix, paste0(prefix, ".vcf.gz"))
+        file_fas <- file.path(dir_readmap, prefix, paste0(prefix, ".fa"))
+        if (all(file.exists(file_vcf, file_fas)) && file.size(file_fas) != 0L) {
+            ls_variant_done <- c(ls_variant_done, paste("-", prefix))
+            next
+        }
+
+        # add prefix to to-do-list
+        ls_variant_run <- c(ls_variant_run, prefix)
+    }
+}
+
+# output log file for available VCF files
+if (length(ls_variant_done) > 0) {
+    ls_variant_done <- c(paste0("Available VCF files (", length(ls_variant_done), "/", length(ls_prefix), ")"), ls_variant_done, "")
+    readr::write_lines(ls_variant_done, file=fn_log, append=T)
+}
+
+# update variable for the next analysis
+if (length(ls_variant_run) > 0) {
+    is_variant <- TRUE
+}
+```
+
+```{r}
+# print the number of VCF files in HTML document
+cat(paste0("Available VCF files (", length(ls_variant_done), "/", length(ls_prefix), ")"))
+cat(paste("Variants to be called:", length(ls_variant_run)))
+```
+
+```{r readmap-calling, include=is_variant, eval=is_variant}
+readr::write_lines(paste("Running Bcftools using", params$thread_samtools, "threads"),
+                   file=fn_log, append=T)
+
+# set up number of doSNOW cluster
+cl_samtools <- floor(params$thread/params$thread_samtools)
+if (cl_samtools < 1) {
+    log4r::error(fn_logger, "Invalid thread for Samtools. Exited.")
+    knitr::knit_exit()
+}
+
+# create doSNOW cluster
+nwcl <- makeCluster(cl_samtools)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over reference sequences
+foreach (prefix = ls_variant_run) %dopar% {
+    # output directory
+    dir_output <- file.path(dir_readmap, prefix)
+
+    # check if input file exists
+    file_bam <- file.path(dir_output, paste0(prefix, ".bam"))
+    if (!file.exists(file_bam)) {
+        log4r::warn(fn_logger, paste0("File not found: BAM file for ", prefix, ". Skipped."))
+        return(NULL)
+    }
+
+    # extract reference file location
+    ref <- unlist(strsplit(prefix, split="--"))[2]
+    file_ref <- df_refs$dir[df_refs$species==ref]
+
+    # variant calling
+    f_variant_calling(prefix, dir_output, params$thread_samtools, file_ref, params$exe_bcftools)
+    log4r::info(fn_logger, paste0("File created: VCF and FASTA files for ", prefix, "."))
+}
+
+stopCluster(nwcl)
+```

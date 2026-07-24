@@ -1,0 +1,175 @@
+---
+title: "Run BUSCO Analysis on Reference Sequences"
+---
+
+```{r, include=FALSE}
+# open input files
+df_refs <- data.table::fread(params$file_refseq)
+df_refs$species <- gsub(" ", "", df_refs$species)
+df_refs$species <- gsub("\\.", "_", df_refs$species)
+
+df_reads <- data.table::fread(params$file_shortreads)
+df_reads$species <- gsub(" ", "", df_reads$species)
+df_reads$species <- gsub("\\.", "_", df_reads$species)
+
+# input directories
+dir_readmap <- file.path(currentdir, "readmap")
+ls_prefix <- list.dirs(dir_readmap, recursive=F, full.names=F)
+
+# extract list of reference sequences and short-reads
+ls_refseq <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[2] }))
+ls_shortreads <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[1] }))
+
+# input files
+fn_readmap_coverage <- file.path(dir_readmap, "summary.tsv")
+df_readmap_coverage <- data.table::fread(fn_readmap_coverage)
+
+# output directories
+dir_busco_lineage <- file.path(currentdir, "busco_lineage")
+
+dir_busco <- file.path(currentdir, "busco_extraction")
+dir_busco_ref <- file.path(dir_busco, "refseq")
+dir_busco_read <- file.path(dir_busco, "short_reads")
+dir_busco_tree <- file.path(dir_busco, "trees", "unfiltered")
+
+lapply(list(dir_busco_lineage, dir_busco_ref, dir_busco_read, dir_busco_tree), function(x){
+    if(!dir.exists(x)) dir.create(x, recursive=T)})
+
+# optional output directories
+dir_busco_trimal <- file.path(dir_busco, "trees", "trimal")
+if (!dir.exists(dir_busco_trimal) && params$run_trimal) {
+    dir.create(dir_busco_trimal, recursive=T)
+}
+
+dir_busco_treeshrink <- file.path(dir_busco, "trees", "unfiltered_treeshrink")
+if (!dir.exists(dir_busco_treeshrink) && params$run_treeshrink) {
+    dir.create(dir_busco_treeshrink, recursive=T)
+}
+
+# output files
+fn_refseq_busco <- file.path(dir_busco_ref, "list_busco.txt")
+fn_mapped_reads_busco <- file.path(dir_busco_read, "metadata.tsv")
+```
+
+## Download BUSCO lineage dataset
+```{r busco-lineage-download}
+# download specific BUSCO lineage
+dir_lineage <- file.path(dir_busco_lineage, "lineages", params$busco_lineage)
+if (!dir.exists(dir_lineage)) {
+    busco_cmd <- paste(params$exe_busco, "--download_path", dir_busco_lineage, "--download", params$busco_lineage)
+    system(busco_cmd)
+}
+```
+
+## Run BUSCO on reference sequences
+```{r, include=FALSE}
+readr::write_lines(c("", "--------- Reference Sequence -------"),
+                   file=fn_log, append=T)
+
+# set up variables
+is_busco_ref <- FALSE
+
+ls_busco_ref_done <- c()
+ls_busco_ref_run <- c()
+
+# iterate over reference sequences
+if (params$redo) {
+    ls_busco_ref_run <- ls_refseq
+} else {
+    for (ref in ls_refseq) {
+        # check if BUSCO run exists
+        file_busco_log <- file.path(dir_busco_ref, ref, "logs", "busco.log")
+        if (file.exists(file_busco_log)) {
+            finish_msg <- system(paste("grep 'BUSCO analysis done'", file_busco_log), intern=T)
+            if (length(finish_msg) != 0) {
+                ls_busco_ref_done <- c(ls_busco_ref_done, paste("-", ref))
+                next
+            }
+        }
+
+        # add reference sequence to to-do-list
+        ls_busco_ref_run <- c(ls_busco_ref_run, ref)
+    }
+}
+
+# output log file for available reference BUSCO runs
+if (length(ls_busco_ref_done) > 0) {
+    ls_busco_ref_done <- c(paste0("Available reference BUSCO runs (", length(ls_busco_ref_done), "/", length(ls_refseq), ")"), ls_busco_ref_done, "")
+    readr::write_lines(ls_busco_ref_done, file=fn_log, append=T)
+}
+
+# update variable for the next analysis
+if (length(ls_busco_ref_run) > 0) {
+    is_busco_ref <- TRUE
+}
+```
+
+```{r}
+# print the number of reference BUSCO in HTML document
+cat(paste0("Available reference BUSCO (", length(ls_busco_ref_done), "/", length(ls_refseq), ")"))
+cat(paste("Reference BUSCO to run:", length(ls_busco_ref_run)))
+```
+
+```{r check-busco-ref, include=is_busco_ref, eval=is_busco_ref}
+readr::write_lines(paste("Running BUSCO using", params$thread_busco, "threads"), file=fn_log, append=T)
+
+# set up number of doSNOW cluster
+cl_busco <- floor(params$thread/params$thread_busco)
+if (cl_busco < 1) {
+    log4r::error(fn_logger, "Invalid thread for BUSCO. Exited.")
+    knitr::knit_exit()
+}
+
+# create doSNOW cluster
+nwcl <- makeCluster(cl_busco)
+doSNOW::registerDoSNOW(nwcl)
+
+# iterate over reference sequences
+foreach (ref = ls_busco_ref_run) %dopar% {
+    # extract reference file location
+    file_ref <- df_refs$dir[df_refs$species==ref]
+
+    # run BUSCO
+    f_run_busco(file_ref, dir_lineage, ref, dir_busco_ref, params$busco_mode, params$thread_busco, params$exe_busco)
+    log4r::info(fn_logger, paste0("File created: BUSCO run for ", ref, "."))
+}
+
+stopCluster(nwcl)
+```
+
+## Extract common BUSCOs between reference sequences
+```{r check-busco-common}
+# initiate variable
+shared_busco <- c()
+
+# iterate over reference sequences
+for (ref in ls_refseq) {
+  # open BUSCO full table
+  fn_busco_fulltable <- file.path(dir_busco_ref, ref, paste0("run_", params$busco_lineage), "full_table.tsv")
+  df_busco_fulltable <- data.table::fread(fn_busco_fulltable, skip=3, fill=TRUE)
+  
+  # extract complete BUSCO
+  busco_ids <- df_busco_fulltable$V1[df_busco_fulltable$V2=="Complete"]
+  
+  # extract shared BUSCOs between reference sequences
+  if (length(shared_busco) == 0) {
+    shared_busco <- busco_ids
+  } else {
+    shared_busco <- intersect(shared_busco, busco_ids)
+  }
+}
+
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO between references:", length(shared_busco)))
+
+# check if shared BUSCOs found
+if (length(shared_busco) == 0) {
+    log4r::error(fn_logger, paste0("Error: no BUSCO shared between reference sequences. Exited."))
+    knitr::knit_exit()
+} else {
+    readr::write_lines(c("", paste0("Number of complete single-copy BUSCOs: ", length(shared_busco), ".")),
+                       file=fn_log, append=T)
+}
+
+writeLines(shared_busco, con=fn_refseq_busco)
+```
