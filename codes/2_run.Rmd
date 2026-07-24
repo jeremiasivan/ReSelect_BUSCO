@@ -3,6 +3,37 @@ title: "PhyloRBT"
 ---
 
 ```{r, include=FALSE}
+# extract list of locus
+ls_locus <- list.dirs(params$dir_genes_alignment, recursive=F, full.names=F)
+
+# print the number of locus in HTML document
+readr::write_lines(paste("Number of gene trees:", length(ls_locus)), file=fn_log, append=T)
+cat(paste("Number of gene trees:", length(ls_locus)))
+
+# check if list is of length zero
+if (length(ls_locus) == 0) {
+    log4r::error(fn_logger, "Error: list of locus is of length zero. Exited.")
+    knitr::knit_exit()
+}
+
+# extract list of prefix from the first locus
+temp_tre <- file.path(params$dir_genes_alignment, ls_locus[1], paste0(ls_locus[1], ".fa.treefile"))
+temp_tre <- ape::read.tree(temp_tre)
+ls_prefix <- temp_tre$tip.label[grepl("--",temp_tre$tip.label)]
+
+# print the number of prefix in HTML document
+cat(paste("Number of mapped reads:", length(ls_prefix)))
+
+# check if list is of length zero
+if (length(ls_prefix) == 0) {
+    log4r::error(fn_logger, "Error: list of mapped reads is of length zero. Exited.")
+    knitr::knit_exit()
+}
+
+# extract list of reference sequences and short-reads
+ls_refseq <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[2] }))
+ls_shortreads <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[1] }))
+
 # output directories
 dir_check_summary <- file.path(currentdir, "summary")
 dir_check_summary_correlation <- file.path(dir_check_summary, "correlation_figs")
@@ -19,38 +50,6 @@ fn_cor_summary <- paste0(fn_prefix, ".cor.sumtable")
 fn_cor_summary_trimal <- paste0(fn_prefix, ".cor_trimal.sumtable")
 
 fn_dist_tiff <- file.path(dir_check_summary, paste0(params$prefix, ".dist.tiff"))
-```
-
-```{r}
-# extract list of locus
-ls_locus <- list.dirs(params$dir_genes_alignment, recursive=F, full.names=F)
-
-# print the number of locus in HTML document
-cat(paste("Number of gene trees:", length(ls_locus)))
-
-# check if list is of length zero
-if (length(ls_locus) == 0) {
-    log4r::error(fn_logger, "Error: list of locus is of length zero. Exited.")
-    knitr::knit_exit()
-}
-
-# extract list of prefix from the first locus
-temp_tre <- file.path(params$dir_genes_alignment, ls_locus[1], paste0(ls_locus[1], ".treefile"))
-temp_tre <- ape::read.tree(temp_tre)
-ls_prefix <- temp_tre$tip.label[grepl("--",temp_tre$tip.label)]
-
-# print the number of prefix in HTML document
-cat(paste("Number of mapped reads:", length(ls_prefix)))
-
-# check if list is of length zero
-if (length(ls_prefix) == 0) {
-    log4r::error(fn_logger, "Error: list of mapped reads is of length zero. Exited.")
-    knitr::knit_exit()
-}
-
-# extract list of reference sequences and short-reads
-ls_refseq <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[2] }))
-ls_shortreads <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[1] }))
 ```
 
 ## Calculate phylogenetic distance between mapped reads and reference from the same taxon
@@ -74,7 +73,7 @@ if (length(ls_intersect_sp) > 0) {
     # iterate over loci
     ls_output <- foreach (locus = ls_locus, .combine='c') %dopar% {
         # read tree
-        tre <- ape::read.tree(file.path(params$dir_genes_alignment, locus, paste0(locus, ".treefile")))
+        tre <- ape::read.tree(file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa.treefile")))
         ls_tips <- tre$tip.label
 
         # calculate phylogenetic distance
@@ -140,7 +139,7 @@ df_output <- foreach (locus = ls_locus, .combine='rbind') %dopar% {
                                        spearman_rho_noout=numeric(), spearman_p_noout=numeric())
 
     # read trees
-    tre_original <- ape::read.tree(file.path(params$dir_genes_alignment, locus, paste0(locus, ".treefile")))
+    tre_original <- ape::read.tree(file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa.treefile")))
     tre_original_tips <- tre_original$tip.label
 
     # update list of mapped reads
