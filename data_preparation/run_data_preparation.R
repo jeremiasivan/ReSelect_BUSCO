@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 # ============================================================
-#  PhyloRBT — 1_data_preparation
+#  PhyloRBT — data_preparation
 #
 #  Usage: Rscript run_pipeline.R --config config.yaml
 #         Rscript run_pipeline.R --config config.yaml --redo
@@ -71,7 +71,7 @@ if (is.null(cfg$busco_lineage) || cfg$busco_lineage == "") {
   stop("busco_lineage must be set in the config file.")
 }
 
-# check if prefix is set, otherwise derive it from the reference metadata filename
+# check if prefix is set
 if (is.null(cfg$prefix) || cfg$prefix == "") {
   cfg$prefix <- "PhyloRBT_output"
 }
@@ -138,7 +138,7 @@ if (!file.exists(readmap_rmd_path)) {
   stop(paste("1_main.Rmd not found:", readmap_rmd_path))
 }
 
-busco_rmd_path <- file.path(path.expand(full_params$codedir), "data_preparation", "2_extract_busco_loci", "1_main.Rmd")
+busco_rmd_path <- file.path(path.expand(full_params$codedir), "data_preparation", "2_extract_busco", "1_main.Rmd")
 if (!file.exists(busco_rmd_path)) {
   stop(paste("1_main.Rmd not found:", busco_rmd_path))
 }
@@ -162,7 +162,7 @@ rmarkdown::render(
 )
 
 # --- Step 2: BUSCO loci extraction ------------------------------
-message("\n[2/2] Running BUSCO loci extraction (2_extract_busco_loci)...")
+message("\n[2/2] Running BUSCO loci extraction (2_extract_busco)...")
 rmarkdown::render(
   input       = busco_rmd_path,
   params      = params_busco,
@@ -172,5 +172,5 @@ rmarkdown::render(
 )
 
 message("\nDone. Reports:")
-message("  ", file.path(file.path(path.expand(full_params$outdir), full_params$prefix), paste0(full_params$prefix, "_readmap_report.html")))
-message("  ", file.path(file.path(path.expand(full_params$outdir), full_params$prefix), paste0(full_params$prefix, "_buscoextract_report.html")))
+message("  ", file.path(path.expand(full_params$outdir), full_params$prefix, paste0(full_params$prefix, "_readmap_report.html")))
+message("  ", file.path(path.expand(full_params$outdir), full_params$prefix, paste0(full_params$prefix, "_buscoextract_report.html")))

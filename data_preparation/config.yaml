@@ -2,7 +2,7 @@
 #  PhyloRBT — data_preparation config file
 #
 #  Edit this file, then run:
-#    Rscript run_pipeline.R --config config.yaml
+#    Rscript run_data_preparation.R --config config.yaml
 # ============================================================
 
 # --- General -------------------------------------------------
@@ -13,8 +13,8 @@ thread:   1                               # number of parallel threads (default:
 redo:     FALSE                           # re-run even if output files exist (default: FALSE)
 
 # --- Input Files -----------------------------------------------
-file_refseq:     "files/eucs_reference.txt"       # reference sequence metadata
-file_shortreads: "files/eucs_shortreads.txt"      # short-reads metadata
+file_refseq:     "files/eucs_reference.tsv"       # reference sequence metadata
+file_shortreads: "files/eucs_shortreads.tsv"      # short-reads metadata
 
 # --- Executables -----------------------------------------------
 exe_bwamem2:   "bwa-mem2"                 # path to BWA-MEM2 executable
@@ -26,14 +26,14 @@ exe_busco:      "busco"                   # path to BUSCO executable
 exe_gff2bed:    "gff2bed"                 # path to gff2bed executable
 exe_mafft:      "mafft"                   # path to MAFFT executable
 exe_trimal:     "trimal"                  # path to TrimAl executable
-exe_iqtree2:    "iqtree2"                 # path to IQ-TREE2 executable
+exe_iqtree2:    "iqtree3"                 # path to IQ-TREE2 executable
 exe_treeshrink: "run_treeshrink.py"       # path to TreeShrink executable
 
 # --- Number of Threads -------------------------------------------
-thread_bwamem2:  1                 # threads per BWA-MEM2 run (default: same as thread)
-thread_samtools: 1                 # threads per samtools/bcftools run (default: same as thread)
-thread_qualimap: 1                 # threads per QualiMap run (default: same as thread)
-thread_busco:    1                 # threads per BUSCO run (default: same as thread)
+thread_bwamem2:  NULL                 # threads per BWA-MEM2 run (default: same as thread)
+thread_samtools: NULL                 # threads per samtools/bcftools run (default: same as thread)
+thread_qualimap: NULL                 # threads per QualiMap run (default: same as thread)
+thread_busco:    NULL                 # threads per BUSCO run (default: same as thread)
 
 # --- BUSCO Pipeline Parameters -----------------------------------
 busco_lineage:    ""               # BUSCO lineage dataset name (e.g. "eudicots_odb10")

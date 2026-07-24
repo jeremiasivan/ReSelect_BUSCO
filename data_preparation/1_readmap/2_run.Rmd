@@ -13,8 +13,8 @@ df_reads$species <- gsub(" ", "", df_reads$species)
 df_reads$species <- gsub("\\.", "_", df_reads$species)
 
 # extract list of reference sequences and short-reads
-ls_refseq <- df_refs$species
-ls_shortreads <- df_reads$species
+ls_refseq <- unique(df_refs$species)
+ls_shortreads <- unique(df_reads$species)
 
 # output directories
 dir_readmap <- file.path(currentdir, "readmap")

@@ -8,7 +8,7 @@ readr::write_lines(c("", "--------- Tree Topology Test -------"),
 
 # output directory
 dir_locustree <- file.path(currentdir, "topology_test")
-if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+if (params$is_astral_constrained && file.exists(params$file_species_treefile)) {
     dir_locustree <- file.path(currentdir, "topology_test_constrained")
 }
 
@@ -92,11 +92,11 @@ for (read in ls_shortreads) {
         alltre_temp <- alltre_temp[[1]]
 
         # run ASTRAL
-        if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+        if (params$is_astral_constrained && file.exists(params$file_species_treefile)) {
             fn_sptree <- file.path(dir_output_condition_trees, "sptree.treefile")
             
             # open species tree
-            sptree <- ape::read.tree(params$file_genome_treefile)
+            sptree <- ape::read.tree(params$file_species_treefile)
             sptree <- ape::drop.tip(sptree, tip=sptree$tip.label[!sptree$tip.label%in%alltre_temp$tip.label])
             ape::write.tree(sptree, file=fn_sptree)
 
@@ -176,11 +176,11 @@ for (read in ls_shortreads) {
             alltre_temp <- alltre_temp[[1]]
 
             # run ASTRAL
-            if (params$is_astral_constrained && file.exists(params$file_genome_treefile)) {
+            if (params$is_astral_constrained && file.exists(params$file_species_treefile)) {
                 fn_sptree <- file.path(dir_output_perref_trees, "sptree.treefile")
                 
                 # open species tree
-                sptree <- ape::read.tree(params$file_genome_treefile)
+                sptree <- ape::read.tree(params$file_species_treefile)
                 sptree <- ape::drop.tip(sptree, tip=sptree$tip.label[!sptree$tip.label%in%alltre_temp$tip.label])
                 ape::write.tree(sptree, file=fn_sptree)
 

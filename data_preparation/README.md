@@ -2,11 +2,14 @@
 
 ## Table of Content
 - <a href="#prereqs">Prerequisites</a>
-- <a href="#readmap">Mapping Short Reads</a>
-- <a href="#busco">Extracting BUSCO Loci</a>
+- <a href="#genpipe">General Pipeline</a>
+    - <a href="#readmap">Mapping Short Reads</a>
+    - <a href="#busco">Extracting BUSCO Loci</a>
+    - <a href="#runpipeline">Running Both Analyses</a>
+- <a href="#refs">References</a>
 
 ## <a id="prereqs">Prerequisites</a>
-In order to prepare BUSCO locus alignments and trees used in PhyloRBT, additional software are required. We recommend you to use environment management system (e.g. `conda`) to install the prerequisites, but you can also provide the executable paths on `run_pipeline.R`
+For PhyloRBT data preparation, additional software are required. We recommend you to use environment management system (e.g. `conda`) to install the prerequisites, but you can also provide the executable paths on `run_pipeline.R`
 
 ### Software
 |    Name    |                                    Website                                     |                             Anaconda                             |
@@ -23,7 +26,7 @@ In order to prepare BUSCO locus alignments and trees used in PhyloRBT, additiona
 
 If using `conda`, you can use the following command to install the software:
 ```
-conda install -c bioconda bcftools busco bwa-mem2 gff2bed mafft qualimap samtools treeshrink trimal
+conda install -c conda-forge -c bioconda bcftools bedops busco bwa-mem2 mafft qualimap samtools treeshrink trimal
 ```
     
 If `bcftools` returns a `libgsl.so.25` error, you can either download the software <a href="https://www.htslib.org/download/">here</a>, or try to set the `conda` channel priorities before installing any package:
@@ -34,8 +37,10 @@ conda config --prepend channels conda-forge
 conda config --set channel_priority strict
 ```
 
-## <a id="readmap">Mapping Short Reads</a>
-In this step, we download the reference genomes and short reads from NCBI. Then, we performed quality-control (QC) on the short reads and map them to all of the available references. The parameters for this step is set in `1_data_download/1_main.Rmd`.
+## <a id="#genpipe">General Pipeline</a>
+
+### <a id="readmap">Mapping Short Reads</a>
+In this step, we map each set of short-reads to all available reference genomes. The parameters for this step is set in `1_readmap/1_main.Rmd`.
 
 | Parameters                 | Definition                                                                                                                            |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
@@ -44,8 +49,8 @@ In this step, we download the reference genomes and short reads from NCBI. Then,
 | `outdir`                   | Output directory                                                                                                                      |
 | `thread`                   | Number of threads for parallelisation                                                                                                 |
 | `redo`                     | If `FALSE`, skip analysis if output files exist; if `TRUE`, overwrite previous results                                                |
-| `file_refseq`              | Metadata file for reference assembly (e.g., `ReSelect_BUSCO/data/eucs_refseq.txt`)                                                    |
-| `file_shortreads`          | Metadata file for short reads (e.g., `ReSelect_BUSCO/data/eucs_shortreads.txt`)                                                       |
+| `file_refseq`              | Metadata file for reference assembly (e.g., `PhyloRBT/files/eucs_reference.txt`)                                                      |
+| `file_shortreads`          | Metadata file for short reads (e.g., `PhyloRBT/files/eucs_shortreads.txt`)                                                            |
 | `exe_bwamem2`              | Executable for BWA-MEM2                                                                                                               |
 | `exe_samtools`             | Executable for Samtools                                                                                                               |
 | `exe_bcftools`             | Executable for Bcftools                                                                                                               |
@@ -54,14 +59,13 @@ In this step, we download the reference genomes and short reads from NCBI. Then,
 | `thread_samtools`          | Number of threads for Samtools and Bcftools                                                                                           |
 | `thread_qualimap`          | Number of threads for QualiMap                                                                                                        |
 
-### Output
+#### Output
 Running the code will create the following folders in `outdir/prefix`:
-- `readmap/`: folder with the output of mapping (i.e., BAM, VCF, and consensus FASTA sequence)
-    - `qualimap/`: folder with the output of QualiMap for each mapped reads
-    - `metadata.tsv`: file with the FASTA directories of all references
+- `readmap/`: folder with individual folders for each set of mapped reads (including the BAM, VCF, and consensus FASTA sequence)
+    - `mapped_reads/qualimap/`: folder with the QualiMap output for each set of mapped reads
     - `summary.tsv`: file with the summary coverage for all mapped reads
 
-## <a id="busco">Extracting BUSCO Loci</a>
+### <a id="busco">Extracting BUSCO Loci</a>
 In this step, we run correlation analysis to check for the extent of reference bias in BUSCO and assess if it changes the BUSCO tree topology. The parameters for this step is set in `2_busco_check/1_main.Rmd`.
 
 | Parameters               | Definition                                                                                                                            |
@@ -71,31 +75,62 @@ In this step, we run correlation analysis to check for the extent of reference b
 | `outdir`                 | Output directory                                                                                                                      |
 | `thread`                 | Number of threads for parallelisation                                                                                                 |
 | `redo`                   | If `FALSE`, skip analysis if output files exist; if `TRUE`, overwrite previous results                                                |
-| `file_refseq`            | Metadata file for reference genomes (e.g., `ReSelect_BUSCO/data/eucs_refseq.txt`)                                                     |
-| `file_shortreads`        | Metadata file for short reads (e.g., `ReSelect_BUSCO/data/eucs_shortreads.txt`)                                                       |
+| `file_refseq`            | Metadata file for reference assembly (e.g., `PhyloRBT/files/eucs_reference.txt`)                                                      |
+| `file_shortreads`        | Metadata file for short reads (e.g., `PhyloRBT/files/eucs_shortreads.txt`)                                                            |
 | `exe_busco`              | Executable for BUSCO                                                                                                                  |
 | `exe_gff2bed`            | Executable for Gff2Bed from BEDOPS                                                                                                    |
 | `exe_samtools`           | Executable for Samtools                                                                                                               |
 | `exe_qualimap`           | Executable for QualiMap                                                                                                               |
 | `exe_mafft`              | Executable for MAFFT                                                                                                                  |
 | `exe_trimal`             | Executable for TrimAl                                                                                                                 |
-| `exe_iqtree2`            | Executable for IQ-TREE 2                                                                                                              |
+| `exe_iqtree2`            | Executable for IQ-TREE2                                                                                                               |
 | `exe_treeshrink`         | Executable for TreeShrink                                                                                                             |
 | `busco_lineage`          | Lineage for BUSCO pipeline                                                                                                            |
 | `busco_mode`             | Mode for BUSCO pipeline. Options: genome, transcriptome, or protein                                                                   |
 | `thread_busco`           | Number of threads for BUSCO                                                                                                           |
 | `min_busco_depth`        | Minimum BUSCO depth for mapped reads                                                                                                  |
+| `run_trimal`             | Run `TrimAl` for individual locus alignments                                                                                          |
+| `run_treeshrink`         | Run `Treeshrink` for individual locus trees                                                                                           |
 
 #### Output
 Running the code will create the following folders in `outdir/prefix`:
 - `busco_lineage/`: folder with the lineage dataset for running BUSCO pipeline
-- `busco_check/`
-    - `busco_refseq/`: folder with all BUSCO runs on individual reference genome
-        - `fasta/`: folder with all BUSCO sequences inferred from BUSCO GFF files. Applicable only for `type==coordinate`.
-        - `metadata.tsv`: file with the error status for each BUSCO for each reference
-    - `short_reads/`: folder with all BUSCO sequences for all mapped reads
-        - `metadata.tsv`: file with the error status for each BUSCO for each mapped reads
-    - `trees/`: folder with all BUSCO alignments and trees for reference genomes and mapped reads
+- `busco_extraction/`
+    - `refseq/`: folder with all BUSCO runs on individual reference genomes
+        - `list_busco.txt`: list of single-copy, complete BUSCO loci that are shared between reference genomes
+    - `short_reads/`: folder with all BUSCO runs on individual mapped reads
+        - `metadata.tsv`: file with the error status for individual BUSCO loci for each set of mapped reads
+    - `trees/`: folder with individual BUSCO alignments and trees comprising all reference genomes and mapped reads
+        - `unfiltered/`: unfiltered locus alignments and trees from BUSCO pipeline
+        - `trimal/`: TrimAl-filtered locus alignments and their associated trees (only if `run_trimal==TRUE`)
+        - `unfiltered_treeshrink/`: Treeshrink-filtered locus trees (only if `run_treeshrink==TRUE`)
+
+### <a id="runpipeline">Running Both Analyses</a>
+In order to run both analyses on the same set of input files, you should update <a href="./config.yaml">`config.yaml`</a> and run the following command:
+```
+Rscript run_data_preparation.R --config config.yaml
+Rscript run_data_preparation.R --config config.yaml --redo
+```
 
 ---
-*Last update: 23 July 2026 by Jeremias Ivan*
+## <a id="refs">References</a>
+1. Danecek, P., et al. (<a href="https://doi.org/10.1093/gigascience/giab008">2021</a>). **Twelve years of SAMtools and BCFtools**. *GigaScience*, *10*(2), giab008.
+
+2. Manni, M., et al. (<a href="https://doi.org/10.1002/cpz1.323">2021</a>). **BUSCO: Assessing Genomic Data Quality and Beyond**. *Current Protocols*, *1*(12), e323.
+
+3. Vasimuddin, M., et al. (<a href="https://doi.org/10.1109/IPDPS.2019.00041">2019</a>). **Efficient Architecture-Aware Acceleration of BWA-MEM for Multicore Systems**. *IEEE Parallel and Distributed Processing Symposium*.
+
+4. Neph, S., et al. (<a href="https://doi.org/10.1093/bioinformatics/bts277">2012</a>). **BEDOPS: high-performance genomic feature operations**. *Bioinformatics*, *28*(14), 1919-1920.
+
+5. Katoh, K. & Standley, D.M. (<a href="https://doi.org/10.1093/molbev/mst010">2013</a>). **MAFFT multiple sequence alignment software version 7: Improvements in performance and usability**. *Molecular Biology and Evolution*, *30*(4), 772–780.
+
+6. García-Alcalde, F., et al. (<a href="https://doi.org/10.1093/bioinformatics/bts503">2012</a>). **Qualimap: evaluating next-generation sequencing alignment data**. *Bioinformatics*, *28*(20), 2678-2679.
+
+7. Mai, U. & Mirarab, S. (<a href="https://doi.org/10.1186/s12864-018-4620-2">2018</a>). **TreeShrink: fast and accurate detection of outlier long branches in collections of phylogenetic trees**. *BMC Genomics*, *19*(272).
+
+8. Capella-Gutiérrez, S., et al. (<a href="https://doi.org/10.1093/bioinformatics/btp348">2009</a>). **trimAl: a tool for automated alignment trimming in large-scale phylogenetic analyses**. *Bioinformatics*, *25*(15), 1972-1973.
+
+9. Anthropic. (<a href="https://claude.ai/">2026</a>). Claude 4.6 Sonnet was used to generate `config.yaml` and `run_data_preparation.R`. 
+
+---
+*Last update: 24 July 2026 by Jeremias Ivan*

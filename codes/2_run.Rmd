@@ -3,23 +3,6 @@ title: "PhyloRBT"
 ---
 
 ```{r, include=FALSE}
-# open input files
-df_refs <- data.table::fread(params$file_refseq)
-df_refs$species <- gsub(" ", "", df_refs$species)
-df_refs$species <- gsub("\\.", "_", df_refs$species)
-
-df_reads <- data.table::fread(params$file_shortreads)
-df_reads$species <- gsub(" ", "", df_reads$species)
-df_reads$species <- gsub("\\.", "_", df_reads$species)
-
-# input directories
-dir_readmap <- file.path(currentdir, "readmap")
-ls_prefix <- list.dirs(dir_readmap, recursive=F, full.names=F)
-
-# extract list of reference sequences and short-reads
-ls_refseq <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[2] }))
-ls_shortreads <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[1] }))
-
 # output directories
 dir_check_summary <- file.path(currentdir, "summary")
 dir_check_summary_correlation <- file.path(dir_check_summary, "correlation_figs")
@@ -38,7 +21,7 @@ fn_cor_summary_trimal <- paste0(fn_prefix, ".cor_trimal.sumtable")
 fn_dist_tiff <- file.path(dir_check_summary, paste0(params$prefix, ".dist.tiff"))
 ```
 
-```{r summary-update}
+```{r}
 # extract list of locus
 ls_locus <- list.dirs(params$dir_genes_alignment, recursive=F, full.names=F)
 
@@ -50,6 +33,24 @@ if (length(ls_locus) == 0) {
     log4r::error(fn_logger, "Error: list of locus is of length zero. Exited.")
     knitr::knit_exit()
 }
+
+# extract list of prefix from the first locus
+temp_tre <- file.path(params$dir_genes_alignment, ls_locus[1], paste0(ls_locus[1], ".treefile"))
+temp_tre <- ape::read.tree(temp_tre)
+ls_prefix <- temp_tre$tip.label[grepl("--",temp_tre$tip.label)]
+
+# print the number of prefix in HTML document
+cat(paste("Number of mapped reads:", length(ls_prefix)))
+
+# check if list is of length zero
+if (length(ls_prefix) == 0) {
+    log4r::error(fn_logger, "Error: list of mapped reads is of length zero. Exited.")
+    knitr::knit_exit()
+}
+
+# extract list of reference sequences and short-reads
+ls_refseq <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[2] }))
+ls_shortreads <- unique(sapply(ls_prefix, function(x) { unlist(strsplit(x, split="--"))[1] }))
 ```
 
 ## Calculate phylogenetic distance between mapped reads and reference from the same taxon

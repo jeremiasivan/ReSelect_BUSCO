@@ -1,31 +1,31 @@
 # ============================================================
-#  BusIER — 2_phylorbt config file
+#  PhyloRBT config file
 #
 #  Edit this file, then run:
 #    Rscript run_pipeline.R --config config.yaml
 # ============================================================
 
 # --- General -------------------------------------------------
-codedir:  "/home/user/BusIER/"            # path to BusIER repo root
-prefix:   ""                              # output prefix (default: "" -> derived from file_genome_treefile)
+codedir:  "/home/user/PhyloRBT/"          # path to PhyloRBT directory
+prefix:   ""                              # output prefix (used for filenames) (default: "PhyloRBT_output")
 outdir:   "/home/user/output"             # output directory
 thread:   1                               # number of parallel threads (default: 1)
 redo:     FALSE                           # re-run even if output files exist (default: FALSE)
 
 # --- Input Files -----------------------------------------------
-file_refseq:          "data/eucs_refseq.txt"       # reference sequence metadata (id, species, dir, grouping)
-file_shortreads:      "data/eucs_shortreads.txt"   # short-read metadata (id, species, dir, is_check)
-file_genome_treefile: "data/eucs.treefile"         # backbone/genome-scale species tree
+file_refseq:           "files/eucs_refseq.tsv"       # reference sequence metadata
+file_shortreads:       "files/eucs_shortreads.tsv"   # short-reads metadata
+file_species_treefile: "files/eucs.treefile"         # reference species tree topology
 
-dir_genes_alignment:  "/home/user/output/eucs_refseq/gene_trees"   # per-locus alignments+treefiles from 1_data_preparation
+dir_genes_alignment:   "/home/user/output/busco_extraction/trees/unfiltered"    # per-locus alignments and their respective treefiles
 
 # --- Executables -----------------------------------------------
-exe_iqtree2: "iqtree2"                    # path to IQ-TREE2 executable
+exe_iqtree2: "iqtree3"                    # path to IQ-TREE executable
 exe_astral:  "astral.jar"                 # path to ASTRAL executable (.jar)
 
 # --- PhyloRBT Parameters -----------------------------------------
 is_astral_constrained: FALSE              # run ASTRAL constrained search (default: FALSE)
 
 # --- Optional ----------------------------------------------------
-outgroup:       []                        # outgroup taxon name(s) (default: [] (no outgroup))
-focal_species:  ""                        # focal species to highlight (default: "" (none))
+outgroup:       []                        # outgroup taxon name (default: "" (no outgroup))
+focal_species:  ""                        # focal species to calculate pairwise phylogenetic distances (default: "" (randomised))

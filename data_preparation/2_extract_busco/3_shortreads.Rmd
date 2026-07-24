@@ -7,6 +7,7 @@ readr::write_lines(c("", "------------ Mapped Reads ----------"),
                    file=fn_log, append=T)
 
 # set up variables
+is_busco_metadata <- FALSE
 is_busco_read <- FALSE
 
 ls_busco_read_done <- c()
@@ -14,6 +15,9 @@ ls_busco_read_run <- c()
 
 # filter out BUSCOs according to several criteria
 if (!file.exists(fn_mapped_reads_busco) || params$redo) {
+    # update variable
+    is_busco_metadata <- TRUE
+
     # iterate over mapped sequences
     if (params$redo) {
         ls_busco_read_run <- ls_prefix
@@ -80,7 +84,7 @@ foreach (prefix = ls_busco_read_run) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r check-busco-read-common, include=is_busco_read, eval=is_busco_read}
+```{r check-busco-read-common, include=is_busco_metadata, eval=is_busco_metadata}
 # output data.table
 df_mapped_reads_busco <- data.table::data.table(ref=character(),
                                                 read=character(),
@@ -221,9 +225,11 @@ for (prefix in ls_prefix) {
     file_gff <- file.path(dir_busco_read, prefix, "all_busco.gff")
 
     # concatenate all GFF files
-    shared_busco_gff <- file.path(dir_busco_read, prefix, paste0("run_", params$busco_lineage), "busco_sequences", "single_copy_busco_sequences", paste0(shared_busco, ".gff"))
-    shared_busco_gff <- paste0(shared_busco_gff, collapse=" ")
-    system(paste("cat", shared_busco_gff, ">", file_gff))    
+    for (busco in shared_busco) {
+        fn_busco_gff <- file.path(dir_busco_read, prefix, paste0("run_", params$busco_lineage), "busco_sequences", "single_copy_busco_sequences", paste0(busco, ".gff"))
+        cat_cmd <- paste("cat", fn_busco_gff, ">>", file_gff)
+        system(cat_cmd)
+    }
 
     # run QualiMap
     file_qualimap_html <- file.path(dir_busco_read, prefix, "qualimap", "qualimapReport.html")

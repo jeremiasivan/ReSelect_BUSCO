@@ -18,11 +18,8 @@ params:
   redo: FALSE
 
   # --- Input Files ---------------------------------------------
-  file_refseq: ""
-  file_shortreads: ""
-  file_genome_treefile: ""
-
   dir_genes_alignment: ""
+  file_species_treefile: ""
   
   # --- Executables ---------------------------------------------
   exe_iqtree2: ""

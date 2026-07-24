@@ -51,7 +51,7 @@ sys_tic <- Sys.time()
 suppressPackageStartupMessages(library(doSNOW))
 suppressPackageStartupMessages(library(tidyverse))
 
-source(file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco_loci", "functions.R"), local=TRUE)
+source(file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco", "functions.R"), local=TRUE)
 
 # create outdir
 currentdir <- file.path(path.expand(params$outdir), params$prefix)
@@ -76,13 +76,13 @@ if (!file.exists(fn_log)) {
 knitr::opts_knit$set(root.dir = currentdir)
 ```
 
-```{r child = file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco_loci", "2_refseq.Rmd")}
+```{r child = file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco", "2_refseq.Rmd")}
 ```
 
-```{r child = file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco_loci", "3_shortreads.Rmd")}
+```{r child = file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco", "3_shortreads.Rmd")}
 ```
 
-```{r child = file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco_loci", "4_gene_trees.Rmd")}
+```{r child = file.path(path.expand(params$codedir), "data_preparation", "2_extract_busco", "4_gene_trees.Rmd")}
 ```
 
 ```{r, include=FALSE}
