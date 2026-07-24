@@ -32,7 +32,7 @@ dir_busco_ref <- file.path(dir_busco, "refseq")
 dir_busco_read <- file.path(dir_busco, "short_reads")
 dir_busco_tree <- file.path(dir_busco, "trees", "unfiltered")
 
-lapply(list(dir_busco_lineage, dir_busco_ref, dir_busco_read, dir_busco_tree, dir_busco_trimal, dir_busco_treeshrink), function(x){
+lapply(list(dir_busco_lineage, dir_busco_ref, dir_busco_read, dir_busco_tree), function(x){
     if(!dir.exists(x)) dir.create(x, recursive=T)})
 
 # optional output directories

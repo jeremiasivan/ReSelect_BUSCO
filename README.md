@@ -33,7 +33,7 @@ PhyloRBT requires several software and R packages to run. We recommend you to us
 ## <a id="inout">Input and Output Files</a>
 
 ### Input Files
-PhyloRBT requires a set of gene alignments and their corresponding trees as input. Each alignment should comprise different reconstructions of the same set of short-reads that are mapped to different reference genomes. For example, if we have short-reads data from `SpeciesA` and reference genomes from `SpeciesX`, `SpeciesY`, and `SpeciesZ`, each gene alignment should look like this:
+PhyloRBT requires a set of locus alignments and their corresponding trees as input. Each alignment should comprise reconstructions of the same set of short-reads that are mapped to different reference genomes. For example, if we have short-read data from `SpeciesA` and reference genomes from `SpeciesX`, `SpeciesY`, and `SpeciesZ`, each gene alignment should look like this:
 ```
 > SpeciesA--SpeciesX
 ATGACTAAACGTCACGGGTAGAAAAAA
@@ -50,7 +50,7 @@ ATGACTATTCGTCACGGGTAGAAAAAA
 ```
 where `SpeciesA--SpeciesX` refers to `SpeciesA` mapped to reference `SpeciesX`.
 
-Each gene alignment and tree should be stored in individual folders, while the parent directory should be provided in <a href="./config.yaml">`config.yaml`</a>. For example:
+Each gene alignment and tree should be stored in individual folders, while the parent directory should be provided in <a href="./config.yaml">`config.yaml`</a> before running PhyloRBT. For example:
 ```
 parent_directory/
 ├── gene01/
@@ -65,7 +65,7 @@ parent_directory/
 ### Output Files
 Running the code will create the following folders in `outdir/prefix`:
 - `summary/`: folder that stores summary files from correlation analyses
-    - `correlation_figs/`: folder with scatter plots from the correlation analyses
+    - `correlation_figs/`: folder that stores scatter plots from the correlation analyses
     - `prefix.cor.sumtable`: summary table for the correlation analyses
     - `prefix.dist.tiff`: plot of phylogenetic distances between mapped reads and reference genomes from the same species (if any)
     - `topology_test/`: output folder for the tree topology test
@@ -75,7 +75,7 @@ Running the code will create the following folders in `outdir/prefix`:
             - `per_reference/`: folder that stores one reconstruction per run
 
 ### Example
-Please see <a href="./files/">`files/`</a> for example input files for running both PhyloRBT data preparation and main analyses.
+Please see <a href="./files/">`files/`</a> for example input files to run both PhyloRBT data preparation (i.e., `eucs_reference.tsv` and `eucs_shortreads.tsv`) and main analyses (i.e., `eucs.treefile`).
 
 ## <a id="genpipe">General Pipeline</a>
 1. **Clone the Git repository** <br>
@@ -135,4 +135,4 @@ Please see <a href="./files/">`files/`</a> for example input files for running b
 12. Anthropic. (<a href="https://claude.ai/">2026</a>). Claude 4.6 Sonnet was used to generate `config.yaml` and `run_pipeline.R`. 
 
 ---
-*Last update: 24 July 2026 by Jeremias Ivan*
+*Last update: 25 July 2026 by Jeremias Ivan*

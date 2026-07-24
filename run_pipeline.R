@@ -45,21 +45,13 @@ if (!file.exists(opt$config)) {
 cfg <- yaml::read_yaml(opt$config)
 
 # set required parameters
-required_fields <- c("codedir", "outdir", "dir_genes_alignment", "file_species_treefile")
+required_fields <- c("codedir", "outdir", "dir_genes_alignment")
 missing <- setdiff(required_fields, names(cfg))
 if (length(missing) > 0) {
   stop(paste("Missing required config fields:", paste(missing, collapse=", ")))
 }
 
 # check if input files are invalid
-if (is.null(cfg$file_species_treefile) || cfg$file_species_treefile == "") {
-  stop("file_species_treefile must be set in the config file.")
-}
-
-if (!file.exists(path.expand(cfg$file_species_treefile))) {
-  stop(paste("file_species_treefile file not found:", cfg$file_species_treefile))
-}
-
 if (is.null(cfg$dir_genes_alignment) || cfg$dir_genes_alignment == "") {
   stop("dir_genes_alignment must be set in the config file.")
 }
@@ -91,7 +83,7 @@ render_params <- list(
   redo                 = as.logical(f_get_param(cfg$redo, FALSE)),
 
   dir_genes_alignment   = cfg$dir_genes_alignment,
-  file_species_treefile = cfg$file_species_treefile,
+  file_species_treefile = f_get_param(cfg$file_species_treefile, ""),
 
   exe_iqtree2      = f_get_param(cfg$exe_iqtree2, "iqtree3"),
   exe_astral       = f_get_param(cfg$exe_astral, "astral"),
