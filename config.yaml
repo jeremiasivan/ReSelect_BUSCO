@@ -13,15 +13,12 @@ thread:   1                               # number of parallel threads (default:
 redo:     FALSE                           # re-run even if output files exist (default: FALSE)
 
 # --- Input Files -----------------------------------------------
-file_refseq:           "files/eucs_refseq.tsv"       # reference sequence metadata
-file_shortreads:       "files/eucs_shortreads.tsv"   # short-reads metadata
-file_species_treefile: "files/eucs.treefile"         # reference species tree topology
-
 dir_genes_alignment:   "/home/user/output/busco_extraction/trees/unfiltered"    # per-locus alignments and their respective treefiles
+file_species_treefile: "files/eucs.treefile"                                    # reference species tree topology
 
 # --- Executables -----------------------------------------------
 exe_iqtree2: "iqtree3"                    # path to IQ-TREE executable
-exe_astral:  "astral.jar"                 # path to ASTRAL executable (.jar)
+exe_astral:  "astral"                 # path to ASTRAL executable (.jar)
 
 # --- PhyloRBT Parameters -----------------------------------------
 is_astral_constrained: FALSE              # run ASTRAL constrained search (default: FALSE)

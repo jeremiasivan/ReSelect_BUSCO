@@ -93,8 +93,8 @@ render_params <- list(
   dir_genes_alignment   = cfg$dir_genes_alignment,
   file_species_treefile = cfg$file_species_treefile,
 
-  exe_iqtree2      = f_get_param(cfg$exe_iqtree2, "iqtree2"),
-  exe_astral       = f_get_param(cfg$astral, "astral.jar"),
+  exe_iqtree2      = f_get_param(cfg$exe_iqtree2, "iqtree3"),
+  exe_astral       = f_get_param(cfg$astral, "astral"),
 
   is_astral_constrained = as.logical(f_get_param(cfg$is_astral_constrained, FALSE)),
 
