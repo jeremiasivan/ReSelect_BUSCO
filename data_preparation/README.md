@@ -70,7 +70,7 @@ In this step, we run correlation analysis to check for the extent of reference b
 
 | Parameters               | Definition                                                                                                                            |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `codedir`                | Directory for folder `ReSelect_BUSCO/codes/`                                                                                          |
+| `codedir`                | Directory for folder `PhyloRBT/`                                                                                                      |
 | `prefix`                 | Prefix for output files and folder                                                                                                    | 
 | `outdir`                 | Output directory                                                                                                                      |
 | `thread`                 | Number of threads for parallelisation                                                                                                 |
@@ -133,4 +133,4 @@ Rscript run_data_preparation.R --config config.yaml --redo
 9. Anthropic. (<a href="https://claude.ai/">2026</a>). Claude 4.6 Sonnet was used to generate `config.yaml` and `run_data_preparation.R`. 
 
 ---
-*Last update: 24 July 2026 by Jeremias Ivan*
+*Last update: 27 July 2026 by Jeremias Ivan*

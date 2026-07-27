@@ -68,7 +68,7 @@ if (length(ls_invalid_read) > 0) {
 }
 ```
 
-## Map short-reads data to reference genomes using BWA-MEM2
+## Read mapping
 ```{r, include=FALSE}
 # set up variables
 is_readmap <- FALSE
@@ -98,8 +98,8 @@ if (params$redo) {
 
 # output log file for available mapped reads
 if (length(ls_readmap_done) > 0) {
-    ls_readmap_done <- c(paste0("Available mapped reads (", length(ls_readmap_done), "/", length(ls_prefix), ")"), ls_readmap_done, "")
-    readr::write_lines(ls_readmap_done, file=fn_log, append=T)
+    log_msg <- c(paste0("Available mapped reads (", length(ls_readmap_done), "/", length(ls_prefix), ")"), ls_readmap_done, "")
+    readr::write_lines(log_msg, file=fn_log, append=T)
 }
 
 # update variable for the next analysis
@@ -268,8 +268,8 @@ if (params$redo) {
 
 # output log file for available VCF files
 if (length(ls_variant_done) > 0) {
-    ls_variant_done <- c(paste0("Available VCF files (", length(ls_variant_done), "/", length(ls_prefix), ")"), ls_variant_done, "")
-    readr::write_lines(ls_variant_done, file=fn_log, append=T)
+    log_msg <- c(paste0("Available VCF files (", length(ls_variant_done), "/", length(ls_prefix), ")"), ls_variant_done, "")
+    readr::write_lines(log_msg, file=fn_log, append=T)
 }
 
 # update variable for the next analysis

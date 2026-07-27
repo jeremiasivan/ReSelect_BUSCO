@@ -3,7 +3,7 @@ title: "Inferring BUSCO Trees"
 ---
 
 ## Convert individual BUSCO alignments into MSA
-```{r check-busco-msa}
+```{r check-busco-msa, include=FALSE}
 # set up variables
 busco_refs_dir_mid <- file.path(paste0("run_", params$busco_lineage), "busco_sequences", "single_copy_busco_sequences")
 busco_read_dir_mid <- file.path(paste0("run_", params$busco_lineage), "busco_sequences", "single_copy_busco_sequences")
@@ -68,8 +68,7 @@ stopCluster(nwcl)
 # update the number of shared BUSCOs
 shared_busco <- shared_busco[!shared_busco %in% output]
 
-# print the number of BUSCO in HTML document
-cat(paste("Number of shared BUSCO after filtering reference-only genes:", length(shared_busco)))
+# update log file
 readr::write_lines(c("", paste0("Number of BUSCO after filtering genes with zero mapped reads: ", length(shared_busco), ".")),
                    file=fn_log, append=T)
 
@@ -79,8 +78,13 @@ if (length(shared_busco) == 0) {
 }
 ```
 
+```{r}
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO after filtering reference-only genes:", length(shared_busco)))
+```
+
 ## Infer BUSCO trees
-```{r check-busco-tree}
+```{r check-busco-tree, include=FALSE}
 readr::write_lines(c("", "------------ BUSCO Trees -----------"), file=fn_log, append=T)
               
 # create doSNOW cluster
@@ -103,7 +107,7 @@ foreach (busco = shared_busco) %dopar% {
 stopCluster(nwcl)
 ```
 
-```{r check-busco-treeshrink, include=params$run_treeshrink, eval=params$run_treeshrink}
+```{r check-busco-treeshrink, include=FALSE, eval=params$run_treeshrink}
 readr::write_lines(c("", "------------ TreeShrink ------------"), file=fn_log, append=T)
               
 # create doSNOW cluster
@@ -135,8 +139,7 @@ log4r::info(fn_logger, "File created/modified: BUSCO trees.")
 stopCluster(nwcl)
 ```
 
-## Run TrimAl
-```{r check-busco-trimal, include=params$run_trimal, eval=params$run_trimal}
+```{r check-busco-trimal, include=FALSE, eval=params$run_trimal}
 readr::write_lines(c("", "-------------- TrimAl --------------"), file=fn_log, append=T)
 
 # create doSNOW cluster

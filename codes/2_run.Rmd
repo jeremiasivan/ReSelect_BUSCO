@@ -52,8 +52,7 @@ fn_cor_summary_trimal <- paste0(fn_prefix, ".cor_trimal.sumtable")
 fn_dist_tiff <- file.path(dir_check_summary, paste0(params$prefix, ".dist.tiff"))
 ```
 
-## Calculate phylogenetic distance between mapped reads and reference from the same taxon
-```{r summary-individual}
+```{r summary-individual, include=FALSE}
 # set up variable
 is_check_summary_individual <- FALSE
 plot <- NULL
@@ -119,7 +118,7 @@ print(plot + theme(plot.title = element_text(face = "bold"),
 ```
 
 ## Correlation analysis on locus phylogenetic distances
-```{r summary-correlation}
+```{r summary-correlation, include=FALSE}
 # create doSNOW cluster
 nwcl <- makeCluster(params$thread)
 doSNOW::registerDoSNOW(nwcl)
@@ -275,4 +274,39 @@ stopCluster(nwcl)
 
 # save the data.frame
 data.table::fwrite(df_output, file=fn_cor_summary, sep="\t", quote=F, row.names=F)
+```
+
+```{r, results='asis', echo=FALSE}
+# print the correlation results in HTML
+for (reads in ls_shortreads_available) {
+    # subset the summary table
+    df_output_subset <- df_output %>% filter(read == reads)
+    n_locus_total <- nrow(df_output_subset)
+
+    # extract statistics with outgroup
+    n_biased <- df_output_subset$locus[df_output_subset$lm_p<0.05 | df_output_subset$spearman_p<0.05]
+    n_biased <- length(n_biased[!is.na(n_biased)])
+    prop_biased <- round(n_biased/n_locus_total*100,3)
+
+    n_unbiased <- n_locus_total-n_biased
+    prop_unbiased <- round(n_unbiased/n_locus_total*100,3)
+
+    # extract statistics without outgroup
+    n_biased_noout <- df_output_subset$locus[df_output_subset$lm_p_noout<0.05 | df_output_subset$spearman_p_noout<0.05]
+    n_biased_noout <- length(n_biased_noout[!is.na(n_biased_noout)])
+    prop_biased_noout <- round(n_biased_noout/n_locus_total*100,3)
+
+    n_unbiased_noout <- n_locus_total-n_biased_noout
+    prop_unbiased_noout <- round(n_unbiased_noout/n_locus_total*100,3)
+
+    cat(sprintf("\n## %s\n\n", reads))
+    cat(sprintf("* Number of putatively biased loci: %d/%d (%s%%)\n",
+                n_biased, n_locus_total, prop_biased))
+    cat(sprintf("* Number of putatively unbiased loci: %d/%d (%s%%)\n",
+                n_unbiased, n_locus_total, prop_unbiased))
+    cat(sprintf("* Number of putatively biased loci (without outgroup): %d/%d (%s%%)\n",
+                n_biased_noout, n_locus_total, prop_biased_noout))
+    cat(sprintf("* Number of putatively unbiased loci (without outgroup): %d/%d (%s%%)\n\n",
+                n_unbiased_noout, n_locus_total, prop_unbiased_noout))
+}
 ```

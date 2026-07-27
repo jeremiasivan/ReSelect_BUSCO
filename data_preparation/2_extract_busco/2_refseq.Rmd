@@ -94,8 +94,8 @@ if (params$redo) {
 
 # output log file for available reference BUSCO runs
 if (length(ls_busco_ref_done) > 0) {
-    ls_busco_ref_done <- c(paste0("Available reference BUSCO runs (", length(ls_busco_ref_done), "/", length(ls_refseq), ")"), ls_busco_ref_done, "")
-    readr::write_lines(ls_busco_ref_done, file=fn_log, append=T)
+    log_msg <- c(paste0("Available reference BUSCO runs (", length(ls_busco_ref_done), "/", length(ls_refseq), ")"), ls_busco_ref_done, "")
+    readr::write_lines(log_msg, file=fn_log, append=T)
 }
 
 # update variable for the next analysis
@@ -110,7 +110,7 @@ cat(paste0("Available reference BUSCO (", length(ls_busco_ref_done), "/", length
 cat(paste("Reference BUSCO to run:", length(ls_busco_ref_run)))
 ```
 
-```{r check-busco-ref, include=is_busco_ref, eval=is_busco_ref}
+```{r check-busco-ref, include=FALSE, eval=is_busco_ref}
 readr::write_lines(paste("Running BUSCO using", params$thread_busco, "threads"), file=fn_log, append=T)
 
 # set up number of doSNOW cluster
@@ -138,7 +138,7 @@ stopCluster(nwcl)
 ```
 
 ## Extract common BUSCOs between reference sequences
-```{r check-busco-common}
+```{r check-busco-common, include=FALSE}
 # initiate variable
 shared_busco <- c()
 
@@ -159,9 +159,6 @@ for (ref in ls_refseq) {
   }
 }
 
-# print the number of BUSCO in HTML document
-cat(paste("Number of shared BUSCO between references:", length(shared_busco)))
-
 # check if shared BUSCOs found
 if (length(shared_busco) == 0) {
     log4r::error(fn_logger, paste0("Error: no BUSCO shared between reference sequences. Exited."))
@@ -172,4 +169,9 @@ if (length(shared_busco) == 0) {
 }
 
 writeLines(shared_busco, con=fn_refseq_busco)
+```
+
+```{r}
+# print the number of BUSCO in HTML document
+cat(paste("Number of shared BUSCO between references:", length(shared_busco)))
 ```

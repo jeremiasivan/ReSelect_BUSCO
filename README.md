@@ -1,6 +1,6 @@
 # PhyloRBT
 
-**PhyloRBT (Phylogenetic Reference Bias Test)** is an R pipeline to assess reference bias in individual loci based on pairwise phylogenetic distances. It consists of two main steps: an optional data preparation and the reference bias test. It is mainly developed and tested using Linux, so there might be incompatibilities using MacOS and Windows.
+**PhyloRBT (Phylogenetic Reference Bias Test)** is an R pipeline to assess reference bias in individual loci based on pairwise phylogenetic distances. It requires a set of locus alignments and their respective trees as input, where each alignment comprises reconstructions of one (or more) set of short-read data that are mapped to multiple reference genomes. It is mainly developed and tested using Linux, so there might be incompatibilities using MacOS and Windows.
 
 ## Table of Content
 - <a href="#prereqs">Prerequisites</a>
@@ -135,4 +135,4 @@ Please see <a href="./files/">`files/`</a> for example input files to run both P
 12. Anthropic. (<a href="https://claude.ai/">2026</a>). Claude 4.6 Sonnet was used to generate `config.yaml` and `run_pipeline.R`. 
 
 ---
-*Last update: 25 July 2026 by Jeremias Ivan*
+*Last update: 27 July 2026 by Jeremias Ivan*

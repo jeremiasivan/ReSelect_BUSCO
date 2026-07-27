@@ -33,7 +33,6 @@ params:
   focal_species: ""
 ---
 
-## Load required libraries and functions
 ```{r, include=FALSE}
 # store initial system time
 sys_tic <- Sys.time()
