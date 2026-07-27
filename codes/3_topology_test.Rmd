@@ -117,11 +117,11 @@ for (read in ls_shortreads) {
 }
 ```
 
-```{r, results='asis', echo=FALSE}
+```{r, results='asis', out.width="100%", echo=FALSE}
 # print trees in HTML
 for (reads in ls_shortreads) {
-    cat(sprintf("\n### %s\n\n", reads))
-    
+    cat(sprintf("\n### *%s*\n\n", reads))
+
     # input files
     fn_tree_all <- file.path(dir_locustree, reads, "all", "trees", "astral.treefile")
     fn_tree_bias <- file.path(dir_locustree, reads, "bias", "trees", "astral.treefile")

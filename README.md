@@ -2,6 +2,11 @@
 
 **PhyloRBT (Phylogenetic Reference Bias Test)** is an R pipeline to assess reference bias in individual loci based on pairwise phylogenetic distances. It requires a set of locus alignments and their respective trees as input, where each alignment comprises reconstructions of one (or more) set of short-read data that are mapped to multiple reference genomes. It is mainly developed and tested using Linux, so there might be incompatibilities using MacOS and Windows.
 
+**If you use PhyloRBT, please cite as:**
+```
+J. Ivan & R. Lanfear. (2026). PhyloRBT: A Phylogenetic Approach to Detect Reference Bias in Phylogenomic Datasets, bioRxiv. doi:10.64898/2026.07.24.740642.
+```
+
 ## Table of Content
 - <a href="#prereqs">Prerequisites</a>
 - <a href="#inout">Input and Output Files</a>

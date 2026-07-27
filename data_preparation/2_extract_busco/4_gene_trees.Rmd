@@ -83,7 +83,6 @@ if (length(shared_busco) == 0) {
 cat(paste("Number of shared BUSCO after filtering reference-only genes:", length(shared_busco)))
 ```
 
-## Infer BUSCO trees
 ```{r check-busco-tree, include=FALSE}
 readr::write_lines(c("", "------------ BUSCO Trees -----------"), file=fn_log, append=T)
               

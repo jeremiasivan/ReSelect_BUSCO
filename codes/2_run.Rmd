@@ -299,7 +299,7 @@ for (reads in ls_shortreads) {
     n_unbiased_noout <- n_locus_total-n_biased_noout
     prop_unbiased_noout <- round(n_unbiased_noout/n_locus_total*100,3)
 
-    cat(sprintf("\n### %s\n\n", reads))
+    cat(sprintf("\n### *%s*\n\n", reads))
     cat(sprintf("* Number of putatively biased loci: %d/%d (%s%%)\n",
                 n_biased, n_locus_total, prop_biased))
     cat(sprintf("* Number of putatively unbiased loci: %d/%d (%s%%)\n",
@@ -309,4 +309,5 @@ for (reads in ls_shortreads) {
     cat(sprintf("* Number of putatively unbiased loci (without outgroup): %d/%d (%s%%)\n\n",
                 n_unbiased_noout, n_locus_total, prop_unbiased_noout))
 }
+cat("\n<br>\n\n")
 ```
