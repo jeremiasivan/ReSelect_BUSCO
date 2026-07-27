@@ -24,7 +24,8 @@ df_cor_summary <- data.table::fread(fn_cor_summary)
 fn_cf_summary <- file.path(dir_locustree, paste0(params$prefix, ".cf.sumtable"))
 ```
 
-```{r topology-test}
+## Tree topology test
+```{r topology-test, include=FALSE}
 # iterate over short-reads
 for (read in ls_shortreads) {
     # output directory
@@ -116,7 +117,26 @@ for (read in ls_shortreads) {
 }
 ```
 
-```{r topology-test-perref}
+```{r, results='asis', echo=FALSE}
+# print trees in HTML
+for (reads in ls_shortreads) {
+    cat(sprintf("\n### %s\n\n", reads))
+    
+    # input files
+    fn_tree_all <- file.path(dir_locustree, reads, "all", "trees", "astral.treefile")
+    fn_tree_bias <- file.path(dir_locustree, reads, "bias", "trees", "astral.treefile")
+    fn_tree_nonbias <- file.path(dir_locustree, reads, "nonbias", "trees", "astral.treefile")
+
+    # set the number of columns
+    par(mfrow = c(1, 3))
+    plot(ape::read.tree(fn_tree_all), main = "All loci", cex = 0.8)
+    plot(ape::read.tree(fn_tree_bias), main = "Putatively biased loci", cex = 0.8)
+    plot(ape::read.tree(fn_tree_nonbias), main = "Putatively unbiased loci", cex = 0.8)
+    par(mfrow = c(1, 1))
+}
+```
+
+```{r topology-test-perref, include=FALSE}
 # iterate over shortreads
 for (read in ls_shortreads) {
     # subset the data.frame
