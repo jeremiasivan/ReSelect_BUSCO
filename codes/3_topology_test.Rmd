@@ -74,7 +74,7 @@ for (read in ls_shortreads) {
         # iterate over all locus
         foreach(locus = ls_locus_condition) %dopar% {
             # extract alignment
-            fn_input <- file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa"))
+            fn_input <- file.path(params$dir_input_genes, locus, paste0(locus, ".fa"))
             fn_output <- file.path(dir_output_condition_fasta, paste0(locus, ".fa"))
             if (file.exists(fn_output)) {
                 return(NULL)
@@ -186,7 +186,7 @@ for (read in ls_shortreads) {
             # iterate over all locus
             foreach(locus = ls_locus_condition) %dopar% {
                 # extract alignment
-                fn_input <- file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa"))
+                fn_input <- file.path(params$dir_input_genes, locus, paste0(locus, ".fa"))
                 fn_output <- file.path(dir_output_perref_fasta, paste0(locus, ".fa"))
                 if (file.exists(fn_output)) {
                     return(NULL)

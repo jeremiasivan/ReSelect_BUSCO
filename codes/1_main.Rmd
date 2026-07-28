@@ -18,7 +18,7 @@ params:
   redo: FALSE
 
   # --- Input Files ---------------------------------------------
-  dir_genes_alignment: ""
+  dir_input_genes: ""
   file_species_treefile: ""
   
   # --- Executables ---------------------------------------------

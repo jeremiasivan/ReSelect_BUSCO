@@ -4,7 +4,7 @@ title: "PhyloRBT"
 
 ```{r, include=FALSE}
 # extract list of locus
-ls_locus <- list.dirs(params$dir_genes_alignment, recursive=F, full.names=F)
+ls_locus <- list.dirs(params$dir_input_genes, recursive=F, full.names=F)
 
 # print the number of locus in HTML document
 readr::write_lines(paste("Number of gene trees:", length(ls_locus)), file=fn_log, append=T)
@@ -17,7 +17,7 @@ if (length(ls_locus) == 0) {
 }
 
 # extract list of prefix from the first locus
-temp_tre <- file.path(params$dir_genes_alignment, ls_locus[1], paste0(ls_locus[1], ".fa.treefile"))
+temp_tre <- file.path(params$dir_input_genes, ls_locus[1], paste0(ls_locus[1], ".fa.treefile"))
 temp_tre <- ape::read.tree(temp_tre)
 ls_prefix <- temp_tre$tip.label[grepl("--",temp_tre$tip.label)]
 
@@ -72,7 +72,7 @@ if (length(ls_intersect_sp) > 0) {
     # iterate over loci
     ls_output <- foreach (locus = ls_locus, .combine='c') %dopar% {
         # read tree
-        fn_tre <- file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa.treefile"))
+        fn_tre <- file.path(params$dir_input_genes, locus, paste0(locus, ".fa.treefile"))
         if (!file.exists(fn_tre)) {
             return(NULL)
         }
@@ -143,7 +143,7 @@ df_output <- foreach (locus = ls_locus, .combine='rbind') %dopar% {
                                        spearman_rho_noout=numeric(), spearman_p_noout=numeric())
 
     # read tree
-    fn_tre_original <- file.path(params$dir_genes_alignment, locus, paste0(locus, ".fa.treefile"))
+    fn_tre_original <- file.path(params$dir_input_genes, locus, paste0(locus, ".fa.treefile"))
     if (!file.exists(fn_tre_original)) {
         return(NULL)
     }

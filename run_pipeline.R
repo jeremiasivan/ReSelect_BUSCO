@@ -45,19 +45,19 @@ if (!file.exists(opt$config)) {
 cfg <- yaml::read_yaml(opt$config)
 
 # set required parameters
-required_fields <- c("codedir", "outdir", "dir_genes_alignment")
+required_fields <- c("codedir", "outdir", "dir_input_genes")
 missing <- setdiff(required_fields, names(cfg))
 if (length(missing) > 0) {
   stop(paste("Missing required config fields:", paste(missing, collapse=", ")))
 }
 
 # check if input files are invalid
-if (is.null(cfg$dir_genes_alignment) || cfg$dir_genes_alignment == "") {
-  stop("dir_genes_alignment must be set in the config file.")
+if (is.null(cfg$dir_input_genes) || cfg$dir_input_genes == "") {
+  stop("dir_input_genes must be set in the config file.")
 }
 
-if (!dir.exists(path.expand(cfg$dir_genes_alignment))) {
-  stop(paste("dir_genes_alignment not found:", cfg$dir_genes_alignment))
+if (!dir.exists(path.expand(cfg$dir_input_genes))) {
+  stop(paste("dir_input_genes not found:", cfg$dir_input_genes))
 }
 
 # check if prefix is set
@@ -82,7 +82,7 @@ render_params <- list(
   thread               = cfg$thread,
   redo                 = as.logical(f_get_param(cfg$redo, FALSE)),
 
-  dir_genes_alignment   = cfg$dir_genes_alignment,
+  dir_input_genes       = cfg$dir_input_genes,
   file_species_treefile = f_get_param(cfg$file_species_treefile, ""),
 
   exe_iqtree2      = f_get_param(cfg$exe_iqtree2, "iqtree3"),
@@ -104,7 +104,7 @@ message("Starting PhyloRBT pipeline...")
 message("  Config:          ", opt$config)
 message("  Prefix:          ", render_params$prefix)
 message("  Output:          ", render_params$outdir)
-message("  Gene alignments: ", render_params$dir_genes_alignment)
+message("  Gene alignments: ", render_params$dir_input_genes)
 message("  Genome treefile: ", render_params$file_species_treefile)
 message("  Threads:         ", render_params$thread)
 

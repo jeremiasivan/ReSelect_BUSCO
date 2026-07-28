@@ -13,7 +13,7 @@ thread:   1                               # number of parallel threads (default:
 redo:     FALSE                           # re-run even if output files exist (default: FALSE)
 
 # --- Input Files --------------------------------------------
-dir_genes_alignment:   "/home/user/output/busco_extraction/trees/unfiltered"    # per-locus alignments and their respective treefiles
+dir_input_genes:   "/home/user/output/busco_extraction/trees/unfiltered"    # per-locus alignments and their respective treefiles
 
 # --- Executables --------------------------------------------
 exe_iqtree2: "iqtree3"                    # path to IQ-TREE executable

@@ -38,7 +38,7 @@ PhyloRBT requires several software and R packages to run. We recommend you to us
 ## <a id="inout">Input and Output Files</a>
 
 ### Input Files
-PhyloRBT requires a set of locus alignments and their corresponding trees as input. Each alignment should comprise reconstructions of the same set of short-reads that are mapped to different reference genomes. For example, if we have short-read data from `SpeciesA` and reference genomes from `SpeciesX`, `SpeciesY`, and `SpeciesZ`, each gene alignment should look like this:
+PhyloRBT requires a set of locus alignments and their corresponding trees as input. Each alignment should comprise reconstructions of the same set of short-reads that are mapped to different reference genomes. For example, if we have short-read data from `SpeciesA` and reference genomes from `SpeciesX`, `SpeciesY`, and `SpeciesZ`, each gene alignment should look like this (note that `SpeciesA--SpeciesX` refers to `SpeciesA` mapped to reference `SpeciesX`):
 ```
 > SpeciesA--SpeciesX
 ATGACTAAACGTCACGGGTAGAAAAAA
@@ -53,11 +53,10 @@ ATGACTACCCGTCACGGGTAGAAAAAA
 > SpeciesZ
 ATGACTATTCGTCACGGGTAGAAAAAA
 ```
-where `SpeciesA--SpeciesX` refers to `SpeciesA` mapped to reference `SpeciesX`.
 
-Each gene alignment and tree should be stored in individual folders, while the parent directory should be provided in <a href="./config.yaml">`config.yaml`</a> before running PhyloRBT. For example:
+Each gene alignment and tree should be stored in individual folders (see <a href="./config.yaml">`config.yaml`</a>). For example:
 ```
-parent_directory/
+dir_input_genes/
 ├── gene01/
 │   ├── gene01.fa
 │   └── gene01.fa.treefile
