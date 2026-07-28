@@ -76,7 +76,7 @@ Running the code will create the following folders in `outdir/prefix`:
     - `topology_test/`: output folder for the tree topology test
         - `all/`, `bias/`, and `nonbias/`: folder with individual analysis for different sets of loci
             - `alignment/`: folder that stores individual locus sequences
-            - `trees/`: folder that stores individual locus trees and ASTRAL tree
+            - `trees/`: folder that stores individual gene trees and ASTRAL tree
             - `per_reference/`: folder that stores one reconstruction per run
 
 ### Example
@@ -140,4 +140,4 @@ Please see <a href="./files/">`files/`</a> for example input files to run both P
 12. Anthropic. (<a href="https://claude.ai/">2026</a>). Claude 4.6 Sonnet was used to generate `config.yaml` and `run_pipeline.R`. 
 
 ---
-*Last update: 27 July 2026 by Jeremias Ivan*
+*Last update: 28 July 2026 by Jeremias Ivan*

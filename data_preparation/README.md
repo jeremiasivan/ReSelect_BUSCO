@@ -90,7 +90,7 @@ In this step, we run correlation analysis to check for the extent of reference b
 | `thread_busco`           | Number of threads for BUSCO                                                                                                           |
 | `min_busco_depth`        | Minimum BUSCO depth for mapped reads                                                                                                  |
 | `run_trimal`             | Run `TrimAl` for individual locus alignments                                                                                          |
-| `run_treeshrink`         | Run `Treeshrink` for individual locus trees                                                                                           |
+| `run_treeshrink`         | Run `Treeshrink` for individual gene trees                                                                                            |
 
 #### Output
 Running the code will create the following folders in `outdir/prefix`:
@@ -103,7 +103,7 @@ Running the code will create the following folders in `outdir/prefix`:
     - `trees/`: folder with individual BUSCO alignments and trees comprising all reference genomes and mapped reads
         - `unfiltered/`: unfiltered locus alignments and trees from BUSCO pipeline
         - `trimal/`: TrimAl-filtered locus alignments and their associated trees (only if `run_trimal==TRUE`)
-        - `unfiltered_treeshrink/`: Treeshrink-filtered locus trees (only if `run_treeshrink==TRUE`)
+        - `unfiltered_treeshrink/`: Treeshrink-filtered gene trees (only if `run_treeshrink==TRUE`)
 
 ### <a id="runpipeline">Running Both Analyses</a>
 In order to run both analyses on the same set of input files, you should update <a href="./config.yaml">`config.yaml`</a> and run the following command:
@@ -133,4 +133,4 @@ Rscript run_data_preparation.R --config config.yaml --redo
 9. Anthropic. (<a href="https://claude.ai/">2026</a>). Claude 4.6 Sonnet was used to generate `config.yaml` and `run_data_preparation.R`. 
 
 ---
-*Last update: 27 July 2026 by Jeremias Ivan*
+*Last update: 28 July 2026 by Jeremias Ivan*
