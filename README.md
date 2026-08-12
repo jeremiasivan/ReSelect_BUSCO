@@ -101,7 +101,10 @@ Please see <a href="./files/">`files/`</a> for example input files to run both P
 3. **[Optional] Data Preparation**
     <br>If you have short-reads data and a set of reference genomes, you can refer to <a href="./data_preparation/">`data_preparation/`</a> to: (i) map each set of short-reads to individual reference genomes, and (ii) extract BUSCO loci from each reference genome and set of mapped reads. Please see the <a href="./data_preparation/README.md">README</a> file for more details.
 
-    If you run `data_preparation`, the output folder that stores individual gene alignments and trees will be stored at `outdir/prefix/busco_extraction/trees/unfiltered/`. If you set `run_trimal==TRUE` or `run_treeshrink==TRUE`, the post-trimming output files will be stored at `outdir/busco_extraction/trees/trimal/` or `outdir/busco_extraction/trees/unfiltered_treeshrink/`.
+    If you run `data_preparation/`, the output folder that stores individual gene alignments and trees will be stored at `outdir/prefix/busco_extraction/trees/`:
+    - `unfiltered/`: unfiltered locus alignments and trees from BUSCO pipeline
+    - `trimal/`: TrimAl-filtered locus alignments and their associated trees (only if `run_trimal==TRUE`)
+    - `unfiltered_treeshrink/`: Treeshrink-filtered gene trees (only if `run_treeshrink==TRUE`)
 
 4. **Update the parameters in `config.yaml`** <br>
 
@@ -139,4 +142,4 @@ Please see <a href="./files/">`files/`</a> for example input files to run both P
 12. Anthropic. (<a href="https://claude.ai/">2026</a>). Claude 4.6 Sonnet was used to generate `config.yaml` and `run_pipeline.R`. 
 
 ---
-*Last update: 28 July 2026 by Jeremias Ivan*
+*Last update: 12 August 2026 by Jeremias Ivan*
